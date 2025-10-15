@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "458512617441",
+    "project_id": "devlokos",
+    "storage_bucket": "devlokos.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:458512617441:android:4e8929cf2c778dfd9c8ca0",
+        "android_client_info": {
+          "package_name": "com.devlokos.devlokos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSVo_XuC7P_oLbwbAa6V4zyaQ93MrhsO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:458512617441:android:c38d499d355577519c8ca0",
+        "android_client_info": {
+          "package_name": "com.devlokos.devlokos_podcast"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSVo_XuC7P_oLbwbAa6V4zyaQ93MrhsO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
