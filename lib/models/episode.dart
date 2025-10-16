@@ -53,6 +53,36 @@ class Episode {
     };
   }
 
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'thumbnailUrl': thumbnailUrl,
+      'youtubeVideoId': youtubeVideoId,
+      'duration': duration,
+      'publishedDate': publishedDate.toIso8601String(),
+      'category': category,
+      'tags': tags,
+      'isFeatured': isFeatured,
+    };
+  }
+
+  factory Episode.fromMap(Map<String, dynamic> map) {
+    return Episode(
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      thumbnailUrl: map['thumbnailUrl'] ?? '',
+      youtubeVideoId: map['youtubeVideoId'] ?? '',
+      duration: map['duration'] ?? '0:00',
+      publishedDate: DateTime.parse(map['publishedDate'] ?? DateTime.now().toIso8601String()),
+      category: map['category'] ?? '',
+      tags: List<String>.from(map['tags'] ?? []),
+      isFeatured: map['isFeatured'] ?? false,
+    );
+  }
+
   Episode copyWith({
     String? id,
     String? title,
@@ -92,4 +122,9 @@ class Episode {
 
   @override
   int get hashCode => id.hashCode;
+
+  // Getters adicionales para compatibilidad
+  String get videoId => youtubeVideoId;
+  DateTime get publishedAt => publishedDate;
+  int get viewCount => 0; // Placeholder, se puede implementar después
 }

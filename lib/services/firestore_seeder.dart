@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/episode.dart';
-import '../utils/sample_data.dart';
+import '../services/sample_data.dart';
 
 class FirestoreSeeder {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;

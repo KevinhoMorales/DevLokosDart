@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-import '../utils/app_theme.dart';
+import '../bloc/auth/auth_bloc_exports.dart';
+import '../utils/brand_colors.dart';
 import '../constants/app_constants.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -54,9 +54,10 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(seconds: 3));
     
     if (mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      // Verificar el estado de autenticación
+      final authState = context.read<AuthBloc>().state;
       
-      if (authProvider.isAuthenticated) {
+      if (authState is AuthAuthenticated) {
         context.go('/home');
       } else {
         context.go('/login');
@@ -75,7 +76,7 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
+          color: BrandColors.primaryBlack,
         ),
         child: Center(
           child: AnimatedBuilder(
@@ -88,45 +89,42 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo placeholder - necesitarás agregar el logo real
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.primaryGradient,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.radio,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                      ),
+                             // Logo DevLokos oficial
+                             Container(
+                               width: 200,
+                               height: 200,
+                               decoration: BoxDecoration(
+                                 color: BrandColors.primaryBlack,
+                                 borderRadius: BorderRadius.circular(25),
+                               ),
+                               child: ClipRRect(
+                                 borderRadius: BorderRadius.circular(25),
+                                 child: Image.asset(
+                                   'assets/icons/devlokos_icon.png',
+                                   width: 180,
+                                   height: 180,
+                                   fit: BoxFit.contain,
+                                 ),
+                               ),
+                             ),
                       const SizedBox(height: 32),
                       Text(
                         AppConstants.appName,
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
+                          color: BrandColors.primaryWhite,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tu podcast de desarrollo',
+                        'APRENDE - CREA - CRECE',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.textSecondary,
+                          color: BrandColors.grayMedium,
                         ),
                       ),
                       const SizedBox(height: 48),
                       const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
                       ),
                     ],
                   ),

@@ -24,8 +24,8 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp(
-          home: const Scaffold(
+        child: const MaterialApp(
+          home: Scaffold(
             body: Center(
               child: Text('DevLokos Podcast'),
             ),

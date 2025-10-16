@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/app_theme.dart';
+import '../utils/brand_colors.dart';
 
 class GradientButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -8,6 +8,8 @@ class GradientButton extends StatelessWidget {
   final double? width;
   final double height;
   final IconData? icon;
+  final LinearGradient? gradient;
+  final Color? textColor;
 
   const GradientButton({
     super.key,
@@ -17,6 +19,8 @@ class GradientButton extends StatelessWidget {
     this.width,
     this.height = 56,
     this.icon,
+    this.gradient,
+    this.textColor,
   });
 
   @override
@@ -26,22 +30,16 @@ class GradientButton extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         gradient: onPressed != null && !isLoading
-            ? AppTheme.primaryGradient
-            : LinearGradient(
+            ? (gradient ?? BrandColors.primaryGradient)
+            : const LinearGradient(
                 colors: [
-                  AppTheme.textLight,
-                  AppTheme.textLight,
+                  BrandColors.grayMedium,
+                  BrandColors.grayMedium,
                 ],
               ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: onPressed != null && !isLoading
-            ? [
-                BoxShadow(
-                  color: AppTheme.primaryColor.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ]
+            ? BrandColors.orangeShadow
             : null,
       ),
       child: Material(
@@ -59,7 +57,7 @@ class GradientButton extends StatelessWidget {
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).cardColor,
+                          textColor ?? BrandColors.primaryWhite,
                         ),
                       ),
                     )
@@ -70,7 +68,7 @@ class GradientButton extends StatelessWidget {
                         if (icon != null) ...[
                           Icon(
                             icon,
-                            color: Colors.white,
+                            color: textColor ?? BrandColors.primaryWhite,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -78,7 +76,7 @@ class GradientButton extends StatelessWidget {
                         Text(
                           text,
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Colors.white,
+                            color: textColor ?? BrandColors.primaryWhite,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

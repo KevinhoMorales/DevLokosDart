@@ -104,7 +104,7 @@ class EpisodeCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.access_time,
                           size: 14,
                           color: AppTheme.textLight,
@@ -117,7 +117,7 @@ class EpisodeCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Icon(
+                        const Icon(
                           Icons.category,
                           size: 14,
                           color: AppTheme.textLight,
@@ -130,7 +130,7 @@ class EpisodeCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Icon(
+                        const Icon(
                           Icons.play_circle_filled,
                           color: AppTheme.primaryColor,
                           size: 24,

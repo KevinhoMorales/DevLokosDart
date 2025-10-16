@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html;
 import '../models/episode.dart';
 
 class YouTubeScraper {
-  static const String _playlistUrl = 'https://www.youtube.com/playlist?list=PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ';
+  // static const String _playlistUrl = 'https://www.youtube.com/playlist?list=PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ'; // No usado por ahora
   
   /// Obtiene todos los episodios de la playlist de YouTube
   static Future<List<Episode>> getPlaylistEpisodes() async {
@@ -26,66 +25,6 @@ class YouTubeScraper {
     } catch (e) {
       throw Exception('Error al hacer scraping de YouTube: $e');
     }
-  }
-  
-  /// Parsea el HTML de la playlist para extraer los episodios
-  static List<Episode> _parsePlaylistHtml(String htmlContent) {
-    final document = html.parse(htmlContent);
-    final episodes = <Episode>[];
-    
-    // Buscar los elementos de video en la playlist
-    final videoElements = document.querySelectorAll('tr.pl-video');
-    
-    for (int i = 0; i < videoElements.length; i++) {
-      final element = videoElements[i];
-      
-      try {
-        // Extraer información del video
-        final titleElement = element.querySelector('.pl-video-title a');
-        final title = titleElement?.text?.trim() ?? 'Título no disponible';
-        
-        final linkElement = element.querySelector('.pl-video-title a');
-        final href = linkElement?.attributes['href'] ?? '';
-        final videoId = _extractVideoId(href);
-        
-        final thumbnailElement = element.querySelector('.pl-video-thumbnail img');
-        final thumbnailUrl = thumbnailElement?.attributes['src'] ?? '';
-        
-        final durationElement = element.querySelector('.pl-video-time .timestamp');
-        final duration = durationElement?.text?.trim() ?? '0:00';
-        
-        // Crear el episodio
-        final episode = Episode(
-          id: 'episode_${i + 1}',
-          title: title,
-          description: 'Episodio del podcast DevLokos',
-          thumbnailUrl: thumbnailUrl,
-          youtubeVideoId: videoId,
-          duration: duration,
-          publishedDate: DateTime.now().subtract(Duration(days: i)),
-          category: 'Desarrollo',
-          tags: ['Flutter', 'Dart', 'Desarrollo', 'Podcast'],
-          isFeatured: i < 3, // Los primeros 3 son destacados
-        );
-        
-        episodes.add(episode);
-      } catch (e) {
-        print('Error al parsear episodio $i: $e');
-        continue;
-      }
-    }
-    
-    return episodes;
-  }
-  
-  /// Extrae el ID del video de YouTube desde la URL
-  static String _extractVideoId(String href) {
-    if (href.contains('watch?v=')) {
-      return href.split('watch?v=')[1].split('&')[0];
-    } else if (href.contains('youtu.be/')) {
-      return href.split('youtu.be/')[1].split('?')[0];
-    }
-    return '';
   }
   
   /// Obtiene episodios de ejemplo del podcast DevLokos
@@ -190,6 +129,16 @@ class YouTubeScraper {
     ];
   }
 
+  /// Extrae el ID del video de YouTube desde la URL
+  static String _extractVideoId(String href) {
+    if (href.contains('watch?v=')) {
+      return href.split('watch?v=')[1].split('&')[0];
+    } else if (href.contains('youtu.be/')) {
+      return href.split('youtu.be/')[1].split('?')[0];
+    }
+    return '';
+  }
+  
   /// Obtiene información adicional de un video específico
   static Future<Map<String, dynamic>> getVideoDetails(String videoId) async {
     try {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-import '../../providers/episode_provider.dart';
+import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../models/episode.dart';
-import '../../utils/app_theme.dart';
+import '../../utils/brand_colors.dart';
+import '../../widgets/episode_card.dart';
 
 class EpisodeDetailScreen extends StatefulWidget {
   final String episodeId;
@@ -20,7 +20,6 @@ class EpisodeDetailScreen extends StatefulWidget {
 
 class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
     with SingleTickerProviderStateMixin {
-  late YoutubePlayerController _youtubeController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   Episode? _episode;
@@ -50,33 +49,23 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
   }
 
   void _loadEpisode() {
-    final episodeProvider = Provider.of<EpisodeProvider>(context, listen: false);
-    _episode = episodeProvider.getEpisodeById(widget.episodeId);
-    
-    if (_episode != null) {
-      _initializeYoutubePlayer();
-    }
-  }
-
-  void _initializeYoutubePlayer() {
-    if (_episode != null) {
-      _youtubeController = YoutubePlayerController(
-        initialVideoId: _episode!.youtubeVideoId,
-        flags: const YoutubePlayerFlags(
-          autoPlay: false,
-          mute: false,
-          isLive: false,
-          forceHD: true,
-          enableCaption: true,
-          showLiveFullscreenButton: true,
-        ),
-      );
-    }
+    // Por ahora usamos datos de muestra, después se puede integrar con BLoC
+    _episode = Episode(
+      id: widget.episodeId,
+      title: 'Introducción a Flutter y Dart',
+      description: 'En este episodio exploramos los fundamentos de Flutter y Dart, las tecnologías que están revolucionando el desarrollo móvil multiplataforma.',
+      thumbnailUrl: 'https://img.youtube.com/vi/1gDhl4jeEuU/maxresdefault.jpg',
+      youtubeVideoId: '1gDhl4jeEuU',
+      duration: '45:30',
+      publishedDate: DateTime(2024, 1, 15),
+      category: 'Desarrollo Móvil',
+      tags: ['Flutter', 'Dart', 'Mobile', 'Cross-platform'],
+      isFeatured: true,
+    );
   }
 
   @override
   void dispose() {
-    _youtubeController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -87,11 +76,11 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
       return Scaffold(
         body: Container(
           decoration: const BoxDecoration(
-            gradient: AppTheme.backgroundGradient,
+            gradient: BrandColors.backgroundGradient,
           ),
           child: const Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
             ),
           ),
         ),
@@ -101,7 +90,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
+          gradient: BrandColors.backgroundGradient,
         ),
         child: SafeArea(
           child: FadeTransition(
@@ -129,7 +118,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
         onPressed: () => context.pop(),
         icon: const Icon(
           Icons.arrow_back,
-          color: AppTheme.textPrimary,
+          color: BrandColors.primaryWhite,
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
@@ -139,8 +128,8 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                AppTheme.primaryColor.withOpacity(0.8),
-                AppTheme.primaryColor.withOpacity(0.4),
+                BrandColors.primaryOrange.withOpacity(0.8),
+                BrandColors.primaryOrange.withOpacity(0.4),
               ],
             ),
           ),
@@ -148,16 +137,16 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.radio,
                   size: 48,
-                  color: Colors.white,
+                  color: BrandColors.primaryWhite,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'DevLokos Podcast',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: BrandColors.primaryWhite,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -176,28 +165,39 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Video Player
+            // Video Player Placeholder
             Container(
               height: 200,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                boxShadow: BrandColors.orangeShadow,
+                gradient: BrandColors.primaryGradient,
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: YoutubePlayer(
-                  controller: _youtubeController,
-                  showVideoProgressIndicator: true,
-                  progressIndicatorColor: AppTheme.primaryColor,
-                  onReady: () {
-                    print('YouTube player ready');
-                  },
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.play_circle_filled,
+                      size: 64,
+                      color: BrandColors.primaryWhite,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'YouTube Player',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: BrandColors.primaryWhite,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Se integrará próximamente',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: BrandColors.primaryWhite.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -208,7 +208,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
               _episode!.title,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
+                color: BrandColors.primaryWhite,
               ),
             ),
             const SizedBox(height: 16),
@@ -216,29 +216,29 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
             // Episode Details
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.access_time,
                   size: 16,
-                  color: AppTheme.textSecondary,
+                  color: BrandColors.grayMedium,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   _episode!.duration,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
+                    color: BrandColors.grayMedium,
                   ),
                 ),
                 const SizedBox(width: 16),
-                Icon(
+                const Icon(
                   Icons.category,
                   size: 16,
-                  color: AppTheme.textSecondary,
+                  color: BrandColors.grayMedium,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   _episode!.category,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
+                    color: BrandColors.grayMedium,
                   ),
                 ),
               ],
@@ -250,14 +250,14 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
               'Descripción',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
+                color: BrandColors.primaryWhite,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               _episode!.description,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.textSecondary,
+                color: BrandColors.grayMedium,
                 height: 1.5,
               ),
             ),
@@ -269,7 +269,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
                 'Tags',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+                  color: BrandColors.primaryWhite,
                 ),
               ),
               const SizedBox(height: 8),
@@ -283,16 +283,16 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentColor.withOpacity(0.1),
+                      color: BrandColors.primaryOrange.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppTheme.accentColor.withOpacity(0.3),
+                        color: BrandColors.primaryOrange.withOpacity(0.3),
                       ),
                     ),
                     child: Text(
                       tag,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.accentColor,
+                        color: BrandColors.primaryOrange,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

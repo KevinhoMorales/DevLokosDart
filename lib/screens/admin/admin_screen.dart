@@ -160,7 +160,7 @@ class _AdminScreenState extends State<AdminScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.info_outline,
                             color: AppTheme.accentColor,
                             size: 20,

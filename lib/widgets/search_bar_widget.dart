@@ -32,7 +32,7 @@ class SearchBarWidget extends StatelessWidget {
           hintStyle: TextStyle(
             color: AppTheme.textSecondary.withOpacity(0.7),
           ),
-          prefixIcon: Icon(
+          prefixIcon: const Icon(
             Icons.search,
             color: AppTheme.primaryColor,
           ),
@@ -42,7 +42,7 @@ class SearchBarWidget extends StatelessWidget {
                     controller.clear();
                     onChanged('');
                   },
-                  icon: Icon(
+                  icon: const Icon(
                     Icons.clear,
                     color: AppTheme.textSecondary,
                   ),

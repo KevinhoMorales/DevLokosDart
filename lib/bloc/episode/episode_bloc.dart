@@ -145,7 +145,7 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
     try {
       final episode = await _repository.getEpisodeById(event.episodeId);
       if (episode == null) {
-        emit(EpisodeError(message: 'Episodio no encontrado'));
+        emit(const EpisodeError(message: 'Episodio no encontrado'));
         return;
       }
 

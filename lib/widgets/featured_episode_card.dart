@@ -154,7 +154,7 @@ class FeaturedEpisodeCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.access_time,
                         size: 14,
                         color: AppTheme.textLight,
@@ -167,7 +167,7 @@ class FeaturedEpisodeCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      Icon(
+                      const Icon(
                         Icons.category,
                         size: 14,
                         color: AppTheme.textLight,

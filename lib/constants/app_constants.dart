@@ -5,7 +5,7 @@ class AppConstants {
   static const String youtubeApiKey = 'YOUR_YOUTUBE_API_KEY'; // Necesitarás configurar esto
   
   // App Info
-  static const String appName = 'DevLokos Podcast';
+  static const String appName = 'DevLokos';
   static const String appVersion = '1.0.0';
   
   // Firebase Collections

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../utils/app_theme.dart';
-import '../../constants/app_constants.dart';
+import '../../bloc/auth/auth_bloc_exports.dart';
+import '../../utils/brand_colors.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/gradient_button.dart';
 
@@ -71,19 +70,22 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate() && _acceptTerms) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.createUserWithEmailAndPassword(
-        _emailController.text.trim(),
-        _passwordController.text,
+      context.read<AuthBloc>().add(
+        AuthRegisterRequested(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          name: _nameController.text.trim(),
+        ),
       );
-
-      if (authProvider.isAuthenticated && mounted) {
-        context.go('/home');
-      }
     } else if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Debes aceptar los términos y condiciones'),
+        SnackBar(
+          content: const Text('Debes aceptar los términos y condiciones'),
+          backgroundColor: BrandColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -92,14 +94,14 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.backgroundGradient,
-        ),
+             body: Container(
+               decoration: const BoxDecoration(
+                 color: BrandColors.primaryBlack,
+               ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppConstants.defaultPadding),
+              padding: const EdgeInsets.all(24.0),
               child: AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
@@ -131,25 +133,22 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget _buildHeader() {
     return Column(
       children: [
-        // Logo
+        // Logo DevLokos oficial
         Container(
-          width: 100,
-          height: 100,
+          width: 160,
+          height: 120,
           decoration: BoxDecoration(
-            gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            color: BrandColors.primaryBlack,
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: const Icon(
-            Icons.radio,
-            size: 50,
-            color: Colors.white,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Image.asset(
+              'assets/icons/devlokos_icon.png',
+              width: 140,
+              height: 100,
+              fit: BoxFit.contain,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -157,14 +156,14 @@ class _RegisterScreenState extends State<RegisterScreen>
           '¡Únete a DevLokos!',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
+            color: BrandColors.primaryWhite,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Crea tu cuenta para comenzar',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: AppTheme.textSecondary,
+            color: BrandColors.grayMedium,
           ),
         ),
       ],
@@ -172,17 +171,46 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildRegisterForm() {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        return Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              CustomTextField(
-                controller: _nameController,
-                labelText: 'Nombre completo',
-                hintText: 'Tu nombre completo',
-                prefixIcon: Icons.person_outlined,
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthRegisterSuccess || state is AuthAuthenticated) {
+          context.go('/home');
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: BrandColors.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: BrandColors.blackLight.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: BrandColors.primaryOrange.withOpacity(0.3),
+              width: 1,
+            ),
+            boxShadow: BrandColors.blackShadow,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                CustomTextField(
+                  controller: _nameController,
+                  labelText: 'Nombre completo',
+                  hintText: 'Tu nombre completo',
+                  prefixIcon: Icons.person_outlined,
+                  textColor: BrandColors.primaryWhite,
+                  borderColor: BrandColors.primaryOrange,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu nombre';
@@ -193,13 +221,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _emailController,
-                labelText: 'Correo electrónico',
-                hintText: 'tu@email.com',
-                keyboardType: TextInputType.emailAddress,
-                prefixIcon: Icons.email_outlined,
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _emailController,
+                  labelText: 'Correo electrónico',
+                  hintText: 'tu@email.com',
+                  keyboardType: TextInputType.emailAddress,
+                  prefixIcon: Icons.email_outlined,
+                  textColor: BrandColors.primaryWhite,
+                  borderColor: BrandColors.primaryOrange,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Por favor ingresa tu correo electrónico';
@@ -210,13 +240,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _passwordController,
-                labelText: 'Contraseña',
-                hintText: 'Mínimo 6 caracteres',
-                obscureText: _obscurePassword,
-                prefixIcon: Icons.lock_outlined,
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _passwordController,
+                  labelText: 'Contraseña',
+                  hintText: 'Mínimo 6 caracteres',
+                  obscureText: _obscurePassword,
+                  prefixIcon: Icons.lock_outlined,
+                  textColor: BrandColors.primaryWhite,
+                  borderColor: BrandColors.primaryOrange,
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -237,13 +269,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _confirmPasswordController,
-                labelText: 'Confirmar contraseña',
-                hintText: 'Repite tu contraseña',
-                obscureText: _obscureConfirmPassword,
-                prefixIcon: Icons.lock_outlined,
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _confirmPasswordController,
+                  labelText: 'Confirmar contraseña',
+                  hintText: 'Repite tu contraseña',
+                  obscureText: _obscureConfirmPassword,
+                  prefixIcon: Icons.lock_outlined,
+                  textColor: BrandColors.primaryWhite,
+                  borderColor: BrandColors.primaryOrange,
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
@@ -264,46 +298,33 @@ class _RegisterScreenState extends State<RegisterScreen>
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              _buildTermsCheckbox(),
-              const SizedBox(height: 24),
-              if (authProvider.errorMessage != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: AppTheme.errorColor.withOpacity(0.3),
+                const SizedBox(height: 16),
+                _buildTermsCheckbox(),
+                const SizedBox(height: 24),
+                if (state is AuthLoading)
+                  Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: BrandColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: AppTheme.errorColor,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          authProvider.errorMessage!,
-                          style: TextStyle(
-                            color: AppTheme.errorColor,
-                            fontSize: 14,
-                          ),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          BrandColors.primaryWhite,
                         ),
                       ),
-                    ],
+                    ),
+                  )
+                else
+                  GradientButton(
+                    onPressed: _handleRegister,
+                    text: 'Crear Cuenta',
+                    gradient: BrandColors.primaryGradient,
+                    textColor: BrandColors.primaryWhite,
                   ),
-                ),
-              GradientButton(
-                onPressed: authProvider.isLoading ? null : _handleRegister,
-                text: 'Crear Cuenta',
-                isLoading: authProvider.isLoading,
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -320,7 +341,8 @@ class _RegisterScreenState extends State<RegisterScreen>
               _acceptTerms = value ?? false;
             });
           },
-          activeColor: AppTheme.primaryColor,
+          activeColor: BrandColors.primaryOrange,
+          checkColor: BrandColors.primaryWhite,
         ),
         Expanded(
           child: GestureDetector(
@@ -332,22 +354,22 @@ class _RegisterScreenState extends State<RegisterScreen>
             child: RichText(
               text: TextSpan(
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondary,
+                  color: BrandColors.grayMedium,
                 ),
-                children: [
-                  const TextSpan(text: 'Acepto los '),
+                children: const [
+                  TextSpan(text: 'Acepto los '),
                   TextSpan(
                     text: 'términos y condiciones',
                     style: TextStyle(
-                      color: AppTheme.primaryColor,
+                      color: BrandColors.primaryOrange,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const TextSpan(text: ' y la '),
+                  TextSpan(text: ' y la '),
                   TextSpan(
                     text: 'política de privacidad',
                     style: TextStyle(
-                      color: AppTheme.primaryColor,
+                      color: BrandColors.primaryOrange,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -361,18 +383,38 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildLoginLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text('¿Ya tienes cuenta? '),
-        TextButton(
-          onPressed: () => context.go('/login'),
-          child: const Text(
-            'Inicia sesión aquí',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      decoration: BoxDecoration(
+        color: BrandColors.primaryOrange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withOpacity(0.3),
         ),
-      ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            '¿Ya tienes cuenta? ',
+            style: TextStyle(
+              color: BrandColors.grayMedium,
+              fontSize: 14,
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.go('/login'),
+            child: const Text(
+              'Inicia sesión aquí',
+              style: TextStyle(
+                color: BrandColors.primaryOrange,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
