@@ -1,4 +1,4 @@
-# 🏗️ Arquitectura MVVM con BLoC - DevLokos Podcast
+# 🏗️ Arquitectura MVVM con BLoC - DevLokos
 
 ## 📋 Resumen
 

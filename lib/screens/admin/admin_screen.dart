@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/episode_provider.dart';
 import '../../services/firestore_seeder.dart';
 import '../../utils/app_theme.dart';
@@ -89,7 +90,15 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        // Permitir navegación hacia atrás normalmente
+        if (!didPop) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Administración'),
         backgroundColor: Colors.transparent,
@@ -190,6 +199,7 @@ class _AdminScreenState extends State<AdminScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

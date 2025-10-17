@@ -1,4 +1,4 @@
-# Configuración de Firebase para DevLokos Podcast
+# Configuración de Firebase para DevLokos
 
 ## Pasos para configurar Firebase:
 
@@ -26,7 +26,7 @@
 ### 4. Configurar Android App
 1. En la página principal del proyecto, haz clic en el ícono de Android
 2. Nombre del paquete Android: `com.devlokos.devlokosdart`
-3. Apodo de la aplicación: `DevLokos Podcast`
+3. Apodo de la aplicación: `DevLokos`
 4. Certificado SHA-1: (opcional para desarrollo)
 5. Haz clic en "Registrar aplicación"
 6. Descarga el archivo `google-services.json`
@@ -35,7 +35,7 @@
 ### 5. Configurar iOS App (opcional)
 1. En la página principal del proyecto, haz clic en el ícono de iOS
 2. ID del paquete iOS: `com.devlokos.devlokosdart`
-3. Apodo de la aplicación: `DevLokos Podcast`
+3. Apodo de la aplicación: `DevLokos`
 4. Haz clic en "Registrar aplicación"
 5. Descarga el archivo `GoogleService-Info.plist`
 6. Coloca el archivo en: `ios/Runner/GoogleService-Info.plist`

@@ -70,7 +70,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
   Future<void> _handlePasswordReset() async {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(
+      context.read<AuthBlocSimple>().add(
         AuthPasswordResetRequested(
           email: _emailController.text.trim(),
         ),
@@ -80,15 +80,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-             body: Container(
-               decoration: const BoxDecoration(
-                 color: BrandColors.primaryBlack,
-               ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        // Navegar siempre al login screen
+        if (!didPop) {
+          context.go('/login');
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            color: BrandColors.primaryBlack,
+          ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(20.0),
               child: AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
@@ -100,12 +108,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildLogo(),
-                          const SizedBox(height: 32),
-                          _buildHeader(),
-                          const SizedBox(height: 32),
-                          _buildForm(),
                           const SizedBox(height: 24),
-                          _buildBackToLogin(),
+                          _buildHeader(),
+                          const SizedBox(height: 24),
+                          _buildForm(),
                         ],
                       ),
                     ),
@@ -116,51 +122,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           ),
         ),
       ),
+    ),
     );
   }
 
   Widget _buildLogo() {
     return ScaleTransition(
       scale: _logoScaleAnimation,
-      child: Container(
-        width: 140,
-        height: 140,
-        decoration: BoxDecoration(
-          color: BrandColors.primaryBlack,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-        // Logo DevLokos oficial
-        Container(
-          width: 160,
-          height: 80,
+        child: Container(
+          width: 120,
+          height: 120,
           decoration: BoxDecoration(
             color: BrandColors.primaryBlack,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: Image.asset(
-              'assets/icons/devlokos_icon.png',
-              width: 140,
-              height: 60,
-              fit: BoxFit.contain,
-            ),
-          ),
+          borderRadius: BorderRadius.circular(20),
         ),
-            const SizedBox(height: 8),
-            // Text "DevLokos"
-            Text(
-              'DevLokos',
-              style: TextStyle(
-                color: BrandColors.primaryOrange,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.asset(
+            'assets/icons/devlokos_icon.png',
+            width: 100,
+            height: 100,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );
@@ -192,7 +175,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 
   Widget _buildForm() {
-    return BlocConsumer<AuthBloc, AuthState>(
+    return BlocConsumer<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthPasswordResetSuccess) {
           _showSuccessDialog(state.message);
@@ -211,7 +194,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       },
       builder: (context, state) {
         return Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: BrandColors.blackLight.withOpacity(0.8),
             borderRadius: BorderRadius.circular(20),
@@ -228,7 +211,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                 CustomTextField(
                   controller: _emailController,
                   labelText: 'Correo electrónico',
-                  hintText: 'tu@email.com',
+                  hintText: 'info@devlokos.com',
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: Icons.email_outlined,
                   textColor: BrandColors.primaryWhite,
@@ -243,7 +226,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 if (state is AuthLoading)
                   Container(
                     height: 50,
@@ -262,7 +245,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                 else
                   GradientButton(
                     onPressed: _handlePasswordReset,
-                    text: 'Enviar Enlace de Recuperación',
+                    text: 'Enviar Enlace',
                     gradient: BrandColors.primaryGradient,
                     textColor: BrandColors.primaryWhite,
                   ),
@@ -274,47 +257,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     );
   }
 
-  Widget _buildBackToLogin() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      decoration: BoxDecoration(
-        color: BrandColors.primaryOrange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.arrow_back,
-            color: BrandColors.primaryOrange,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            '¿Recordaste tu contraseña? ',
-            style: TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 14,
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.go('/login'),
-            child: const Text(
-              'Volver al login',
-              style: TextStyle(
-                color: BrandColors.primaryOrange,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showSuccessDialog(String message) {
     showDialog(

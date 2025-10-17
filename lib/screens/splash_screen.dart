@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../bloc/auth/auth_bloc_exports.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/brand_colors.dart';
+import '../utils/environment_manager.dart';
+import '../utils/user_manager.dart';
 import '../constants/app_constants.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -54,14 +56,76 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(const Duration(seconds: 3));
     
     if (mounted) {
-      // Verificar el estado de autenticación
-      final authState = context.read<AuthBloc>().state;
+      await _checkUserAndNavigate();
+    }
+  }
+
+  Future<void> _checkUserAndNavigate() async {
+    try {
+      // 1. Verificar si hay un usuario guardado localmente
+      final hasLocalUser = await UserManager.hasUser();
       
-      if (authState is AuthAuthenticated) {
-        context.go('/home');
-      } else {
-        context.go('/login');
+      if (hasLocalUser) {
+        // Si hay usuario local, verificar si existe en Firestore
+        final localUser = await UserManager.getUser();
+        if (localUser != null) {
+          final existsInFirestore = await _checkUserExistsInFirestore(localUser.uid);
+          
+          if (existsInFirestore) {
+            // Usuario existe en Firestore, ir a home
+            context.go('/home');
+            return;
+          } else {
+            // Usuario no existe en Firestore, limpiar local y ir a login
+            await UserManager.deleteUser();
+            context.go('/login');
+            return;
+          }
+        }
       }
+
+      // 2. Si no hay usuario local, verificar Firebase Auth
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      
+      if (firebaseUser != null) {
+        // Hay usuario en Firebase Auth, verificar en Firestore
+        final existsInFirestore = await _checkUserExistsInFirestore(firebaseUser.uid);
+        
+        if (existsInFirestore) {
+          // Usuario existe en Firestore, guardar localmente y ir a home
+          final userModel = UserModel.fromFirebaseUser(firebaseUser);
+          await UserManager.saveUser(userModel);
+          context.go('/home');
+          return;
+        } else {
+          // Usuario no existe en Firestore, cerrar sesión y ir a login
+          await FirebaseAuth.instance.signOut();
+          context.go('/login');
+          return;
+        }
+      }
+
+      // 3. No hay usuario en ningún lado, ir a login
+      context.go('/login');
+      
+    } catch (e) {
+      // En caso de error, ir a login por seguridad
+      print('Error en _checkUserAndNavigate: $e');
+      context.go('/login');
+    }
+  }
+
+  Future<bool> _checkUserExistsInFirestore(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection(EnvironmentManager.getUsersCollection())
+          .doc(uid)
+          .get();
+      
+      return doc.exists && doc.data() != null;
+    } catch (e) {
+      print('Error al verificar usuario en Firestore: $e');
+      return false;
     }
   }
 

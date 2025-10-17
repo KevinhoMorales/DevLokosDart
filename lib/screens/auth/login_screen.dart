@@ -73,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(
+      context.read<AuthBlocSimple>().add(
         AuthLoginRequested(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -84,45 +84,77 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-             body: Container(
-               decoration: const BoxDecoration(
-                 color: BrandColors.primaryBlack,
-               ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: AnimatedBuilder(
-                animation: _animationController,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildLogo(),
-                          // const SizedBox(height: 8),
-                          _buildWelcomeText(),
-                          const SizedBox(height: 16),
-                          _buildLoginForm(),
-                          const SizedBox(height: 24),
-                          _buildForgotPasswordLink(),
-                          const SizedBox(height: 16),
-                          _buildRegisterLink(),
-                        ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        // Si el usuario presiona el botón back, mostrar diálogo de confirmación
+        if (!didPop) {
+          final shouldPop = await _showExitDialog();
+          if (shouldPop && context.mounted) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            color: BrandColors.primaryBlack,
+          ),
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: AnimatedBuilder(
+                  animation: _animationController,
+                  builder: (context, child) {
+                    return FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildLogo(),
+                            // const SizedBox(height: 8),
+                            _buildWelcomeText(),
+                            const SizedBox(height: 16),
+                            _buildLoginForm(),
+                            const SizedBox(height: 24),
+                            _buildForgotPasswordLink(),
+                            const SizedBox(height: 16),
+                            _buildRegisterLink(),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<bool> _showExitDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Salir de la aplicación'),
+        content: const Text('¿Estás seguro de que quieres salir de DevLokos?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Salir'),
+          ),
+        ],
+      ),
+    ) ?? false;
   }
 
   Widget _buildLogo() {
@@ -181,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildLoginForm() {
-    return BlocConsumer<AuthBloc, AuthState>(
+    return BlocConsumer<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           context.go('/home');

@@ -70,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate() && _acceptTerms) {
-      context.read<AuthBloc>().add(
+      context.read<AuthBlocSimple>().add(
         AuthRegisterRequested(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -93,11 +93,19 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-             body: Container(
-               decoration: const BoxDecoration(
-                 color: BrandColors.primaryBlack,
-               ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        // Navegar siempre al login screen
+        if (!didPop) {
+          context.go('/login');
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            color: BrandColors.primaryBlack,
+          ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -115,8 +123,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                           _buildHeader(),
                           const SizedBox(height: 32),
                           _buildRegisterForm(),
-                          const SizedBox(height: 24),
-                          _buildLoginLink(),
                         ],
                       ),
                     ),
@@ -127,6 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -157,13 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: BrandColors.primaryWhite,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Crea tu cuenta para comenzar',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: BrandColors.grayMedium,
+            fontSize: 20,
           ),
         ),
       ],
@@ -171,7 +172,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildRegisterForm() {
-    return BlocConsumer<AuthBloc, AuthState>(
+    return BlocConsumer<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthRegisterSuccess || state is AuthAuthenticated) {
           context.go('/home');
@@ -207,7 +208,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 CustomTextField(
                   controller: _nameController,
                   labelText: 'Nombre completo',
-                  hintText: 'Tu nombre completo',
+                  hintText: 'Nombre y apellido',
                   prefixIcon: Icons.person_outlined,
                   textColor: BrandColors.primaryWhite,
                   borderColor: BrandColors.primaryOrange,
@@ -225,7 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 CustomTextField(
                   controller: _emailController,
                   labelText: 'Correo electrónico',
-                  hintText: 'tu@email.com',
+                  hintText: 'info@devlokos.com',
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: Icons.email_outlined,
                   textColor: BrandColors.primaryWhite,
@@ -244,7 +245,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 CustomTextField(
                   controller: _passwordController,
                   labelText: 'Contraseña',
-                  hintText: 'Mínimo 6 caracteres',
+                  hintText: '********',
                   obscureText: _obscurePassword,
                   prefixIcon: Icons.lock_outlined,
                   textColor: BrandColors.primaryWhite,
@@ -273,7 +274,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 CustomTextField(
                   controller: _confirmPasswordController,
                   labelText: 'Confirmar contraseña',
-                  hintText: 'Repite tu contraseña',
+                  hintText: '********',
                   obscureText: _obscureConfirmPassword,
                   prefixIcon: Icons.lock_outlined,
                   textColor: BrandColors.primaryWhite,

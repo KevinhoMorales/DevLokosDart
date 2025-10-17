@@ -1,4 +1,4 @@
-# DevLokos Podcast App
+# DevLokos App
 
 Una aplicación móvil moderna para el podcast DevLokos, desarrollada con Flutter y Firebase. La aplicación permite a los usuarios registrarse, iniciar sesión y explorar episodios del podcast con reproducción integrada de YouTube.
 
@@ -104,7 +104,7 @@ flutter pub get
 #### Configurar Android
 1. Agrega una app Android en Firebase Console
 2. Nombre del paquete: `com.devlokos.devlokosdart`
-3. Apodo: `DevLokos Podcast`
+3. Apodo: `DevLokos`
 4. Descarga `google-services.json`
 5. Coloca en `android/app/google-services.json`
 
@@ -286,7 +286,7 @@ Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 
 ## 📞 Contacto
 
-DevLokos Podcast - [@devlokos](https://twitter.com/devlokos)
+DevLokos - [@devlokos](https://twitter.com/devlokos)
 
 Link del proyecto: [https://github.com/tu-usuario/DevLokosDart](https://github.com/tu-usuario/DevLokosDart)
-DevLokos Podcast 
+DevLokos 

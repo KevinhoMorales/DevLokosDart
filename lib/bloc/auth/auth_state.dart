@@ -52,10 +52,10 @@ class AuthError extends AuthState {
 
 /// Estado de éxito para registro
 class AuthRegisterSuccess extends AuthState {
-  final User user;
+  final User? user;
 
   const AuthRegisterSuccess({
-    required this.user,
+    this.user,
   });
 
   @override
@@ -72,6 +72,11 @@ class AuthPasswordResetSuccess extends AuthState {
 
   @override
   List<Object?> get props => [message];
+}
+
+/// Estado de éxito para envío de email de recuperación
+class AuthPasswordResetSent extends AuthState {
+  const AuthPasswordResetSent();
 }
 
 

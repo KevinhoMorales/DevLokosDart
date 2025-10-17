@@ -8,7 +8,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:devlokos_podcast/main.dart';
 import 'package:devlokos_podcast/bloc/episode/episode_bloc_exports.dart';
 import 'package:devlokos_podcast/repository/episode_repository.dart';
 
@@ -27,7 +26,7 @@ void main() {
         child: const MaterialApp(
           home: Scaffold(
             body: Center(
-              child: Text('DevLokos Podcast'),
+              child: Text('DevLokos'),
             ),
           ),
         ),
@@ -35,6 +34,6 @@ void main() {
     );
 
     // Verify that the app loads
-    expect(find.text('DevLokos Podcast'), findsOneWidget);
+    expect(find.text('DevLokos'), findsOneWidget);
   });
 }

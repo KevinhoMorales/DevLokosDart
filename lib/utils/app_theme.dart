@@ -67,6 +67,23 @@ class AppTheme {
             horizontal: 24,
             vertical: 12,
           ),
+          textStyle: const TextStyle(
+            textBaseline: TextBaseline.alphabetic,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          textStyle: const TextStyle(
+            textBaseline: TextBaseline.alphabetic,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          textStyle: const TextStyle(
+            textBaseline: TextBaseline.alphabetic,
+          ),
         ),
       ),
       textTheme: const TextTheme(
@@ -152,6 +169,23 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(
             horizontal: 24,
             vertical: 12,
+          ),
+          textStyle: const TextStyle(
+            textBaseline: TextBaseline.alphabetic,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          textStyle: const TextStyle(
+            textBaseline: TextBaseline.alphabetic,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          textStyle: const TextStyle(
+            textBaseline: TextBaseline.alphabetic,
           ),
         ),
       ),

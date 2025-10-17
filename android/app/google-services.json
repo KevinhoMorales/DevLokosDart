@@ -7,12 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:458512617441:android:4e8929cf2c778dfd9c8ca0",
+        "mobilesdk_app_id": "1:458512617441:android:c7bcf7ba1aeed9229c8ca0",
         "android_client_info": {
-          "package_name": "com.devlokos.devlokos"
+          "package_name": "com.devlokos.devlokosdart"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "458512617441-6ubkota7oqisioga1jct8pqjvn6cqgp7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCSVo_XuC7P_oLbwbAa6V4zyaQ93MrhsO4"
@@ -20,26 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:458512617441:android:c38d499d355577519c8ca0",
-        "android_client_info": {
-          "package_name": "com.devlokos.devlokos_podcast"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCSVo_XuC7P_oLbwbAa6V4zyaQ93MrhsO4"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "458512617441-6ubkota7oqisioga1jct8pqjvn6cqgp7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

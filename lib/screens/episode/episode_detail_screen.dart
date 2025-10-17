@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../models/episode.dart';
 import '../../utils/brand_colors.dart';
-import '../../widgets/episode_card.dart';
 
 class EpisodeDetailScreen extends StatefulWidget {
   final String episodeId;
@@ -87,19 +84,28 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
       );
     }
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: BrandColors.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: CustomScrollView(
-              slivers: [
-                _buildAppBar(),
-                _buildContent(),
-              ],
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        // Permitir navegación hacia atrás normalmente
+        if (!didPop) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: BrandColors.backgroundGradient,
+          ),
+          child: SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: CustomScrollView(
+                slivers: [
+                  _buildAppBar(),
+                  _buildContent(),
+                ],
+              ),
             ),
           ),
         ),
@@ -144,7 +150,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'DevLokos Podcast',
+                  'DevLokos',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: BrandColors.primaryWhite,
                     fontWeight: FontWeight.bold,

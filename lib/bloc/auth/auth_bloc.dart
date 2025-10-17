@@ -1,17 +1,22 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc/bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:devlokos_podcast/utils/environment_manager.dart';
+import 'package:devlokos_podcast/utils/user_manager.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
-/// BLoC para manejar la autenticación con Firebase
-class AuthBloc extends Bloc<AuthEvent, AuthState> {
+/// Bloc simplificado para manejar la autenticación de usuarios
+class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
   final firebase_auth.FirebaseAuth _firebaseAuth;
+  final FirebaseFirestore _firestore;
 
-  AuthBloc({firebase_auth.FirebaseAuth? firebaseAuth})
-      : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance,
-        super(const AuthInitial()) {
-    
-    // Registrar todos los manejadores de eventos
+  AuthBlocSimple({
+    firebase_auth.FirebaseAuth? firebaseAuth,
+    FirebaseFirestore? firestore,
+  }) : _firebaseAuth = firebaseAuth ?? firebase_auth.FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       super(const AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
     on<AuthRegisterRequested>(_onAuthRegisterRequested);
@@ -19,14 +24,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthPasswordResetRequested>(_onAuthPasswordResetRequested);
     on<AuthErrorCleared>(_onAuthErrorCleared);
 
-    // Escuchar cambios en el estado de autenticación
-    _firebaseAuth.authStateChanges().listen((firebase_auth.User? user) {
-      if (user != null) {
-        emit(AuthAuthenticated(user: user));
-      } else {
-        emit(const AuthUnauthenticated());
-      }
-    });
+    // Verificación inicial simple
+    add(const AuthCheckRequested());
   }
 
   /// Verifica el estado de autenticación actual
@@ -37,8 +36,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
+      // Verificación simple sin usar authStateChanges
       final user = _firebaseAuth.currentUser;
-      if (user != null) {
+      if (user != null && user.uid.isNotEmpty) {
         emit(AuthAuthenticated(user: user));
       } else {
         emit(const AuthUnauthenticated());
@@ -59,17 +59,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
 
+      // Hacer login y capturar UserCredential
       final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: event.email.trim(),
         password: event.password,
       );
 
+      // Usar userCredential.user de forma segura
       if (userCredential.user != null) {
-        emit(AuthAuthenticated(user: userCredential.user!));
+        try {
+          final basicUser = _createBasicUser(userCredential.user!);
+          emit(AuthAuthenticated(user: basicUser));
+        } catch (e) {
+          print('Error al crear usuario básico: $e');
+          emit(const AuthError(
+            message: 'Error al obtener información del usuario',
+            code: 'user_info_error',
+          ));
+        }
       } else {
         emit(const AuthError(
-          message: 'Error al iniciar sesión',
-          code: 'login_failed',
+          message: 'Error al obtener información del usuario',
+          code: 'user_info_error',
         ));
       }
     } on firebase_auth.FirebaseAuthException catch (e) {
@@ -92,29 +103,74 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       emit(const AuthLoading());
+      print('Iniciando registro para: ${event.email}');
 
+      // Crear usuario y capturar el UserCredential
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: event.email.trim(),
         password: event.password,
       );
 
+      print('Usuario creado en Firebase Auth exitosamente');
+
+      // Obtener datos del usuario de forma segura sin usar currentUser
+      String? uid;
+      String? email;
+      
+      // Usar userCredential.user de forma segura
       if (userCredential.user != null) {
-        // Actualizar el perfil del usuario con el nombre
-        await userCredential.user!.updateDisplayName(event.name.trim());
-        
-        emit(AuthRegisterSuccess(user: userCredential.user!));
-      } else {
-        emit(const AuthError(
-          message: 'Error al crear la cuenta',
-          code: 'register_failed',
-        ));
+        try {
+          uid = userCredential.user!.uid;
+          email = userCredential.user!.email ?? event.email.trim();
+          print('Usuario obtenido: UID=$uid, Email=$email');
+          
+          // Actualizar el perfil del usuario
+          try {
+            await userCredential.user!.updateDisplayName(event.name.trim());
+            print('Perfil actualizado exitosamente');
+          } catch (e) {
+            print('Warning: Error al actualizar perfil: $e');
+          }
+        } catch (e) {
+          print('Error al acceder a userCredential.user: $e');
+          // Si hay error, usar datos del evento
+          uid = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+          email = event.email.trim();
+        }
       }
+
+      // Guardar en Firestore y localmente
+      if (uid != null) {
+        try {
+          await _saveUserToFirestoreBasic(
+            uid: uid,
+            email: email ?? event.email.trim(),
+            displayName: event.name.trim(),
+          );
+          
+          await _saveUserLocally(
+            uid: uid,
+            email: email ?? event.email.trim(),
+            displayName: event.name.trim(),
+          );
+          
+          print('Usuario guardado en Firestore y localmente');
+        } catch (e) {
+          print('Warning: Error al guardar en Firestore o localmente: $e');
+        }
+      }
+
+      // Emitir éxito
+      emit(const AuthRegisterSuccess());
+      
     } on firebase_auth.FirebaseAuthException catch (e) {
+      print('Error de Firebase Auth: ${e.code} - ${e.message}');
       emit(AuthError(
         message: _getAuthErrorMessage(e),
         code: e.code,
       ));
     } catch (e) {
+      print('Error inesperado en registro: $e');
       emit(AuthError(
         message: 'Error inesperado: $e',
         code: 'unexpected_error',
@@ -129,9 +185,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       emit(const AuthLoading());
-      
       await _firebaseAuth.signOut();
-      
       emit(const AuthUnauthenticated());
     } catch (e) {
       emit(AuthError(
@@ -141,21 +195,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Envía email de recuperación de contraseña
+  /// Envía un email para restablecer la contraseña
   Future<void> _onAuthPasswordResetRequested(
     AuthPasswordResetRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
       emit(const AuthLoading());
-
-      await _firebaseAuth.sendPasswordResetEmail(
-        email: event.email.trim(),
-      );
-
-        emit(AuthPasswordResetSuccess(
-          message: 'Se ha enviado un email de recuperación a ${event.email}',
-        ));
+      await _firebaseAuth.sendPasswordResetEmail(email: event.email.trim());
+      emit(const AuthPasswordResetSuccess(message: 'Se ha enviado un enlace de recuperación a tu correo electrónico'));
     } on firebase_auth.FirebaseAuthException catch (e) {
       emit(AuthError(
         message: _getAuthErrorMessage(e),
@@ -169,37 +217,99 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Limpia los errores
-  Future<void> _onAuthErrorCleared(
+  /// Limpia el error actual
+  void _onAuthErrorCleared(
     AuthErrorCleared event,
     Emitter<AuthState> emit,
-  ) async {
+  ) {
     emit(const AuthUnauthenticated());
+  }
+
+  /// Guarda un usuario en Firestore usando datos básicos
+  Future<void> _saveUserToFirestoreBasic({
+    required String uid,
+    required String email,
+    required String displayName,
+  }) async {
+    try {
+      final collectionName = EnvironmentManager.getUsersCollection();
+      print('Guardando usuario en Firestore - Colección: $collectionName');
+      print('UID: $uid, Email: $email, Name: $displayName');
+      
+      final userData = {
+        'uid': uid,
+        'email': email,
+        'displayName': displayName,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true,
+      };
+
+      await _firestore
+          .collection(collectionName)
+          .doc(uid)
+          .set(userData);
+          
+      print('Usuario guardado exitosamente en Firestore');
+    } catch (e) {
+      print('Error al guardar usuario en Firestore: $e');
+      rethrow; // Re-lanzar para que el método padre lo maneje
+    }
+  }
+
+  /// Guarda el usuario localmente usando UserManager
+  Future<void> _saveUserLocally({
+    required String uid,
+    required String email,
+    required String displayName,
+  }) async {
+    try {
+      print('Guardando usuario localmente...');
+      
+      // Crear un UserModel básico
+      final userModel = UserModel(
+        uid: uid,
+        email: email,
+        displayName: displayName,
+      );
+      
+      // Guardar usando UserManager
+      await UserManager.saveUser(userModel);
+      print('Usuario guardado localmente exitosamente');
+    } catch (e) {
+      print('Error al guardar usuario localmente: $e');
+      rethrow;
+    }
+  }
+
+  /// Crea un usuario básico para evitar problemas de tipo
+  firebase_auth.User _createBasicUser(firebase_auth.User originalUser) {
+    // Retornamos el usuario original ya que no podemos crear uno nuevo
+    // El problema está en el casting, no en el usuario en sí
+    return originalUser;
   }
 
   /// Convierte los códigos de error de Firebase a mensajes legibles
   String _getAuthErrorMessage(firebase_auth.FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
-        return 'No existe una cuenta con este email';
+        return 'No existe una cuenta con este correo electrónico';
       case 'wrong-password':
         return 'Contraseña incorrecta';
       case 'email-already-in-use':
-        return 'Ya existe una cuenta con este email';
+        return 'Ya existe una cuenta con este correo electrónico';
       case 'weak-password':
         return 'La contraseña es muy débil';
       case 'invalid-email':
-        return 'El email no es válido';
+        return 'El correo electrónico no es válido';
       case 'user-disabled':
         return 'Esta cuenta ha sido deshabilitada';
       case 'too-many-requests':
-        return 'Demasiados intentos. Intenta más tarde';
+        return 'Demasiados intentos fallidos. Intenta más tarde';
       case 'operation-not-allowed':
-        return 'Operación no permitida';
+        return 'Esta operación no está permitida';
       case 'invalid-credential':
-        return 'Credenciales inválidas';
-      case 'network-request-failed':
-        return 'Error de conexión. Verifica tu internet';
+        return 'Las credenciales no son válidas';
       default:
         return 'Error de autenticación: ${e.message}';
     }

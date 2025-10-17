@@ -29,8 +29,8 @@ class DevLokosApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<AuthBloc>(
-          create: (context) => AuthBloc()..add(const AuthCheckRequested()),
+        BlocProvider<AuthBlocSimple>(
+          create: (context) => AuthBlocSimple()..add(const AuthCheckRequested()),
         ),
         BlocProvider<EpisodeBloc>(
           create: (context) => EpisodeBloc(
@@ -39,7 +39,7 @@ class DevLokosApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp.router(
-        title: 'DevLokos Podcast',
+        title: 'DevLokos',
         theme: BrandColors.lightTheme,
         darkTheme: BrandColors.darkTheme,
         themeMode: ThemeMode.system,
