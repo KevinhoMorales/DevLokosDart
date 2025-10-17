@@ -21,10 +21,10 @@ class AuthLoading extends AuthState {
 
 /// Usuario autenticado
 class AuthAuthenticated extends AuthState {
-  final User user;
+  final User? user;
 
   const AuthAuthenticated({
-    required this.user,
+    this.user,
   });
 
   @override

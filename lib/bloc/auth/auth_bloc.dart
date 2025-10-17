@@ -59,24 +59,16 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
 
-      // Hacer login y capturar UserCredential
+      // Hacer login
       final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
         email: event.email.trim(),
         password: event.password,
       );
 
-      // Usar userCredential.user de forma segura
+      // Verificar que el usuario existe
       if (userCredential.user != null) {
-        try {
-          final basicUser = _createBasicUser(userCredential.user!);
-          emit(AuthAuthenticated(user: basicUser));
-        } catch (e) {
-          print('Error al crear usuario básico: $e');
-          emit(const AuthError(
-            message: 'Error al obtener información del usuario',
-            code: 'user_info_error',
-          ));
-        }
+        // Emitir autenticado sin pasar el objeto user directamente
+        emit(const AuthAuthenticated(user: null));
       } else {
         emit(const AuthError(
           message: 'Error al obtener información del usuario',
@@ -105,7 +97,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       emit(const AuthLoading());
       print('Iniciando registro para: ${event.email}');
 
-      // Crear usuario y capturar el UserCredential
+      // Crear usuario
       final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
         email: event.email.trim(),
         password: event.password,
@@ -113,44 +105,32 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
 
       print('Usuario creado en Firebase Auth exitosamente');
 
-      // Obtener datos del usuario de forma segura sin usar currentUser
-      String? uid;
-      String? email;
+      // Obtener datos básicos del usuario
+      final uid = userCredential.user?.uid;
+      final email = userCredential.user?.email ?? event.email.trim();
       
-      // Usar userCredential.user de forma segura
-      if (userCredential.user != null) {
-        try {
-          uid = userCredential.user!.uid;
-          email = userCredential.user!.email ?? event.email.trim();
-          print('Usuario obtenido: UID=$uid, Email=$email');
-          
-          // Actualizar el perfil del usuario
-          try {
-            await userCredential.user!.updateDisplayName(event.name.trim());
-            print('Perfil actualizado exitosamente');
-          } catch (e) {
-            print('Warning: Error al actualizar perfil: $e');
-          }
-        } catch (e) {
-          print('Error al acceder a userCredential.user: $e');
-          // Si hay error, usar datos del evento
-          uid = 'temp_${DateTime.now().millisecondsSinceEpoch}';
-          email = event.email.trim();
-        }
-      }
-
-      // Guardar en Firestore y localmente
       if (uid != null) {
+        print('Usuario obtenido: UID=$uid, Email=$email');
+        
+        // Actualizar el perfil del usuario
+        try {
+          await userCredential.user!.updateDisplayName(event.name.trim());
+          print('Perfil actualizado exitosamente');
+        } catch (e) {
+          print('Warning: Error al actualizar perfil: $e');
+        }
+
+        // Guardar en Firestore y localmente
         try {
           await _saveUserToFirestoreBasic(
             uid: uid,
-            email: email ?? event.email.trim(),
+            email: email,
             displayName: event.name.trim(),
           );
           
           await _saveUserLocally(
             uid: uid,
-            email: email ?? event.email.trim(),
+            email: email,
             displayName: event.name.trim(),
           );
           
@@ -160,7 +140,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         }
       }
 
-      // Emitir éxito
+      // Emitir éxito sin pasar el usuario para evitar PigeonUserDetails
       emit(const AuthRegisterSuccess());
       
     } on firebase_auth.FirebaseAuthException catch (e) {
@@ -178,14 +158,20 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Cierra la sesión del usuario
+  /// Cierra sesión
   Future<void> _onAuthLogoutRequested(
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
       emit(const AuthLoading());
+      
+      // Limpiar datos locales
+      await UserManager.deleteUser();
+      
+      // Cerrar sesión en Firebase
       await _firebaseAuth.signOut();
+      
       emit(const AuthUnauthenticated());
     } catch (e) {
       emit(AuthError(
@@ -195,15 +181,21 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Envía un email para restablecer la contraseña
+  /// Solicita restablecimiento de contraseña
   Future<void> _onAuthPasswordResetRequested(
     AuthPasswordResetRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
       emit(const AuthLoading());
-      await _firebaseAuth.sendPasswordResetEmail(email: event.email.trim());
-      emit(const AuthPasswordResetSuccess(message: 'Se ha enviado un enlace de recuperación a tu correo electrónico'));
+      
+      await _firebaseAuth.sendPasswordResetEmail(
+        email: event.email.trim(),
+      );
+      
+      emit(const AuthPasswordResetSuccess(
+        message: 'Se ha enviado un enlace de restablecimiento a tu correo electrónico',
+      ));
     } on firebase_auth.FirebaseAuthException catch (e) {
       emit(AuthError(
         message: _getAuthErrorMessage(e),
@@ -217,12 +209,12 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Limpia el error actual
-  void _onAuthErrorCleared(
+  /// Limpia errores
+  Future<void> _onAuthErrorCleared(
     AuthErrorCleared event,
     Emitter<AuthState> emit,
-  ) {
-    emit(const AuthUnauthenticated());
+  ) async {
+    emit(const AuthInitial());
   }
 
   /// Guarda un usuario en Firestore usando datos básicos
@@ -282,20 +274,13 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Crea un usuario básico para evitar problemas de tipo
-  firebase_auth.User _createBasicUser(firebase_auth.User originalUser) {
-    // Retornamos el usuario original ya que no podemos crear uno nuevo
-    // El problema está en el casting, no en el usuario en sí
-    return originalUser;
-  }
-
-  /// Convierte los códigos de error de Firebase a mensajes legibles
+  /// Convierte errores de Firebase Auth a mensajes legibles
   String _getAuthErrorMessage(firebase_auth.FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
-        return 'No existe una cuenta con este correo electrónico';
+        return 'No se encontró una cuenta con este correo electrónico';
       case 'wrong-password':
-        return 'Contraseña incorrecta';
+        return 'La contraseña es incorrecta';
       case 'email-already-in-use':
         return 'Ya existe una cuenta con este correo electrónico';
       case 'weak-password':
@@ -311,7 +296,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       case 'invalid-credential':
         return 'Las credenciales no son válidas';
       default:
-        return 'Error de autenticación: ${e.message}';
+        return e.message ?? 'Error de autenticación desconocido';
     }
   }
 }

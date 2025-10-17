@@ -73,7 +73,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
       return Scaffold(
         body: Container(
           decoration: const BoxDecoration(
-            gradient: BrandColors.backgroundGradient,
+            color: BrandColors.primaryBlack,
           ),
           child: const Center(
             child: CircularProgressIndicator(
@@ -95,7 +95,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
       child: Scaffold(
         body: Container(
           decoration: const BoxDecoration(
-            gradient: BrandColors.backgroundGradient,
+            color: BrandColors.primaryBlack,
           ),
           child: SafeArea(
             child: FadeTransition(
@@ -129,36 +129,10 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
       ),
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                BrandColors.primaryOrange.withOpacity(0.8),
-                BrandColors.primaryOrange.withOpacity(0.4),
-              ],
-            ),
+          decoration: const BoxDecoration(
+            color: BrandColors.primaryBlack,
           ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.radio,
-                  size: 48,
-                  color: BrandColors.primaryWhite,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'DevLokos',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: BrandColors.primaryWhite,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: const SizedBox.shrink(),
         ),
       ),
     );
@@ -176,8 +150,8 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
               height: 200,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: BrandColors.orangeShadow,
-                gradient: BrandColors.primaryGradient,
+                boxShadow: BrandColors.blackShadow,
+                color: BrandColors.blackLight,
               ),
               child: Center(
                 child: Column(
@@ -186,7 +160,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen>
                     const Icon(
                       Icons.play_circle_filled,
                       size: 64,
-                      color: BrandColors.primaryWhite,
+                      color: BrandColors.primaryOrange,
                     ),
                     const SizedBox(height: 8),
                     Text(

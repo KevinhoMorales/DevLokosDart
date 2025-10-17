@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/app_theme.dart';
+import '../utils/brand_colors.dart';
 
 class SearchBarWidget extends StatelessWidget {
   final TextEditingController controller;
@@ -17,24 +17,24 @@ class SearchBarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: BrandColors.blackLight.withOpacity(0.8),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.3),
+          color: BrandColors.primaryOrange.withOpacity(0.3),
         ),
       ),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(color: AppTheme.textPrimary),
+        style: const TextStyle(color: BrandColors.primaryWhite),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(
-            color: AppTheme.textSecondary.withOpacity(0.7),
+            color: BrandColors.grayMedium.withOpacity(0.7),
           ),
           prefixIcon: const Icon(
             Icons.search,
-            color: AppTheme.primaryColor,
+            color: BrandColors.primaryOrange,
           ),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
@@ -44,7 +44,7 @@ class SearchBarWidget extends StatelessWidget {
                   },
                   icon: const Icon(
                     Icons.clear,
-                    color: AppTheme.textSecondary,
+                    color: BrandColors.grayMedium,
                   ),
                 )
               : null,

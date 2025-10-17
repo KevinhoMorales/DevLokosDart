@@ -162,11 +162,11 @@ class YouTubeScraper {
     
     // Extraer descripción
     final descriptionElement = document.querySelector('#description-text');
-    final description = descriptionElement?.text?.trim() ?? '';
+    final description = descriptionElement?.text.trim() ?? '';
     
     // Extraer canal
     final channelElement = document.querySelector('#owner-text a');
-    final channel = channelElement?.text?.trim() ?? 'DevLokos';
+    final channel = channelElement?.text.trim() ?? 'DevLokos';
     
     return {
       'description': description,

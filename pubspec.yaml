@@ -27,10 +27,10 @@ dependencies:
   http: ^1.1.2
   html: ^0.15.4
   
-  # Firebase - using stable versions to avoid PigeonUserDetails error
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.15.3
-  cloud_firestore: ^4.13.6
+  # Firebase - using latest versions to fix PigeonUserDetails error
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
   
   # Utils
   intl: ^0.19.0

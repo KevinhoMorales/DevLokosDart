@@ -6,11 +6,12 @@ import 'bloc/episode/episode_bloc_exports.dart';
 import 'bloc/auth/auth_bloc_exports.dart';
 import 'repository/episode_repository.dart';
 import 'screens/splash_screen.dart';
-import 'screens/home/home_screen.dart';
 import 'screens/episode/episode_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
+import 'screens/profile/profile_screen.dart';
+import 'widgets/main_navigation.dart';
 import 'utils/brand_colors.dart';
 import 'firebase_options.dart';
 
@@ -71,7 +72,7 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const HomeScreen(),
+      builder: (context, state) => const MainNavigation(),
     ),
     GoRoute(
       path: '/episode/:id',
@@ -79,6 +80,10 @@ final GoRouter _router = GoRouter(
         final episodeId = state.pathParameters['id']!;
         return EpisodeDetailScreen(episodeId: episodeId);
       },
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
     ),
   ],
 );

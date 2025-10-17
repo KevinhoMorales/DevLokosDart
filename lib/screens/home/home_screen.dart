@@ -3,10 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../models/episode.dart';
-import '../../utils/app_theme.dart';
+import '../../utils/brand_colors.dart';
 import '../../widgets/episode_card.dart';
 import '../../widgets/featured_episode_card.dart';
 import '../../widgets/search_bar_widget.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen>
     context.read<EpisodeBloc>().add(const RefreshEpisodes());
   }
 
+
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -75,14 +78,15 @@ class _HomeScreenState extends State<HomeScreen>
         }
       },
       child: Scaffold(
+        appBar: const CustomAppBar(title: 'HOME'),
         body: Container(
           decoration: const BoxDecoration(
-            gradient: AppTheme.backgroundGradient,
+            color: BrandColors.primaryBlack,
           ),
           child: SafeArea(
             child: Column(
               children: [
-                _buildAppBar(),
+                _buildSearchBar(),
                 Expanded(
                   child: FadeTransition(
                     opacity: _fadeAnimation,
@@ -117,59 +121,22 @@ class _HomeScreenState extends State<HomeScreen>
     ) ?? false;
   }
 
-  Widget _buildAppBar() {
+  Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'DevLokos',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    'Podcast de Desarrollo',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                onPressed: _loadEpisodes,
-                icon: const Icon(
-                  Icons.refresh,
-                  color: AppTheme.primaryColor,
-                  size: 28,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          SearchBarWidget(
-            controller: _searchController,
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-              // Disparar búsqueda con BLoC
-              if (value.isNotEmpty) {
-                context.read<EpisodeBloc>().add(SearchEpisodes(query: value));
-              } else {
-                context.read<EpisodeBloc>().add(const ClearSearch());
-              }
-            },
-          ),
-        ],
+      child: SearchBarWidget(
+        controller: _searchController,
+        onChanged: (value) {
+          setState(() {
+            _searchQuery = value;
+          });
+          // Disparar búsqueda con BLoC
+          if (value.isNotEmpty) {
+            context.read<EpisodeBloc>().add(SearchEpisodes(query: value));
+          } else {
+            context.read<EpisodeBloc>().add(const ClearSearch());
+          }
+        },
       ),
     );
   }
@@ -180,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (state is EpisodeLoading) {
           return const Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
             ),
           );
         }
@@ -193,20 +160,20 @@ class _HomeScreenState extends State<HomeScreen>
                 const Icon(
                   Icons.error_outline,
                   size: 64,
-                  color: AppTheme.errorColor,
+                  color: BrandColors.error,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Error al cargar episodios',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.textPrimary,
+                    color: BrandColors.primaryWhite,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   state.message,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
+                    color: BrandColors.grayMedium,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -214,10 +181,10 @@ class _HomeScreenState extends State<HomeScreen>
                 ElevatedButton.icon(
                   onPressed: _loadEpisodes,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
+                  label: const Text('REINTENTAR'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: BrandColors.primaryOrange,
+                    foregroundColor: BrandColors.primaryWhite,
                   ),
                 ),
               ],
@@ -239,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen>
                   const Icon(
                     Icons.search_off,
                     size: 64,
-                    color: AppTheme.textSecondary,
+                    color: BrandColors.grayMedium,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -247,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ? 'No hay episodios disponibles'
                         : 'No se encontraron episodios',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.textPrimary,
+                      color: BrandColors.primaryWhite,
                     ),
                   ),
                   if (searchQuery.isNotEmpty) ...[
@@ -255,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen>
                     Text(
                       'Intenta con otros términos de búsqueda',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
+                        color: BrandColors.grayMedium,
                       ),
                     ),
                   ],
@@ -282,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen>
         // Estado inicial - mostrar loading
         return const Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
           ),
         );
       },
@@ -296,10 +263,11 @@ class _HomeScreenState extends State<HomeScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Episodios Destacados',
+          'EPISODIOS DESTACADOS',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
+            color: BrandColors.primaryWhite,
+            fontSize: 16,
           ),
         ),
         const SizedBox(height: 16),
@@ -331,10 +299,11 @@ class _HomeScreenState extends State<HomeScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _searchQuery.isEmpty ? 'Todos los Episodios' : 'Resultados de Búsqueda',
+          _searchQuery.isEmpty ? 'TODOS LOS EPISODIOS' : 'RESULTADO DE BÚSQUEDA',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
+            color: BrandColors.primaryWhite,
+            fontSize: 16,
           ),
         ),
         const SizedBox(height: 16),

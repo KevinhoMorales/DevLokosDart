@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/episode.dart';
-import '../utils/app_theme.dart';
+import '../utils/brand_colors.dart';
 
 class EpisodeCard extends StatelessWidget {
   final Episode episode;
@@ -19,18 +19,12 @@ class EpisodeCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: BrandColors.blackLight.withOpacity(0.8),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppTheme.primaryColor.withOpacity(0.2),
+            color: BrandColors.primaryOrange.withOpacity(0.2),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: BrandColors.blackShadow,
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -55,24 +49,24 @@ class EpisodeCard extends StatelessWidget {
                   child: CachedNetworkImage(
                     imageUrl: episode.thumbnailUrl,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.primaryColor,
+                      placeholder: (context, url) => Container(
+                        color: BrandColors.primaryOrange.withOpacity(0.1),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              BrandColors.primaryOrange,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      child: const Icon(
-                        Icons.play_circle_outline,
-                        color: AppTheme.primaryColor,
-                        size: 32,
+                      errorWidget: (context, url, error) => Container(
+                        color: BrandColors.primaryOrange.withOpacity(0.1),
+                        child: const Icon(
+                          Icons.play_circle_outline,
+                          color: BrandColors.primaryOrange,
+                          size: 32,
+                        ),
                       ),
-                    ),
                   ),
                 ),
               ),
@@ -87,7 +81,7 @@ class EpisodeCard extends StatelessWidget {
                       episode.title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
+                        color: BrandColors.primaryWhite,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -96,7 +90,7 @@ class EpisodeCard extends StatelessWidget {
                     Text(
                       episode.description,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
+                        color: BrandColors.grayMedium,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -107,34 +101,29 @@ class EpisodeCard extends StatelessWidget {
                         const Icon(
                           Icons.access_time,
                           size: 14,
-                          color: AppTheme.textLight,
+                          color: BrandColors.grayMedium,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           episode.duration,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textLight,
+                            color: BrandColors.grayMedium,
                           ),
                         ),
                         const SizedBox(width: 16),
                         const Icon(
                           Icons.category,
                           size: 14,
-                          color: AppTheme.textLight,
+                          color: BrandColors.grayMedium,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           episode.category,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textLight,
+                            color: BrandColors.grayMedium,
                           ),
                         ),
                         const Spacer(),
-                        const Icon(
-                          Icons.play_circle_filled,
-                          color: AppTheme.primaryColor,
-                          size: 24,
-                        ),
                       ],
                     ),
                   ],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/episode.dart';
-import '../utils/app_theme.dart';
+import '../utils/brand_colors.dart';
 
 class FeaturedEpisodeCard extends StatelessWidget {
   final Episode episode;
@@ -20,21 +20,16 @@ class FeaturedEpisodeCard extends StatelessWidget {
       child: Container(
         width: 280,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: BrandColors.blackLight.withOpacity(0.8),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppTheme.accentColor.withOpacity(0.3),
+            color: BrandColors.primaryOrange.withOpacity(0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: BrandColors.blackShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // Add this to prevent overflow
           children: [
             // Thumbnail
             Container(
@@ -63,63 +58,32 @@ class FeaturedEpisodeCard extends StatelessWidget {
                       height: double.infinity,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        color: AppTheme.accentColor.withOpacity(0.1),
+                        color: BrandColors.primaryOrange.withOpacity(0.1),
                         child: const Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              AppTheme.accentColor,
+                              BrandColors.primaryOrange,
                             ),
                           ),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: AppTheme.accentColor.withOpacity(0.1),
+                        color: BrandColors.primaryOrange.withOpacity(0.1),
                         child: const Icon(
                           Icons.play_circle_outline,
-                          color: AppTheme.accentColor,
+                          color: BrandColors.primaryOrange,
                           size: 48,
                         ),
                       ),
                     ),
                   ),
                   // Play button overlay
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
-                        ),
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.play_circle_filled,
-                          color: Colors.white,
-                          size: 48,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Featured badge
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'DESTACADO',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
+                  const Positioned.fill(
+                    child: Center(
+                      child: Icon(
+                        Icons.play_circle_outline,
+                        color: BrandColors.primaryOrange,
+                        size: 48,
                       ),
                     ),
                   ),
@@ -128,60 +92,57 @@ class FeaturedEpisodeCard extends StatelessWidget {
             ),
             
             // Content
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    episode.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      episode.title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: BrandColors.primaryWhite,
+                        fontSize: 13,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    episode.description,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondary,
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 12,
+                          color: BrandColors.grayMedium,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          episode.duration,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BrandColors.grayMedium,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(
+                          Icons.category,
+                          size: 12,
+                          color: BrandColors.grayMedium,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          episode.category,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BrandColors.grayMedium,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        size: 14,
-                        color: AppTheme.textLight,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        episode.duration,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textLight,
-                        ),
-                      ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.category,
-                        size: 14,
-                        color: AppTheme.textLight,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        episode.category,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
