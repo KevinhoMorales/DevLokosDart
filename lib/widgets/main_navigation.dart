@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/brand_colors.dart';
-import '../screens/home/home_screen.dart';
 import '../screens/podcast/podcast_screen.dart';
 import '../screens/academy/academy_screen.dart';
 import '../screens/tutorials/tutorials_screen.dart';
@@ -17,28 +16,17 @@ class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const HomeScreen(),
     const PodcastScreen(),
-    const AcademyScreen(),
     const TutorialsScreen(),
+    const AcademyScreen(),
     const EnterpriseScreen(),
   ];
 
   final List<BottomNavigationBarItem> _navItems = [
     const BottomNavigationBarItem(
-      icon: Icon(Icons.home_outlined),
-      activeIcon: Icon(Icons.home),
-      label: 'Home',
-    ),
-    const BottomNavigationBarItem(
       icon: Icon(Icons.radio_outlined),
       activeIcon: Icon(Icons.radio),
       label: 'Podcast',
-    ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.school_outlined),
-      activeIcon: Icon(Icons.school),
-      label: 'Academia',
     ),
     const BottomNavigationBarItem(
       icon: Icon(Icons.play_lesson_outlined),
@@ -46,9 +34,14 @@ class _MainNavigationState extends State<MainNavigation> {
       label: 'Tutoriales',
     ),
     const BottomNavigationBarItem(
+      icon: Icon(Icons.school_outlined),
+      activeIcon: Icon(Icons.school),
+      label: 'Academia',
+    ),
+    const BottomNavigationBarItem(
       icon: Icon(Icons.business_outlined),
       activeIcon: Icon(Icons.business),
-      label: 'Enterprise',
+      label: 'Empresarial',
     ),
   ];
 
