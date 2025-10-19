@@ -39,11 +39,43 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       // Verificación simple sin usar authStateChanges
       final user = _firebaseAuth.currentUser;
       if (user != null && user.uid.isNotEmpty) {
-        emit(AuthAuthenticated(user: user));
+        print('🔍 Usuario autenticado encontrado: ${user.email}');
+        
+        // Verificar si tenemos datos locales del usuario
+        final localUser = await UserManager.getUser();
+        
+        if (localUser != null && localUser.uid == user.uid) {
+          print('✅ Usuario local encontrado y válido');
+          emit(AuthAuthenticated(user: user));
+        } else {
+          print('⚠️ Usuario local no encontrado, validando en Firestore...');
+          
+          // Validar en Firestore y actualizar datos locales
+          try {
+            final userData = await _validateAndGetUserFromFirestore(user.uid);
+            
+            if (userData != null) {
+              await _saveUserLocallyFromFirestore(userData);
+              print('✅ Usuario validado en Firestore y datos locales actualizados');
+              emit(AuthAuthenticated(user: user));
+            } else {
+              print('❌ Usuario no encontrado en Firestore, cerrando sesión');
+              await _firebaseAuth.signOut();
+              await UserManager.deleteUser();
+              emit(const AuthUnauthenticated());
+            }
+          } catch (e) {
+            print('❌ Error al validar usuario en Firestore: $e');
+            // En caso de error, permitir continuar con la sesión actual
+            emit(AuthAuthenticated(user: user));
+          }
+        }
       } else {
+        print('❌ No hay usuario autenticado');
         emit(const AuthUnauthenticated());
       }
     } catch (e) {
+      print('❌ Error al verificar autenticación: $e');
       emit(AuthError(
         message: 'Error al verificar autenticación: $e',
         code: 'auth_check_error',
@@ -67,8 +99,35 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
 
       // Verificar que el usuario existe
       if (userCredential.user != null) {
-        // Emitir autenticado sin pasar el objeto user directamente
-        emit(const AuthAuthenticated(user: null));
+        final user = userCredential.user!;
+        print('✅ Usuario autenticado exitosamente: ${user.email}');
+        
+        // Validar usuario en Firestore y obtener información completa
+        try {
+          final userData = await _validateAndGetUserFromFirestore(user.uid);
+          
+          if (userData != null) {
+            // Guardar información del usuario localmente
+            await _saveUserLocallyFromFirestore(userData);
+            print('✅ Usuario validado en Firestore y guardado localmente');
+            
+            // Emitir autenticado
+            emit(const AuthAuthenticated(user: null));
+          } else {
+            // Usuario no existe en Firestore, pero está autenticado
+            print('⚠️ Usuario autenticado pero no encontrado en Firestore');
+            emit(const AuthError(
+              message: 'Usuario no encontrado en la base de datos',
+              code: 'user_not_found_in_firestore',
+            ));
+          }
+        } catch (e) {
+          print('❌ Error al validar usuario en Firestore: $e');
+          emit(AuthError(
+            message: 'Error al validar usuario: $e',
+            code: 'firestore_validation_error',
+          ));
+        }
       } else {
         emit(const AuthError(
           message: 'Error al obtener información del usuario',
@@ -270,6 +329,57 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       print('Usuario guardado localmente exitosamente');
     } catch (e) {
       print('Error al guardar usuario localmente: $e');
+      rethrow;
+    }
+  }
+
+  /// Valida y obtiene la información del usuario desde Firestore
+  Future<Map<String, dynamic>?> _validateAndGetUserFromFirestore(String uid) async {
+    try {
+      final collectionName = EnvironmentManager.getUsersCollection();
+      print('🔍 Validando usuario en Firestore - UID: $uid, Colección: $collectionName');
+      
+      final doc = await _firestore
+          .collection(collectionName)
+          .doc(uid)
+          .get();
+      
+      if (doc.exists) {
+        final userData = doc.data()!;
+        print('✅ Usuario encontrado en Firestore: ${userData['email']}');
+        print('📋 Datos del usuario: $userData');
+        return userData;
+      } else {
+        print('❌ Usuario no encontrado en Firestore');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Error al consultar Firestore: $e');
+      rethrow;
+    }
+  }
+
+  /// Guarda el usuario localmente con datos obtenidos de Firestore
+  Future<void> _saveUserLocallyFromFirestore(Map<String, dynamic> userData) async {
+    try {
+      print('💾 Guardando usuario localmente desde datos de Firestore...');
+      
+      // Crear un UserModel con datos completos de Firestore
+      final userModel = UserModel(
+        uid: userData['uid'] ?? '',
+        email: userData['email'] ?? '',
+        displayName: userData['displayName'],
+        photoURL: userData['photoURL'],
+        createdAt: userData['createdAt'] != null 
+            ? (userData['createdAt'] as Timestamp).toDate()
+            : null,
+      );
+      
+      // Guardar usando UserManager
+      await UserManager.saveUser(userModel);
+      print('✅ Usuario guardado localmente con datos de Firestore exitosamente');
+    } catch (e) {
+      print('❌ Error al guardar usuario localmente desde Firestore: $e');
       rethrow;
     }
   }

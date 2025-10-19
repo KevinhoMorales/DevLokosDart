@@ -133,157 +133,165 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
     return widget.child;
   }
 
-  void _showUpdateAlert(BuildContext context) {
-    final remoteConfig = RemoteConfigService();
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false, // No se puede cerrar tocando fuera
-      builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false, // No se puede cerrar con el botón back
-          child: AlertDialog(
-            backgroundColor: BrandColors.cardBackground,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(
-                color: BrandColors.primaryOrange,
-                width: 2,
-              ),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: BrandColors.primaryOrange.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.system_update,
+      void _showUpdateAlert(BuildContext context) {
+        final remoteConfig = RemoteConfigService();
+        
+        showDialog(
+          context: context,
+          barrierDismissible: false, // No se puede cerrar tocando fuera
+          builder: (BuildContext context) {
+            return MaterialApp(
+              home: Material(
+                type: MaterialType.transparency,
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: WillPopScope(
+                    onWillPop: () async => false, // No se puede cerrar con el botón back
+                    child: AlertDialog(
+                backgroundColor: BrandColors.cardBackground,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(
                     color: BrandColors.primaryOrange,
-                    size: 24,
+                    width: 2,
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'ACTUALIZACIÓN DISPONIBLE',
-                    style: TextStyle(
-                      color: BrandColors.primaryWhite,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: BrandColors.primaryOrange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.system_update,
+                        color: BrandColors.primaryOrange,
+                        size: 24,
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Una nueva versión de DevLokos está disponible.',
-                  style: const TextStyle(
-                    color: BrandColors.grayLight,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: BrandColors.primaryBlack,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: BrandColors.grayDark,
-                      width: 1,
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'ACTUALIZACIÓN DISPONIBLE',
+                        style: TextStyle(
+                          color: BrandColors.primaryWhite,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Una nueva versión de DevLokos está disponible.',
+                      style: const TextStyle(
+                        color: BrandColors.grayLight,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: BrandColors.primaryBlack,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: BrandColors.grayDark,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
                         children: [
-                          const Text(
-                            'Versión actual:',
-                            style: TextStyle(
-                              color: BrandColors.grayMedium,
-                              fontSize: 12,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Versión actual:',
+                                style: TextStyle(
+                                  color: BrandColors.grayMedium,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                remoteConfig.currentVersion,
+                                style: const TextStyle(
+                                  color: BrandColors.primaryWhite,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            remoteConfig.currentVersion,
-                            style: const TextStyle(
-                              color: BrandColors.primaryWhite,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Nueva versión:',
+                                style: TextStyle(
+                                  color: BrandColors.grayMedium,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                remoteConfig.minimumRequiredVersion,
+                                style: const TextStyle(
+                                  color: BrandColors.primaryOrange,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Nueva versión:',
-                            style: TextStyle(
-                              color: BrandColors.grayMedium,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            remoteConfig.minimumRequiredVersion,
-                            style: const TextStyle(
-                              color: BrandColors.primaryOrange,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Para continuar usando la aplicación, necesitas actualizar a la última versión.',
+                      style: TextStyle(
+                        color: BrandColors.grayLight,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _launchUpdateUrl(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: BrandColors.primaryOrange,
+                        foregroundColor: BrandColors.primaryWhite,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text(
+                        'ACTUALIZAR',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Para continuar usando la aplicación, necesitas actualizar a la última versión.',
-                  style: TextStyle(
-                    color: BrandColors.grayLight,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => _launchUpdateUrl(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BrandColors.primaryOrange,
-                    foregroundColor: BrandColors.primaryWhite,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: const Text(
-                    'ACTUALIZAR',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
               ),
-            ],
-          ),
+            ),
+            );
+          },
         );
-      },
-    );
-  }
+      }
 
   Future<void> _launchUpdateUrl() async {
     try {
@@ -302,152 +310,157 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
   }
 
   Widget _buildDynamicLoadingScreen() {
-    return Material(
-      child: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF0D0D0D),
-            Color(0xFF1A1A1A),
-            Color(0xFF0D0D0D),
-          ],
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Material(
+        child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0D0D0D),
+              Color(0xFF1A1A1A),
+              Color(0xFF0D0D0D),
+            ],
+          ),
         ),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo animado
-            AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0D0D0D),
-                      borderRadius: BorderRadius.circular(60),
-                      border: Border.all(
-                        color: const Color(0xFFFF914D).withOpacity(_fadeAnimation.value),
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF914D).withOpacity(0.3),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.headphones,
-                        size: 60,
-                        color: Color(0xFFFF914D),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 40),
-            
-            // Indicador de progreso personalizado
-            AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return Container(
-                  width: 200,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2D2D2D),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: _fadeAnimation.value,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo animado
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _scaleAnimation.value,
                     child: Container(
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF914D),
-                        borderRadius: BorderRadius.circular(2),
+                        color: const Color(0xFF0D0D0D),
+                        borderRadius: BorderRadius.circular(60),
+                        border: Border.all(
+                          color: const Color(0xFFFF914D).withOpacity(_fadeAnimation.value),
+                          width: 3,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF914D).withOpacity(0.5),
-                            blurRadius: 8,
-                            spreadRadius: 1,
+                            color: const Color(0xFFFF914D).withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 2,
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 30),
-            
-            // Mensaje dinámico
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
-              child: Text(
-                _loadingMessages[_currentMessageIndex],
-                key: ValueKey(_currentMessageIndex),
-                style: const TextStyle(
-                  color: Color(0xFFFF914D),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Indicador de puntos animados
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(3, (index) {
-                return AnimatedBuilder(
-                  animation: _animationController,
-                  builder: (context, child) {
-                    final delay = index * 0.2;
-                    final animationValue = (_animationController.value + delay) % 1.0;
-                    final opacity = (1.0 - (animationValue * 2).clamp(0.0, 1.0));
-                    
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF914D).withOpacity(opacity),
-                        borderRadius: BorderRadius.circular(4),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(57),
+                        child: Image.asset(
+                          'assets/icons/devlokos_icon.png',
+                          width: 114,
+                          height: 114,
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                    );
-                  },
-                );
-              }),
-            ),
-            const SizedBox(height: 40),
-            
-            // Texto secundario
-            FadeTransition(
-              opacity: _fadeAnimation,
-              child: const Text(
-                'Preparando la mejor experiencia de podcast para ti',
-                style: TextStyle(
-                  color: Color(0xFF888888),
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                ),
-                textAlign: TextAlign.center,
+                    ),
+                  );
+                },
               ),
-            ),
-          ],
+              const SizedBox(height: 40),
+              
+              // Indicador de progreso personalizado
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return Container(
+                    width: 200,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2D2D2D),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: _fadeAnimation.value,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF914D),
+                          borderRadius: BorderRadius.circular(2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF914D).withOpacity(0.5),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 30),
+              
+              // Mensaje dinámico
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: Text(
+                  _loadingMessages[_currentMessageIndex],
+                  key: ValueKey(_currentMessageIndex),
+                  style: const TextStyle(
+                    color: Color(0xFFFF914D),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Indicador de puntos animados
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) {
+                  return AnimatedBuilder(
+                    animation: _animationController,
+                    builder: (context, child) {
+                      final delay = index * 0.2;
+                      final animationValue = (_animationController.value + delay) % 1.0;
+                      final opacity = (1.0 - (animationValue * 2).clamp(0.0, 1.0));
+                      
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF914D).withOpacity(opacity),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 40),
+              
+              // Texto secundario
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: const Text(
+                  'Preparando la mejor experiencia de podcast para ti',
+                  style: TextStyle(
+                    color: Color(0xFF888888),
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
+      ),
     );
   }
 }
