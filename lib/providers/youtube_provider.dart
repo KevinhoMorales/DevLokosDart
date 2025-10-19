@@ -41,7 +41,10 @@ class YouTubeProvider extends ChangeNotifier {
       if (refresh) {
         _videos = response.videos;
       } else {
-        _videos.addAll(response.videos);
+        // Evitar duplicados: solo agregar videos que no existan ya
+        final existingVideoIds = _videos.map((v) => v.videoId).toSet();
+        final newVideos = response.videos.where((video) => !existingVideoIds.contains(video.videoId)).toList();
+        _videos.addAll(newVideos);
       }
 
       _nextPageToken = response.nextPageToken;
@@ -83,11 +86,15 @@ class YouTubeProvider extends ChangeNotifier {
         pageToken: _nextPageToken,
       );
 
-      _videos.addAll(response.videos);
+      // Evitar duplicados: solo agregar videos que no existan ya
+      final existingVideoIds = _videos.map((v) => v.videoId).toSet();
+      final newVideos = response.videos.where((video) => !existingVideoIds.contains(video.videoId)).toList();
+      
+      _videos.addAll(newVideos);
       _nextPageToken = response.nextPageToken;
       _hasMoreVideos = response.hasMoreVideos;
       
-      print('✅ ${response.videos.length} videos adicionales cargados');
+      print('✅ ${newVideos.length} videos nuevos cargados (${response.videos.length - newVideos.length} duplicados evitados)');
     } catch (e) {
       _setError('Error al cargar más videos: $e');
       print('❌ Error al cargar más videos: $e');

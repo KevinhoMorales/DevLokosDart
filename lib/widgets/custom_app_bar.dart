@@ -62,8 +62,16 @@ class _CustomAppBarState extends State<CustomAppBar> {
                 try {
                   context.pop();
                 } catch (e) {
-                  // Si no hay nada que hacer pop, navegar a la pantalla principal
-                  context.go('/home');
+                  // Si no hay nada que hacer pop, determinar la pantalla de destino
+                  // basándose en la ruta actual
+                  final currentRoute = GoRouterState.of(context).uri.path;
+                  if (currentRoute == '/settings') {
+                    context.go('/profile');
+                  } else if (currentRoute.startsWith('/episode/')) {
+                    context.go('/home');
+                  } else {
+                    context.go('/home');
+                  }
                 }
               },
               icon: const Icon(
@@ -92,10 +100,18 @@ class _CustomAppBarState extends State<CustomAppBar> {
         if (!widget.showBackButton)
           IconButton(
             onPressed: () => context.go('/profile'),
-            icon: const Icon(
-              Icons.person,
-              color: BrandColors.primaryOrange,
-              size: 28,
+            icon: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B4513), // Color marrón oscuro
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.person,
+                color: BrandColors.primaryOrange,
+                size: 20,
+              ),
             ),
           ),
         if (widget.actions != null) ...widget.actions!,

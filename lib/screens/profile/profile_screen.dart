@@ -68,10 +68,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             actions: [
               IconButton(
                 onPressed: _openSettings,
-                icon: const Icon(
-                  Icons.settings,
-                  color: BrandColors.primaryOrange,
-                  size: 24,
+                icon: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B4513), // Color marrón oscuro
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.info,
+                    color: BrandColors.primaryOrange,
+                    size: 20,
+                  ),
                 ),
               ),
             ],

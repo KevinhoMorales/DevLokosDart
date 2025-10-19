@@ -100,9 +100,16 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   void _generateSortedVideos(List<YouTubeVideo> allVideos) {
     if (allVideos.isNotEmpty) {
+      // Eliminar duplicados basándose en el videoId
+      final uniqueVideos = <String, YouTubeVideo>{};
+      for (final video in allVideos) {
+        uniqueVideos[video.videoId] = video;
+      }
+      final deduplicatedVideos = uniqueVideos.values.toList();
+      
       // Separar videos por temporada
-      final s1Videos = allVideos.where((v) => v.title.contains('S1')).toList();
-      final s2Videos = allVideos.where((v) => v.title.contains('S2')).toList();
+      final s1Videos = deduplicatedVideos.where((v) => v.title.contains('S1')).toList();
+      final s2Videos = deduplicatedVideos.where((v) => v.title.contains('S2')).toList();
       
       // Ordenar cada temporada por fecha descendente (más reciente primero)
       s1Videos.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
