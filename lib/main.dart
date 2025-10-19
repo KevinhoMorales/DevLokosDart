@@ -8,7 +8,7 @@ import 'bloc/auth/auth_bloc_exports.dart';
 import 'repository/episode_repository.dart';
 import 'providers/youtube_provider.dart';
 import 'screens/splash_screen.dart';
-import 'screens/episode/episode_detail_screen.dart';
+import 'screens/episode_detail/episode_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
@@ -104,7 +104,12 @@ final GoRouter _router = GoRouter(
       path: '/episode/:id',
       builder: (context, state) {
         final episodeId = state.pathParameters['id']!;
-        return EpisodeDetailScreen(episodeId: episodeId);
+        final extra = state.extra as Map<String, dynamic>?;
+        return EpisodeDetailScreen(
+          episodeId: episodeId,
+          episode: extra?['episode'],
+          youtubeVideo: extra?['youtubeVideo'],
+        );
       },
     ),
     GoRoute(

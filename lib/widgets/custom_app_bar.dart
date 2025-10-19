@@ -58,7 +58,14 @@ class _CustomAppBarState extends State<CustomAppBar> {
     return AppBar(
       leading: widget.showBackButton
           ? IconButton(
-              onPressed: () => context.pop(),
+              onPressed: () {
+                try {
+                  context.pop();
+                } catch (e) {
+                  // Si no hay nada que hacer pop, navegar a la pantalla principal
+                  context.go('/home');
+                }
+              },
               icon: const Icon(
                 Icons.arrow_back,
                 color: BrandColors.primaryWhite,
@@ -67,6 +74,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
             )
           : null,
       title: Text(
+        widget.showBackButton ? widget.title : 
         widget.title == 'Mi Perfil' ? 'Mi Perfil' : 
         widget.title == 'Acerca de DevLokos' ? 'Acerca de DevLokos' : 
         _getGreeting(),

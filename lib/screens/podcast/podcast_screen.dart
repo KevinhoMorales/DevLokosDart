@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
@@ -427,16 +428,16 @@ class _PodcastScreenState extends State<PodcastScreen>
 
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (searchQuery.isEmpty) ...[
-                    _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
-                    const SizedBox(height: 12),
-                  ],
-                  _buildEpisodesSection(episodes),
-                ],
-              ),
+              child: _searchQuery.isNotEmpty
+                  ? _buildSearchResultsContent()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
+                        const SizedBox(height: 12),
+                        _buildEpisodesSection(episodes),
+                      ],
+                    ),
           );
         }
 
@@ -508,88 +509,121 @@ class _PodcastScreenState extends State<PodcastScreen>
     );
   }
 
-  Widget _buildEpisodesSection(List<Episode> episodes) {
+  Widget _buildSearchResultsContent() {
     return Consumer<YouTubeProvider>(
       builder: (context, youtubeProvider, child) {
-        // Si hay búsqueda activa, mostrar resultados de búsqueda
-        if (_searchQuery.isNotEmpty) {
-          final searchResults = youtubeProvider.videos
-              .where((video) =>
-                  video.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                  video.description.toLowerCase().contains(_searchQuery.toLowerCase()))
-              .toList();
-          
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Obtener todos los videos disponibles (de ambas temporadas)
+        List<YouTubeVideo> allVideosForSearch = [];
+        
+        // Agregar videos del provider actual
+        allVideosForSearch.addAll(youtubeProvider.videos);
+        
+        // Agregar videos en cache si están disponibles (para incluir ambas temporadas)
+        if (_allVideosSorted != null) {
+          allVideosForSearch.addAll(_allVideosSorted!);
+        }
+        
+        // Eliminar duplicados basándose en el ID del video
+        final uniqueVideos = <String, YouTubeVideo>{};
+        for (final video in allVideosForSearch) {
+          uniqueVideos[video.videoId] = video;
+        }
+        final deduplicatedVideos = uniqueVideos.values.toList();
+        
+        // Realizar búsqueda en todos los videos únicos
+        final lowercaseQuery = _searchQuery.toLowerCase();
+        print('🔍 Buscando "${lowercaseQuery}" en ${deduplicatedVideos.length} videos únicos de ambas temporadas');
+        
+        final searchResults = deduplicatedVideos
+            .where((video) {
+              final titleLower = video.title.toLowerCase();
+              
+              // Enfoque principal: buscar en el título del podcast
+              if (titleLower.contains(lowercaseQuery)) {
+                print('✅ Encontrado en título: ${video.title}');
+                return true;
+              }
+              
+              // Búsqueda más específica en las partes del título separadas por ||
+              // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
+              final titleParts = titleLower.split('||');
+              for (final part in titleParts) {
+                final cleanPart = part.trim();
+                if (cleanPart.contains(lowercaseQuery)) {
+                  print('✅ Encontrado en parte del título: $cleanPart');
+                  return true;
+                }
+              }
+              
+              return false;
+            })
+            .toList();
+        
+        print('✅ Búsqueda completada: ${searchResults.length} resultados encontrados');
+        
+        if (searchResults.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Text(
-                      'RESULTADO DE BÚSQUEDA (${searchResults.length})',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: BrandColors.primaryWhite,
-                        fontSize: 16,
-                      ),
+                  const Icon(
+                    Icons.search_off,
+                    color: BrandColors.grayMedium,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No se encontraron episodios',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: BrandColors.primaryWhite,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Intenta con otros términos de búsqueda',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: BrandColors.grayMedium,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              
-              if (searchResults.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.search_off,
-                          color: BrandColors.grayMedium,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No se encontraron videos',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: BrandColors.primaryWhite,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Intenta con otros términos de búsqueda',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BrandColors.grayMedium,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: searchResults.length,
-                  itemBuilder: (context, index) {
-                    final video = searchResults[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: YouTubeVideoCard(
-                        video: video,
-                        onTap: () => _onVideoTap(video),
-                      ),
-                    );
-                  },
-                ),
-            ],
+            ),
           );
         }
         
-        // Si no hay búsqueda, mostrar videos filtrados por temporada
+        // Mostrar resultados como una lista simple
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                'RESULTADOS DE BÚSQUEDA (${searchResults.length})',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: BrandColors.primaryWhite,
+                ),
+              ),
+            ),
+            ...searchResults.map((video) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              child: YouTubeVideoCard(
+                video: video,
+                onTap: () => _onVideoTap(video),
+              ),
+            )).toList(),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEpisodesSection(List<Episode> episodes) {
+    return Consumer<YouTubeProvider>(
+      builder: (context, youtubeProvider, child) {
+        // Mostrar videos filtrados por temporada
         final filteredVideos = _filterVideosBySeason(youtubeProvider.videos);
         
         return Column(
@@ -714,13 +748,27 @@ class _PodcastScreenState extends State<PodcastScreen>
   }
 
   void _onVideoTap(YouTubeVideo video) {
-    // TODO: Implementar navegación al video
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reproduciendo: ${video.title}'),
-        backgroundColor: BrandColors.primaryOrange,
-        duration: const Duration(seconds: 2),
-      ),
+    // Buscar el episodio correspondiente en la base de datos
+    final episodeBloc = context.read<EpisodeBloc>();
+    Episode? correspondingEpisode;
+    
+    if (episodeBloc.state is EpisodeLoaded) {
+      final episodes = (episodeBloc.state as EpisodeLoaded).episodes;
+      try {
+        correspondingEpisode = episodes.firstWhere(
+          (episode) => episode.youtubeVideoId == video.videoId,
+        );
+      } catch (e) {
+        correspondingEpisode = null;
+      }
+    }
+
+    // Navegar a la pantalla de detalle
+    context.go('/episode/${correspondingEpisode?.id ?? video.videoId}', 
+      extra: {
+        'episode': correspondingEpisode,
+        'youtubeVideo': video,
+      }
     );
   }
 
