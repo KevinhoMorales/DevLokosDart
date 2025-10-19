@@ -67,7 +67,9 @@ class _CustomAppBarState extends State<CustomAppBar> {
             )
           : null,
       title: Text(
-        widget.title == 'Mi Perfil' ? 'Mi Perfil' : _getGreeting(),
+        widget.title == 'Mi Perfil' ? 'Mi Perfil' : 
+        widget.title == 'Acerca de DevLokos' ? 'Acerca de DevLokos' : 
+        _getGreeting(),
         style: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,

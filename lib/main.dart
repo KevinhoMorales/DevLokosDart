@@ -13,6 +13,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/settings/settings_screen.dart';
 import 'screens/youtube/youtube_screen.dart';
 import 'widgets/main_navigation.dart';
 import 'widgets/version_check_wrapper.dart';
@@ -109,6 +110,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
     ),
     GoRoute(
       path: '/youtube',

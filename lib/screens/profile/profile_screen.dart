@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/user_manager.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -33,42 +35,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if (!didPop) {
-          _navigateToHome();
-        }
-      },
-      child: Scaffold(
-        appBar: CustomAppBar(
-          title: 'Mi Perfil',
-          showBackButton: true,
-          actions: [
-            IconButton(
-              onPressed: _openSettings,
-              icon: const Icon(
-                Icons.settings,
-                color: BrandColors.primaryOrange,
-                size: 24,
+    return BlocListener<AuthBlocSimple, AuthState>(
+      listener: (context, state) {
+        if (state is AuthUnauthenticated) {
+          // Navegar a la pantalla de login cuando se cierre sesión
+          context.go('/login');
+        } else if (state is AuthError) {
+          // Mostrar error si hay algún problema
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: BrandColors.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          ],
-        ),
-        body: Container(
-          decoration: const BoxDecoration(
-            color: BrandColors.primaryBlack,
+          );
+        }
+      },
+      child: PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) {
+          if (!didPop) {
+            _navigateToHome();
+          }
+        },
+        child: Scaffold(
+          appBar: CustomAppBar(
+            title: 'Mi Perfil',
+            showBackButton: true,
+            actions: [
+              IconButton(
+                onPressed: _openSettings,
+                icon: const Icon(
+                  Icons.settings,
+                  color: BrandColors.primaryOrange,
+                  size: 24,
+                ),
+              ),
+            ],
           ),
-          child: SafeArea(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        BrandColors.primaryOrange,
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              color: BrandColors.primaryBlack,
+            ),
+            child: SafeArea(
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          BrandColors.primaryOrange,
+                        ),
                       ),
-                    ),
-                  )
-                : _buildContent(),
+                    )
+                  : _buildContent(),
+            ),
           ),
         ),
       ),
@@ -107,9 +131,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Avatar Section
           Center(
@@ -235,19 +260,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
+    if (isDestructive) {
+      // Botón destructivo con estilo similar a login/register pero rojo
+      return Container(
+        width: double.infinity,
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Center(
+              child: Text(
+                title.toUpperCase(),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: BrandColors.primaryWhite,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Botón normal (no destructivo) - mantener el estilo original
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDestructive 
-              ? Colors.red.withOpacity(0.5)
-              : BrandColors.primaryOrange.withOpacity(0.3),
-          width: isDestructive ? 2 : 1,
+          color: BrandColors.primaryOrange.withOpacity(0.3),
+          width: 1,
         ),
-        color: isDestructive 
-            ? Colors.red.withOpacity(0.1)
-            : Colors.transparent,
+        color: Colors.transparent,
       ),
       child: Material(
         color: Colors.transparent,
@@ -260,18 +311,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(
                   icon,
-                  color: isDestructive 
-                      ? Colors.red
-                      : BrandColors.primaryOrange,
+                  color: BrandColors.primaryOrange,
                   size: 24,
                 ),
                 const SizedBox(width: 16),
                 Text(
                   title,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: isDestructive 
-                        ? Colors.red
-                        : BrandColors.primaryWhite,
+                    color: BrandColors.primaryWhite,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -315,12 +362,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
 
-    if (shouldLogout == true) {
-      // Aquí se puede agregar la lógica de logout si es necesario
-      await UserManager.deleteUser();
-      if (mounted) {
-        context.go('/login');
-      }
+    if (shouldLogout == true && mounted) {
+      // Usar AuthBloc para cerrar sesión
+      context.read<AuthBlocSimple>().add(const AuthLogoutRequested());
     }
   }
 
@@ -330,73 +374,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _openSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: BrandColors.blackLight,
-        title: const Text(
-          'Configuración',
-          style: TextStyle(
-            color: BrandColors.primaryWhite,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(
-                Icons.notifications,
-                color: BrandColors.primaryOrange,
-              ),
-              title: Text(
-                'Notificaciones',
-                style: TextStyle(color: BrandColors.primaryWhite),
-              ),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.privacy_tip,
-                color: BrandColors.primaryOrange,
-              ),
-              title: Text(
-                'Privacidad',
-                style: TextStyle(color: BrandColors.primaryWhite),
-              ),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.help,
-                color: BrandColors.primaryOrange,
-              ),
-              title: Text(
-                'Ayuda',
-                style: TextStyle(color: BrandColors.primaryWhite),
-              ),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.info,
-                color: BrandColors.primaryOrange,
-              ),
-              title: Text(
-                'Acerca de',
-                style: TextStyle(color: BrandColors.primaryWhite),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              'Cerrar',
-              style: TextStyle(color: BrandColors.primaryOrange),
-            ),
-          ),
-        ],
-      ),
-    );
+    context.go('/settings');
   }
 }
 
