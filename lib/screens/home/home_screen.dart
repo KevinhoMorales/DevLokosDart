@@ -78,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen>
         }
       },
       child: Scaffold(
-        appBar: const CustomAppBar(title: 'HOME'),
+        appBar: const CustomAppBar(title: ''),
         body: Container(
           decoration: const BoxDecoration(
             color: BrandColors.primaryBlack,

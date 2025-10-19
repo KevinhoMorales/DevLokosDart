@@ -35,7 +35,7 @@ class _YouTubeScreenState extends State<YouTubeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BrandColors.primaryBlack,
-      appBar: const CustomAppBar(title: 'DevLokos Videos'),
+      appBar: const CustomAppBar(title: ''),
       body: Consumer<YouTubeProvider>(
         builder: (context, youtubeProvider, child) {
           if (youtubeProvider.isLoading && youtubeProvider.videos.isEmpty) {

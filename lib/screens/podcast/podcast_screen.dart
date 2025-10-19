@@ -130,18 +130,6 @@ class _PodcastScreenState extends State<PodcastScreen>
     }
   }
 
-  void _clearDiscoverVideosCache() {
-    _discoverVideos = null;
-    print('🗑️ Cache de videos de descubrimiento limpiado');
-  }
-
-  void _clearAllVideosCache() {
-    _discoverVideos = null;
-    _allVideosSorted = null;
-    _s1VideosSorted = null;
-    _s2VideosSorted = null;
-    print('🗑️ Todos los caches de videos limpiados');
-  }
 
   Future<void> _ensureEnoughVideosForAllSeasons(YouTubeProvider provider) async {
     // Verificar si tenemos videos de ambas temporadas
@@ -212,7 +200,7 @@ class _PodcastScreenState extends State<PodcastScreen>
         }
       },
       child: Scaffold(
-        appBar: const CustomAppBar(title: 'PODCAST'),
+        appBar: const CustomAppBar(title: ''),
         body: Container(
           decoration: const BoxDecoration(
             color: BrandColors.primaryBlack,
@@ -257,7 +245,7 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 12.0),
       child: SearchBarWidget(
         controller: _searchController,
         onChanged: (value) {
@@ -271,12 +259,7 @@ class _PodcastScreenState extends State<PodcastScreen>
             context.read<EpisodeBloc>().add(const ClearSearch());
           }
           
-          // También buscar en videos de YouTube
-          if (value.isNotEmpty) {
-            context.read<YouTubeProvider>().searchVideos(value);
-          } else {
-            context.read<YouTubeProvider>().loadVideos(refresh: true);
-          }
+          // La búsqueda en videos se hace directamente en la UI, no necesitamos llamar al provider
         },
       ),
     );
@@ -298,10 +281,6 @@ class _PodcastScreenState extends State<PodcastScreen>
               decoration: BoxDecoration(
                 color: BrandColors.primaryBlack,
                 borderRadius: BorderRadius.circular(60),
-                border: Border.all(
-                  color: BrandColors.primaryOrange,
-                  width: 3,
-                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(57),
@@ -447,13 +426,13 @@ class _PodcastScreenState extends State<PodcastScreen>
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (searchQuery.isEmpty) ...[
                     _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 12),
                   ],
                   _buildEpisodesSection(episodes),
                 ],
@@ -498,7 +477,7 @@ class _PodcastScreenState extends State<PodcastScreen>
                   fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               SizedBox(
                 height: 200,
                 child: ListView.builder(
@@ -511,7 +490,7 @@ class _PodcastScreenState extends State<PodcastScreen>
                       width: 280, // Ancho fijo para evitar problemas de layout
                       child: Padding(
                         padding: EdgeInsets.only(
-                          right: index < discoverVideos.length - 1 ? 16 : 0,
+                          right: index < discoverVideos.length - 1 ? 8 : 0,
                         ),
                         child: YouTubeVideoCard(
                           video: video,
@@ -532,7 +511,85 @@ class _PodcastScreenState extends State<PodcastScreen>
   Widget _buildEpisodesSection(List<Episode> episodes) {
     return Consumer<YouTubeProvider>(
       builder: (context, youtubeProvider, child) {
-        // Filtrar videos por temporada
+        // Si hay búsqueda activa, mostrar resultados de búsqueda
+        if (_searchQuery.isNotEmpty) {
+          final searchResults = youtubeProvider.videos
+              .where((video) =>
+                  video.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                  video.description.toLowerCase().contains(_searchQuery.toLowerCase()))
+              .toList();
+          
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'RESULTADO DE BÚSQUEDA (${searchResults.length})',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: BrandColors.primaryWhite,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              if (searchResults.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.search_off,
+                          color: BrandColors.grayMedium,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No se encontraron videos',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: BrandColors.primaryWhite,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Intenta con otros términos de búsqueda',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BrandColors.grayMedium,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: searchResults.length,
+                  itemBuilder: (context, index) {
+                    final video = searchResults[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: YouTubeVideoCard(
+                        video: video,
+                        onTap: () => _onVideoTap(video),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          );
+        }
+        
+        // Si no hay búsqueda, mostrar videos filtrados por temporada
         final filteredVideos = _filterVideosBySeason(youtubeProvider.videos);
         
         return Column(
@@ -543,7 +600,7 @@ class _PodcastScreenState extends State<PodcastScreen>
               children: [
                 Expanded(
                   child: Text(
-                    _searchQuery.isEmpty ? 'TODOS LOS EPISODIOS' : 'RESULTADO DE BÚSQUEDA',
+                    'TODOS LOS EPISODIOS',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: BrandColors.primaryWhite,
@@ -554,7 +611,7 @@ class _PodcastScreenState extends State<PodcastScreen>
                 _buildSeasonFilter(),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             
             // Mostrar videos de YouTube en lugar de episodios tradicionales
             if (youtubeProvider.isLoading && youtubeProvider.videos.isEmpty)
@@ -642,7 +699,7 @@ class _PodcastScreenState extends State<PodcastScreen>
 
                     final video = filteredVideos[index];
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: YouTubeVideoCard(
                         video: video,
                         onTap: () => _onVideoTap(video),
@@ -669,10 +726,15 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   Widget _buildSeasonFilter() {
     return Container(
+      height: 36, // Reducir altura del contenedor
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // Reducir padding
       decoration: BoxDecoration(
-        color: BrandColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BrandColors.primaryOrange, width: 1),
+        color: BrandColors.primaryBlack,
+        borderRadius: BorderRadius.circular(12), // Reducir border radius
+        border: Border.all(
+          color: BrandColors.primaryOrange.withOpacity(0.3),
+          width: 1,
+        ),
       ),
       child: DropdownButton<String>(
         value: _selectedSeason,
@@ -682,11 +744,16 @@ class _PodcastScreenState extends State<PodcastScreen>
           fontSize: 12,
         ),
         underline: const SizedBox(),
+        icon: const Icon(
+          Icons.keyboard_arrow_down,
+          color: BrandColors.primaryOrange,
+          size: 16,
+        ),
         items: ['Temporada 1', 'Temporada 2'].map((String season) {
           return DropdownMenuItem<String>(
             value: season,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4), // Reducir padding
               child: Text(
                 season,
                 style: const TextStyle(

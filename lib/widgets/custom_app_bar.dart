@@ -6,11 +6,13 @@ import '../utils/user_manager.dart';
 class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
+  final bool showBackButton;
 
   const CustomAppBar({
     super.key,
     required this.title,
     this.actions,
+    this.showBackButton = false,
   });
 
   @override
@@ -54,8 +56,18 @@ class _CustomAppBarState extends State<CustomAppBar> {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      leading: widget.showBackButton
+          ? IconButton(
+              onPressed: () => context.pop(),
+              icon: const Icon(
+                Icons.arrow_back,
+                color: BrandColors.primaryWhite,
+                size: 24,
+              ),
+            )
+          : null,
       title: Text(
-        _getGreeting(),
+        widget.title == 'Mi Perfil' ? 'Mi Perfil' : _getGreeting(),
         style: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
@@ -66,14 +78,16 @@ class _CustomAppBarState extends State<CustomAppBar> {
       foregroundColor: BrandColors.primaryWhite,
       elevation: 0,
       actions: [
-        IconButton(
-          onPressed: () => context.go('/profile'),
-          icon: const Icon(
-            Icons.person,
-            color: BrandColors.primaryOrange,
-            size: 28,
+        // Solo mostrar el icono de perfil si no es la pantalla de perfil
+        if (!widget.showBackButton)
+          IconButton(
+            onPressed: () => context.go('/profile'),
+            icon: const Icon(
+              Icons.person,
+              color: BrandColors.primaryOrange,
+              size: 28,
+            ),
           ),
-        ),
         if (widget.actions != null) ...widget.actions!,
       ],
     );

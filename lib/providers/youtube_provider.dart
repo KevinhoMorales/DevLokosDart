@@ -102,7 +102,8 @@ class YouTubeProvider extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final results = await _youtubeService.searchVideosInPlaylist(query);
+      // Pasar todos los videos cargados para buscar en ellos
+      final results = await _youtubeService.searchVideosInPlaylist(query, _videos);
       
       print('🔍 ${results.length} videos encontrados para: "$query"');
       return results;

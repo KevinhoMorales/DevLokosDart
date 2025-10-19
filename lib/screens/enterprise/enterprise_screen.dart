@@ -8,7 +8,7 @@ class EnterpriseScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(title: 'ENTERPRISE'),
+      appBar: const CustomAppBar(title: ''),
       body: Container(
         decoration: const BoxDecoration(
           color: BrandColors.primaryBlack,

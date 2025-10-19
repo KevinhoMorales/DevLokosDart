@@ -90,11 +90,10 @@ class YouTubeService {
   }
 
   /// Busca videos en la playlist por título
-  Future<List<YouTubeVideo>> searchVideosInPlaylist(String query) async {
+  Future<List<YouTubeVideo>> searchVideosInPlaylist(String query, List<YouTubeVideo> allVideos) async {
     try {
-      final playlistResponse = await getPlaylistVideos(maxResults: 50);
-      
-      return playlistResponse.videos
+      // Buscar en todos los videos cargados en lugar de hacer una nueva petición
+      return allVideos
           .where((video) =>
               video.title.toLowerCase().contains(query.toLowerCase()) ||
               video.description.toLowerCase().contains(query.toLowerCase()))

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/user_manager.dart';
+import '../../widgets/custom_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,58 +33,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          color: BrandColors.primaryBlack,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(),
-              Expanded(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            BrandColors.primaryOrange,
-                          ),
-                        ),
-                      )
-                    : _buildContent(),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          _navigateToHome();
+        }
+      },
+      child: Scaffold(
+        appBar: CustomAppBar(
+          title: 'Mi Perfil',
+          showBackButton: true,
+          actions: [
+            IconButton(
+              onPressed: _openSettings,
+              icon: const Icon(
+                Icons.settings,
+                color: BrandColors.primaryOrange,
+                size: 24,
               ),
-            ],
+            ),
+          ],
+        ),
+        body: Container(
+          decoration: const BoxDecoration(
+            color: BrandColors.primaryBlack,
+          ),
+          child: SafeArea(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        BrandColors.primaryOrange,
+                      ),
+                    ),
+                  )
+                : _buildContent(),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAppBar() {
-    return Container(
-      padding: const EdgeInsets.all(24.0),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(
-              Icons.arrow_back,
-              color: BrandColors.primaryWhite,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            'Mi Perfil',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: BrandColors.primaryWhite,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildContent() {
     if (_currentUser == null) {
@@ -250,9 +241,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDestructive 
-              ? BrandColors.error.withOpacity(0.3)
+              ? Colors.red.withOpacity(0.5)
               : BrandColors.primaryOrange.withOpacity(0.3),
+          width: isDestructive ? 2 : 1,
         ),
+        color: isDestructive 
+            ? Colors.red.withOpacity(0.1)
+            : Colors.transparent,
       ),
       child: Material(
         color: Colors.transparent,
@@ -266,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icon(
                   icon,
                   color: isDestructive 
-                      ? BrandColors.error
+                      ? Colors.red
                       : BrandColors.primaryOrange,
                   size: 24,
                 ),
@@ -275,7 +270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: isDestructive 
-                        ? BrandColors.error
+                        ? Colors.red
                         : BrandColors.primaryWhite,
                     fontWeight: FontWeight.w600,
                   ),
@@ -327,6 +322,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
         context.go('/login');
       }
     }
+  }
+
+  void _navigateToHome() {
+    // Navegar a la home con los tabs
+    context.go('/home');
+  }
+
+  void _openSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: BrandColors.blackLight,
+        title: const Text(
+          'Configuración',
+          style: TextStyle(
+            color: BrandColors.primaryWhite,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                Icons.notifications,
+                color: BrandColors.primaryOrange,
+              ),
+              title: Text(
+                'Notificaciones',
+                style: TextStyle(color: BrandColors.primaryWhite),
+              ),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.privacy_tip,
+                color: BrandColors.primaryOrange,
+              ),
+              title: Text(
+                'Privacidad',
+                style: TextStyle(color: BrandColors.primaryWhite),
+              ),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.help,
+                color: BrandColors.primaryOrange,
+              ),
+              title: Text(
+                'Ayuda',
+                style: TextStyle(color: BrandColors.primaryWhite),
+              ),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.info,
+                color: BrandColors.primaryOrange,
+              ),
+              title: Text(
+                'Acerca de',
+                style: TextStyle(color: BrandColors.primaryWhite),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Cerrar',
+              style: TextStyle(color: BrandColors.primaryOrange),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

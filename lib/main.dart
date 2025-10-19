@@ -15,14 +15,29 @@ import 'screens/auth/forgot_password_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/youtube/youtube_screen.dart';
 import 'widgets/main_navigation.dart';
+import 'widgets/version_check_wrapper.dart';
 import 'utils/brand_colors.dart';
 import 'firebase_options.dart';
+import 'services/remote_config_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Inicializar Firebase Remote Config
+  print('🔄 Inicializando Firebase Remote Config...');
+  final remoteConfig = RemoteConfigService();
+  await remoteConfig.initialize();
+  
+  // Verificar configuración
+  print('🔍 Verificando configuración de Remote Config...');
+  final isConfigured = remoteConfig.isRemoteConfigConfigured;
+  print('✅ Remote Config configurado: $isConfigured');
+  
   runApp(const DevLokosApp());
 }
 
@@ -46,13 +61,15 @@ class DevLokosApp extends StatelessWidget {
             )..add(const LoadEpisodes()),
           ),
         ],
-        child: MaterialApp.router(
-          title: 'DevLokos',
-          theme: BrandColors.lightTheme,
-          darkTheme: BrandColors.darkTheme,
-          themeMode: ThemeMode.system,
-          routerConfig: _router,
-          debugShowCheckedModeBanner: false,
+        child: VersionCheckWrapper(
+          child: MaterialApp.router(
+            title: 'DevLokos',
+            theme: BrandColors.lightTheme,
+            darkTheme: BrandColors.darkTheme,
+            themeMode: ThemeMode.system,
+            routerConfig: _router,
+            debugShowCheckedModeBanner: false,
+          ),
         ),
       ),
     );

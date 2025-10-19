@@ -1,10 +1,16 @@
+import '../services/remote_config_service.dart';
+
 class YouTubeConfig {
-  // TODO: Mover a Firebase Remote Config o Firebase Functions
-  // Por ahora, API Key hardcodeada - NO SUBIR A REPOSITORIO PÚBLICO
-  static const String apiKey = 'AIzaSyAKQUaIVnjM-WOKwJUtOk63Dax6_T7-q7s';
+  // Servicio de Remote Config para obtener configuración dinámicamente
+  static final RemoteConfigService _remoteConfig = RemoteConfigService();
   
-  // ID de la playlist de DevLokos
-  static const String devLokosPlaylistId = 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ';
+  // API Key obtenida desde Firebase Remote Config
+  // ⚠️ IMPORTANTE: Configurar en Firebase Remote Config como 'youtube_api_key'
+  static String get apiKey => _remoteConfig.youtubeApiKey;
+  
+  // ID de la playlist de DevLokos obtenido desde Firebase Remote Config
+  // ⚠️ IMPORTANTE: Configurar en Firebase Remote Config como 'youtube_playlist_id'
+  static String get devLokosPlaylistId => _remoteConfig.youtubePlaylistId;
   
   // URLs base de la API
   static const String baseUrl = 'https://www.googleapis.com/youtube/v3';
@@ -24,8 +30,8 @@ class YouTubeConfig {
   
   // Validar configuración
   static bool get isConfigured => 
-      apiKey != 'YOUR_YOUTUBE_API_KEY_HERE' && 
-      devLokosPlaylistId != 'PLabcd1234XYZ';
+      apiKey.isNotEmpty && 
+      devLokosPlaylistId.isNotEmpty;
   
   // Método para obtener URL completa con parámetros opcionales
   static String buildPlaylistUrl({
