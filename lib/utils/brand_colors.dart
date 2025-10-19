@@ -18,6 +18,9 @@ class BrandColors {
   static const Color blackMedium = Color(0xFF2D2D2D);
   static const Color blackDark = Color(0xFF0D0D0D);
   
+  // Color para tarjetas y fondos
+  static const Color cardBackground = Color(0xFF1A1A1A);
+  
   // Grises para textos secundarios
   static const Color grayLight = Color(0xFFF5F5F5);
   static const Color grayMedium = Color(0xFF9E9E9E);

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'bloc/episode/episode_bloc_exports.dart';
 import 'bloc/auth/auth_bloc_exports.dart';
 import 'repository/episode_repository.dart';
+import 'providers/youtube_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/episode/episode_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/youtube/youtube_screen.dart';
 import 'widgets/main_navigation.dart';
 import 'utils/brand_colors.dart';
 import 'firebase_options.dart';
@@ -28,24 +31,29 @@ class DevLokosApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
+    return MultiProvider(
       providers: [
-        BlocProvider<AuthBlocSimple>(
-          create: (context) => AuthBlocSimple()..add(const AuthCheckRequested()),
-        ),
-        BlocProvider<EpisodeBloc>(
-          create: (context) => EpisodeBloc(
-            repository: EpisodeRepositoryImpl(),
-          )..add(const LoadEpisodes()),
-        ),
+        ChangeNotifierProvider(create: (context) => YouTubeProvider()),
       ],
-      child: MaterialApp.router(
-        title: 'DevLokos',
-        theme: BrandColors.lightTheme,
-        darkTheme: BrandColors.darkTheme,
-        themeMode: ThemeMode.system,
-        routerConfig: _router,
-        debugShowCheckedModeBanner: false,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBlocSimple>(
+            create: (context) => AuthBlocSimple()..add(const AuthCheckRequested()),
+          ),
+          BlocProvider<EpisodeBloc>(
+            create: (context) => EpisodeBloc(
+              repository: EpisodeRepositoryImpl(),
+            )..add(const LoadEpisodes()),
+          ),
+        ],
+        child: MaterialApp.router(
+          title: 'DevLokos',
+          theme: BrandColors.lightTheme,
+          darkTheme: BrandColors.darkTheme,
+          themeMode: ThemeMode.system,
+          routerConfig: _router,
+          debugShowCheckedModeBanner: false,
+        ),
       ),
     );
   }
@@ -84,6 +92,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: '/youtube',
+      builder: (context, state) => const YouTubeScreen(),
     ),
   ],
 );
