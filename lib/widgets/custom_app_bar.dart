@@ -59,19 +59,18 @@ class _CustomAppBarState extends State<CustomAppBar> {
       leading: widget.showBackButton
           ? IconButton(
               onPressed: () {
-                try {
-                  context.pop();
-                } catch (e) {
-                  // Si no hay nada que hacer pop, determinar la pantalla de destino
-                  // basándose en la ruta actual
-                  final currentRoute = GoRouterState.of(context).uri.path;
-                  if (currentRoute == '/settings') {
-                    context.go('/profile');
-                  } else if (currentRoute.startsWith('/episode/')) {
-                    context.go('/home');
-                  } else {
-                    context.go('/home');
-                  }
+                // Para iOS, usar siempre navegación directa para evitar problemas de navegación
+                final currentRoute = GoRouterState.of(context).uri.path;
+                
+                if (currentRoute == '/settings') {
+                  context.go('/profile');
+                } else if (currentRoute.startsWith('/episode/')) {
+                  context.go('/home');
+                } else if (currentRoute == '/profile') {
+                  context.go('/home');
+                } else {
+                  // Para cualquier otra ruta, ir a home
+                  context.go('/home');
                 }
               },
               icon: const Icon(

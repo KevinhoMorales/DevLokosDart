@@ -131,24 +131,47 @@ class RemoteConfigService {
     print('🔍 Verificación de versión:');
     print('  - Versión actual: $current');
     print('  - Versión mínima requerida: $requiredVersion');
+    print('  - Valor de version_dart desde Remote Config: "${_remoteConfig.getString('version_dart')}"');
+    print('  - ¿Es la versión requerida mayor que la actual? ${_isVersionGreater(requiredVersion, current)}');
     
-    return _isVersionGreater(requiredVersion, current);
+    final result = _isVersionGreater(requiredVersion, current);
+    print('🚨 RESULTADO FINAL: ¿Necesita actualización? $result');
+    
+    return result;
   }
   
   /// Comparar versiones (formato semver: major.minor.patch)
   bool _isVersionGreater(String version1, String version2) {
     try {
+      print('🔍 Comparando versiones:');
+      print('  - Version1 (requerida): "$version1"');
+      print('  - Version2 (actual): "$version2"');
+      
       final v1Parts = version1.split('.').map(int.parse).toList();
       final v2Parts = version2.split('.').map(int.parse).toList();
+      
+      print('  - v1Parts: $v1Parts');
+      print('  - v2Parts: $v2Parts');
       
       // Asegurar que ambas versiones tengan 3 partes
       while (v1Parts.length < 3) v1Parts.add(0);
       while (v2Parts.length < 3) v2Parts.add(0);
       
+      print('  - v1Parts normalizado: $v1Parts');
+      print('  - v2Parts normalizado: $v2Parts');
+      
       for (int i = 0; i < 3; i++) {
-        if (v1Parts[i] > v2Parts[i]) return true;
-        if (v1Parts[i] < v2Parts[i]) return false;
+        print('  - Comparando parte $i: ${v1Parts[i]} vs ${v2Parts[i]}');
+        if (v1Parts[i] > v2Parts[i]) {
+          print('  - ${v1Parts[i]} > ${v2Parts[i]} = true');
+          return true;
+        }
+        if (v1Parts[i] < v2Parts[i]) {
+          print('  - ${v1Parts[i]} < ${v2Parts[i]} = false');
+          return false;
+        }
       }
+      print('  - Las versiones son iguales = false');
       return false; // Las versiones son iguales
     } catch (e) {
       print('❌ Error al comparar versiones: $e');

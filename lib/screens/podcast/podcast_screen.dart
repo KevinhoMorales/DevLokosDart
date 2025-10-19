@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -538,27 +539,43 @@ class _PodcastScreenState extends State<PodcastScreen>
         final deduplicatedVideos = uniqueVideos.values.toList();
         
         // Realizar búsqueda en todos los videos únicos
-        final lowercaseQuery = _searchQuery.toLowerCase();
+        final lowercaseQuery = _searchQuery.toLowerCase().trim();
         print('🔍 Buscando "${lowercaseQuery}" en ${deduplicatedVideos.length} videos únicos de ambas temporadas');
+        
+        // Imprimir algunos títulos para debug
+        for (int i = 0; i < math.min(5, deduplicatedVideos.length); i++) {
+          print('📺 Video ${i + 1}: ${deduplicatedVideos[i].title}');
+        }
         
         final searchResults = deduplicatedVideos
             .where((video) {
               final titleLower = video.title.toLowerCase();
               
-              // Enfoque principal: buscar en el título del podcast
+              // Enfoque principal: buscar en el título completo del podcast
               if (titleLower.contains(lowercaseQuery)) {
-                print('✅ Encontrado en título: ${video.title}');
+                print('✅ Encontrado en título completo: ${video.title}');
                 return true;
               }
               
               // Búsqueda más específica en las partes del título separadas por ||
               // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
               final titleParts = titleLower.split('||');
-              for (final part in titleParts) {
-                final cleanPart = part.trim();
+              for (int i = 0; i < titleParts.length; i++) {
+                final cleanPart = titleParts[i].trim();
                 if (cleanPart.contains(lowercaseQuery)) {
-                  print('✅ Encontrado en parte del título: $cleanPart');
+                  print('✅ Encontrado en parte ${i + 1} del título: "$cleanPart" del video: ${video.title}');
                   return true;
+                }
+              }
+              
+              // Búsqueda por palabras individuales (para casos como "Adap" que debería encontrar "Adaptarse")
+              final words = lowercaseQuery.split(' ');
+              for (final word in words) {
+                if (word.length >= 3) { // Solo buscar palabras de 3+ caracteres
+                  if (titleLower.contains(word)) {
+                    print('✅ Encontrado por palabra "$word": ${video.title}');
+                    return true;
+                  }
                 }
               }
               

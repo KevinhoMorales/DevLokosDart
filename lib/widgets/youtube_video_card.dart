@@ -92,7 +92,7 @@ class YouTubeVideoCard extends StatelessWidget {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withOpacity(0.15),
               ),
               child: const Center(
                 child: Icon(

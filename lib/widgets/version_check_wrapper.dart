@@ -89,22 +89,47 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
 
   Future<void> _checkVersion() async {
     try {
+      print('🔄 Iniciando verificación de versión...');
+      
       // Pequeña pausa para asegurar que Remote Config esté listo
       await Future.delayed(const Duration(milliseconds: 500));
       
       final remoteConfig = RemoteConfigService();
       
+      print('🔍 Verificando configuración de Remote Config...');
+      final isConfigured = remoteConfig.isRemoteConfigConfigured;
+      print('   - Remote Config configurado: $isConfigured');
+      
+      print('🔍 Obteniendo información de versión...');
+      final currentVersion = remoteConfig.currentVersion;
+      final minimumVersion = remoteConfig.minimumRequiredVersion;
+      final needsUpdate = remoteConfig.needsUpdate;
+      
+      print('📊 Información de versiones:');
+      print('   - Versión actual: $currentVersion');
+      print('   - Versión mínima requerida: $minimumVersion');
+      print('   - ¿Necesita actualización? $needsUpdate');
+      
+      // TEMPORAL: Forzar alerta para testing
+      const forceUpdateAlert = true; // Cambiar a false para comportamiento normal
+      final finalNeedsUpdate = forceUpdateAlert || needsUpdate;
+      
+      if (forceUpdateAlert) {
+        print('🧪 MODO DEBUG: Forzando alerta de actualización para testing');
+      }
+      
       setState(() {
-        _needsUpdate = remoteConfig.needsUpdate;
+        _needsUpdate = finalNeedsUpdate;
         _isCheckingVersion = false;
       });
       
       if (_needsUpdate) {
-        print('🚨 Actualización requerida detectada');
-        print('   - Versión actual: ${remoteConfig.currentVersion}');
-        print('   - Versión mínima: ${remoteConfig.minimumRequiredVersion}');
+        print('🚨 ACTUALIZACIÓN REQUERIDA DETECTADA');
+        print('   - Versión actual: $currentVersion');
+        print('   - Versión mínima: $minimumVersion');
+        print('   - Se mostrará la alerta de actualización');
       } else {
-        print('✅ Versión actual es compatible');
+        print('✅ Versión actual es compatible, no se requiere actualización');
       }
     } catch (e) {
       print('❌ Error al verificar versión: $e');
@@ -117,16 +142,26 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
 
   @override
   Widget build(BuildContext context) {
+    print('🔍 VersionCheckWrapper build - _isCheckingVersion: $_isCheckingVersion, _needsUpdate: $_needsUpdate');
+    
     // Mostrar loading mientras se verifica la versión
     if (_isCheckingVersion) {
+      print('⏳ Mostrando pantalla de carga...');
       return _buildDynamicLoadingScreen();
     }
     
     // Si necesita actualización, mostrar alerta sobre la aplicación
     if (_needsUpdate) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showUpdateAlert(context);
+      print('🚨 Necesita actualización, programando alerta...');
+      // Usar un Future.delayed para asegurar que el contexto esté listo
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          print('📱 Mostrando alerta de actualización...');
+          _showUpdateAlert(context);
+        }
       });
+    } else {
+      print('✅ No necesita actualización, continuando normalmente');
     }
     
     // Siempre mostrar la aplicación normal, pero con alerta si es necesario
@@ -134,160 +169,38 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
   }
 
       void _showUpdateAlert(BuildContext context) {
+        print('🚨 _showUpdateAlert llamado - mostrando diálogo de actualización');
         final remoteConfig = RemoteConfigService();
         
         showDialog(
           context: context,
-          barrierDismissible: false, // No se puede cerrar tocando fuera
+          barrierDismissible: false,
           builder: (BuildContext context) {
-            return MaterialApp(
-              home: Material(
-                type: MaterialType.transparency,
-                child: Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: WillPopScope(
-                    onWillPop: () async => false, // No se puede cerrar con el botón back
-                    child: AlertDialog(
-                backgroundColor: BrandColors.cardBackground,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(
-                    color: BrandColors.primaryOrange,
-                    width: 2,
-                  ),
-                ),
-                title: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: BrandColors.primaryOrange.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.system_update,
-                        color: BrandColors.primaryOrange,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'ACTUALIZACIÓN DISPONIBLE',
-                        style: TextStyle(
-                          color: BrandColors.primaryWhite,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Una nueva versión de DevLokos está disponible.',
-                      style: const TextStyle(
-                        color: BrandColors.grayLight,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: BrandColors.primaryBlack,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: BrandColors.grayDark,
-                          width: 1,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Versión actual:',
-                                style: TextStyle(
-                                  color: BrandColors.grayMedium,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              Text(
-                                remoteConfig.currentVersion,
-                                style: const TextStyle(
-                                  color: BrandColors.primaryWhite,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Nueva versión:',
-                                style: TextStyle(
-                                  color: BrandColors.grayMedium,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              Text(
-                                remoteConfig.minimumRequiredVersion,
-                                style: const TextStyle(
-                                  color: BrandColors.primaryOrange,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Para continuar usando la aplicación, necesitas actualizar a la última versión.',
-                      style: TextStyle(
-                        color: BrandColors.grayLight,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => _launchUpdateUrl(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: BrandColors.primaryOrange,
-                        foregroundColor: BrandColors.primaryWhite,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'ACTUALIZAR',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                      ),
-                    ],
-                  ),
+            return AlertDialog(
+              backgroundColor: BrandColors.cardBackground,
+              title: const Text(
+                'ACTUALIZACIÓN DISPONIBLE',
+                style: TextStyle(
+                  color: BrandColors.primaryWhite,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
+              content: Text(
+                'Una nueva versión de DevLokos está disponible.\n\nVersión actual: ${remoteConfig.currentVersion}\nNueva versión: ${remoteConfig.minimumRequiredVersion}\n\nPara continuar usando la aplicación, necesitas actualizar.',
+                style: const TextStyle(
+                  color: BrandColors.grayLight,
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => _launchUpdateUrl(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BrandColors.primaryOrange,
+                    foregroundColor: BrandColors.primaryWhite,
+                  ),
+                  child: const Text('ACTUALIZAR'),
+                ),
+              ],
             );
           },
         );
