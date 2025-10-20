@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -254,21 +253,21 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10.0, 10.0, 10.0, 12.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
       child: SearchBarWidget(
         controller: _searchController,
+        hintText: 'Buscar episodios, invitado o tema...',
         onChanged: (value) {
           setState(() {
-            _searchQuery = value;
+            _searchQuery = value.trim();
           });
-          // Disparar búsqueda con BLoC
-          if (value.isNotEmpty) {
-            context.read<EpisodeBloc>().add(SearchEpisodes(query: value));
+          
+          // Disparar búsqueda con BLoC para episodios de Firestore
+          if (_searchQuery.isNotEmpty) {
+            context.read<EpisodeBloc>().add(SearchEpisodes(query: _searchQuery));
           } else {
             context.read<EpisodeBloc>().add(const ClearSearch());
           }
-          
-          // La búsqueda en videos se hace directamente en la UI, no necesitamos llamar al provider
         },
       ),
     );
@@ -542,44 +541,51 @@ class _PodcastScreenState extends State<PodcastScreen>
         final lowercaseQuery = _searchQuery.toLowerCase().trim();
         print('🔍 Buscando "${lowercaseQuery}" en ${deduplicatedVideos.length} videos únicos de ambas temporadas');
         
-        // Imprimir algunos títulos para debug
-        for (int i = 0; i < math.min(5, deduplicatedVideos.length); i++) {
-          print('📺 Video ${i + 1}: ${deduplicatedVideos[i].title}');
+        // Si la búsqueda está vacía, no mostrar resultados
+        if (lowercaseQuery.isEmpty) {
+          return const SizedBox.shrink();
         }
         
         final searchResults = deduplicatedVideos
             .where((video) {
               final titleLower = video.title.toLowerCase();
               
-              // Enfoque principal: buscar en el título completo del podcast
+              // Búsqueda exacta en el título completo
               if (titleLower.contains(lowercaseQuery)) {
-                print('✅ Encontrado en título completo: ${video.title}');
                 return true;
               }
               
-              // Búsqueda más específica en las partes del título separadas por ||
+              // Búsqueda en las partes del título separadas por ||
               // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
               final titleParts = titleLower.split('||');
-              for (int i = 0; i < titleParts.length; i++) {
-                final cleanPart = titleParts[i].trim();
+              for (final part in titleParts) {
+                final cleanPart = part.trim();
                 if (cleanPart.contains(lowercaseQuery)) {
-                  print('✅ Encontrado en parte ${i + 1} del título: "$cleanPart" del video: ${video.title}');
                   return true;
                 }
               }
               
-              // Búsqueda por palabras individuales (para casos como "Adap" que debería encontrar "Adaptarse")
-              final words = lowercaseQuery.split(' ');
-              for (final word in words) {
-                if (word.length >= 3) { // Solo buscar palabras de 3+ caracteres
-                  if (titleLower.contains(word)) {
-                    print('✅ Encontrado por palabra "$word": ${video.title}');
-                    return true;
+              // Búsqueda por palabras individuales
+              final queryWords = lowercaseQuery.split(' ');
+              final titleWords = titleLower.split(RegExp(r'[\s\|\|]+'));
+              
+              // Buscar cada palabra de la consulta en las palabras del título
+              for (final queryWord in queryWords) {
+                if (queryWord.length >= 2) { // Reducir a 2 caracteres mínimo
+                  bool wordFound = false;
+                  for (final titleWord in titleWords) {
+                    if (titleWord.contains(queryWord) || queryWord.contains(titleWord)) {
+                      wordFound = true;
+                      break;
+                    }
+                  }
+                  if (!wordFound) {
+                    return false; // Si una palabra no se encuentra, excluir el video
                   }
                 }
               }
               
-              return false;
+              return queryWords.isNotEmpty; // Si todas las palabras se encontraron
             })
             .toList();
         
@@ -590,22 +596,40 @@ class _PodcastScreenState extends State<PodcastScreen>
             child: Padding(
               padding: const EdgeInsets.all(32.0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(
                     Icons.search_off,
                     color: BrandColors.grayMedium,
-                    size: 48,
+                    size: 64,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No se encontraron episodios',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: BrandColors.primaryWhite,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Intenta con otros términos de búsqueda',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: BrandColors.grayMedium,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Sugerencias:',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: BrandColors.primaryOrange,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• Busca por nombre del invitado\n• Busca por tema del episodio\n• Busca por número de episodio',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: BrandColors.grayMedium,
                     ),
@@ -621,23 +645,41 @@ class _PodcastScreenState extends State<PodcastScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(
-                'RESULTADOS DE BÚSQUEDA (${searchResults.length})',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: BrandColors.primaryWhite,
-                ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search,
+                    color: BrandColors.primaryOrange,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'RESULTADOS DE BÚSQUEDA (${searchResults.length})',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: BrandColors.primaryWhite,
+                    ),
+                  ),
+                ],
               ),
             ),
-            ...searchResults.map((video) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-              child: YouTubeVideoCard(
-                video: video,
-                onTap: () => _onVideoTap(video),
+            Expanded(
+              child: ListView.builder(
+                itemCount: searchResults.length,
+                itemBuilder: (context, index) {
+                  final video = searchResults[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                    child: YouTubeVideoCard(
+                      video: video,
+                      onTap: () => _onVideoTap(video),
+                    ),
+                  );
+                },
               ),
-            )).toList(),
+            ),
           ],
         );
       },
