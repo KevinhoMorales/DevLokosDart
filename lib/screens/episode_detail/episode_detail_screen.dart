@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../providers/youtube_provider.dart';
+import 'full_episode_screen.dart';
 
 class EpisodeDetailScreen extends StatefulWidget {
   final String? episodeId;
@@ -29,7 +30,7 @@ class EpisodeDetailScreen extends StatefulWidget {
 class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
   Episode? _currentEpisode;
   YouTubeVideo? _currentYouTubeVideo;
-  late YoutubePlayerController _controller;
+  YoutubePlayerController? _controller;
 
   @override
   void initState() {
@@ -59,16 +60,14 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
     final videoId = _currentYouTubeVideo?.videoId ?? widget.youtubeVideo?.videoId ?? '';
     
     if (videoId.isNotEmpty) {
-      _controller = YoutubePlayerController.fromVideoId(
-        videoId: videoId,
-        autoPlay: false,
-        params: const YoutubePlayerParams(
-          showControls: true,
-          showFullscreenButton: true,
+      _controller = YoutubePlayerController(
+        initialVideoId: videoId,
+        flags: const YoutubePlayerFlags(
+          autoPlay: false,
           mute: false,
-          loop: false,
+          isLive: false,
+          forceHD: false,
           enableCaption: true,
-          enableJavaScript: true,
         ),
       );
     }
@@ -103,9 +102,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
 
   @override
   void dispose() {
-    if (_currentYouTubeVideo?.videoId != null || widget.youtubeVideo?.videoId != null) {
-      _controller.close();
-    }
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -159,11 +156,6 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
             _buildEpisodeDescription(),
             const SizedBox(height: 24),
 
-            // Información adicional de YouTube
-            if ((_currentYouTubeVideo ?? widget.youtubeVideo) != null) ...[
-              _buildYouTubeInfo(),
-              const SizedBox(height: 24),
-            ],
 
             // Información del episodio de la base de datos
             if ((_currentEpisode ?? widget.episode) != null) ...[
@@ -178,7 +170,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
 
   Widget _buildVideoPlayer() {
     final videoId = _currentYouTubeVideo?.videoId ?? widget.youtubeVideo?.videoId;
-    if (videoId == null || videoId.isEmpty) {
+    if (videoId == null || videoId.isEmpty || _controller == null) {
       return Container(
         height: 200,
         width: double.infinity,
@@ -219,9 +211,59 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: YoutubePlayer(
-          controller: _controller,
-          aspectRatio: 16 / 9,
+        child: Stack(
+          children: [
+            YoutubePlayer(
+              controller: _controller!,
+              showVideoProgressIndicator: true,
+              progressIndicatorColor: BrandColors.primaryOrange,
+              progressColors: const ProgressBarColors(
+                playedColor: BrandColors.primaryOrange,
+                handleColor: BrandColors.primaryOrange,
+              ),
+              onReady: () {
+                print('✅ Reproductor de YouTube listo');
+              },
+              onEnded: (data) {
+                print('🏁 Video terminado');
+              },
+            ),
+            // Logo de DevLokos para cubrir el botón de pantalla completa nativo
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => FullEpisodeScreen(
+                        episode: _currentEpisode ?? widget.episode,
+                        youtubeVideo: _currentYouTubeVideo ?? widget.youtubeVideo,
+                      ),
+                      fullscreenDialog: true,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.9),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: BrandColors.primaryOrange.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.fullscreen,
+                    color: BrandColors.primaryOrange,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -335,39 +377,6 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
     );
   }
 
-  Widget _buildYouTubeInfo() {
-    final video = _currentYouTubeVideo ?? widget.youtubeVideo!;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.2),
-        ),
-        boxShadow: BrandColors.blackShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Información de YouTube',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: BrandColors.primaryWhite,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildInfoRow('Canal', video.channelTitle),
-          _buildInfoRow('ID del Video', video.videoId),
-          _buildInfoRow('Fecha de Publicación', _formatDate(video.publishedAt)),
-          _buildInfoRow('Posición en Playlist', video.position.toString()),
-        ],
-      ),
-    );
-  }
 
   Widget _buildDatabaseEpisodeInfo() {
     final episode = _currentEpisode ?? widget.episode!;
@@ -437,27 +446,5 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    
-    if (duration.inHours > 0) {
-      return '${duration.inHours}:$twoDigitMinutes:$twoDigitSeconds';
-    } else {
-      return '$twoDigitMinutes:$twoDigitSeconds';
-    }
-  }
-
-  String _formatNumber(int number) {
-    if (number >= 1000000) {
-      return '${(number / 1000000).toStringAsFixed(1)}M';
-    } else if (number >= 1000) {
-      return '${(number / 1000).toStringAsFixed(1)}K';
-    } else {
-      return number.toString();
-    }
   }
 }
