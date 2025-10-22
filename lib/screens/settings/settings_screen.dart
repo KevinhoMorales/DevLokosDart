@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../utils/brand_colors.dart';
-import '../../utils/user_manager.dart';
 import '../../widgets/custom_app_bar.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -29,11 +27,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       setState(() {
-        _appVersion = packageInfo.version;
+        // Mostrar versión con build number: 1.0.1+101
+        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
       });
     } catch (e) {
       setState(() {
-        _appVersion = '1.0.0';
+        _appVersion = '1.0.1+101'; // Fallback con la versión actual del pubspec.yaml
       });
     }
   }
@@ -43,8 +42,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return BlocListener<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
-          // Navegar a la pantalla de login cuando se elimine la cuenta
-          context.go('/login');
+          // Navegar a la pantalla de home cuando se elimine la cuenta
+          context.go('/home');
         } else if (state is AuthError) {
           // Mostrar error si hay algún problema
           ScaffoldMessenger.of(context).showSnackBar(
@@ -121,18 +120,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   color: BrandColors.primaryOrange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(50),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(50),
                   child: Image.asset(
                     'assets/images/devlokos_podcast_host.png',
-                    height: 60,
-                    width: 60,
+                    height: 100,
+                    width: 100,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -143,16 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'DevLokos es una plataforma de podcast que conecta a desarrolladores de software con contenido educativo, entrevistas y experiencias del mundo tech.',
-            style: TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 14,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Únete a nuestra comunidad y mantente actualizado con las últimas tendencias en desarrollo de software.',
+            'DevLokos nació una noche con la simple idea de crear un podcast para hablar de desarrollo y tecnología. Sin planearlo mucho, grabamos el primer episodio entre amigos… y desde entonces, el resto es historia. Hoy contamos con más de 150 episodios junto a grandes expertos, una comunidad activa y nuevas iniciativas como DevLokos Tutorials, DevLokos Academy y DevLokos Enterprise, donde ayudamos a las personas a aprender, crear y crecer en el mundo del software. Lo que comenzó como un podcast, hoy es una marca reconocida que impulsa el aprendizaje y la innovación tecnológica en toda Latinoamérica.',
             style: TextStyle(
               color: BrandColors.grayMedium,
               fontSize: 14,
@@ -189,6 +179,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildInfoRow('Versión', _appVersion),
           const SizedBox(height: 12),
           _buildInfoRow('Desarrollado por', 'DevLokos Enterprise'),
+          const SizedBox(height: 12),
+          _buildInfoRow('Copyright', '© 2025 DevLokos'),
         ],
       ),
     );
@@ -205,14 +197,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
             fontSize: 14,
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            color: BrandColors.primaryWhite,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+        if (value == 'DevLokos Enterprise')
+          GestureDetector(
+            onTap: () async {
+              final uri = Uri.parse('https://linktr.ee/devlokos');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: BrandColors.primaryOrange,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          )
+        else
+          Text(
+            value,
+            style: const TextStyle(
+              color: BrandColors.primaryWhite,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -294,9 +305,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (shouldDelete == true && mounted) {
-      // Aquí puedes agregar la lógica para eliminar la cuenta
-      // Por ahora, solo cerramos sesión
-      context.read<AuthBlocSimple>().add(const AuthLogoutRequested());
+      // Eliminar la cuenta del usuario
+      context.read<AuthBlocSimple>().add(const AuthDeleteAccountRequested());
     }
   }
 }

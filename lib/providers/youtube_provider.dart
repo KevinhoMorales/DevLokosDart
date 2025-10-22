@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/youtube_video.dart';
 import '../models/episode.dart';
 import '../services/youtube_service.dart';
+import '../services/cache_service.dart';
 
 class YouTubeProvider extends ChangeNotifier {
   final YouTubeService _youtubeService = YouTubeService();
@@ -29,6 +30,33 @@ class YouTubeProvider extends ChangeNotifier {
         _hasMoreVideos = false;
       }
 
+      // Si no es refresh, intentar cargar desde caché primero
+      if (!refresh) {
+        final cacheResult = await CacheService.loadVideosFromCache();
+        if (cacheResult != null) {
+          print('📱 Cache: Cargando videos desde caché...');
+          _videos = cacheResult.videos;
+          _featuredVideos = cacheResult.featuredVideos;
+          _nextPageToken = cacheResult.nextPageToken;
+          _hasMoreVideos = cacheResult.hasMoreVideos;
+          
+          print('✅ Cache: ${_videos.length} videos cargados desde caché');
+          print('⭐ Cache: ${_featuredVideos.length} videos destacados desde caché');
+          
+          // Mostrar los primeros 3 videos desde caché
+          if (_videos.isNotEmpty) {
+            print('🎬 Primeros 3 videos desde caché:');
+            for (int i = 0; i < _videos.length && i < 3; i++) {
+              final video = _videos[i];
+              print('  ${i + 1}. ${video.title} (${video.publishedAt})');
+            }
+          }
+          
+          notifyListeners();
+          return;
+        }
+      }
+
       print('🔄 Cargando videos desde YouTube API...');
       _setLoading(true);
       _clearError();
@@ -52,6 +80,14 @@ class YouTubeProvider extends ChangeNotifier {
       
       // Marcar algunos videos como destacados (ejemplo: los 3 más recientes)
       _updateFeaturedVideos();
+      
+      // Guardar en caché
+      await CacheService.saveVideosToCache(
+        videos: _videos,
+        featuredVideos: _featuredVideos,
+        nextPageToken: _nextPageToken,
+        hasMoreVideos: _hasMoreVideos,
+      );
       
       print('✅ ${response.videos.length} videos cargados desde YouTube API');
       print('📊 Total de videos: ${_videos.length}');
@@ -130,6 +166,28 @@ class YouTubeProvider extends ChangeNotifier {
       _setError('Error al obtener videos recientes: $e');
       return [];
     }
+  }
+
+  /// Limpia el caché y recarga los videos
+  Future<void> clearCacheAndReload() async {
+    try {
+      print('🗑️ Limpiando caché y recargando videos...');
+      await CacheService.clearCache();
+      await loadVideos(refresh: true);
+    } catch (e) {
+      _setError('Error al limpiar caché: $e');
+      print('❌ Error al limpiar caché: $e');
+    }
+  }
+
+  /// Verifica si hay caché válido
+  Future<bool> hasValidCache() async {
+    return await CacheService.hasValidCache();
+  }
+
+  /// Obtiene información del caché
+  Future<CacheInfo?> getCacheInfo() async {
+    return await CacheService.getCacheInfo();
   }
 
   /// Convierte un YouTubeVideo a Episode para mantener compatibilidad

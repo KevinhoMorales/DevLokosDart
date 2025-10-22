@@ -1,5 +1,5 @@
 import '../models/episode.dart';
-import '../services/youtube_scraper.dart';
+import '../providers/youtube_provider.dart';
 
 /// Repositorio para manejar la lógica de datos de episodios
 /// Implementa el patrón Repository para separar la lógica de datos
@@ -30,16 +30,26 @@ abstract class EpisodeRepository {
   
   /// Obtiene todos los tags
   Future<List<String>> getAllTags();
+  
+  /// Limpia el caché y recarga los episodios
+  Future<void> clearCacheAndReload();
 }
 
-/// Implementación concreta del repositorio usando YouTube Scraper
+/// Implementación concreta del repositorio usando YouTube Provider
 class EpisodeRepositoryImpl implements EpisodeRepository {
+  final YouTubeProvider _youtubeProvider = YouTubeProvider();
 
   @override
   Future<List<Episode>> getAllEpisodes() async {
     try {
       print('📡 Repository: Obteniendo todos los episodios...');
-      final episodes = await YouTubeScraper.getPlaylistEpisodes();
+      
+      // Cargar videos desde YouTube (con caché)
+      await _youtubeProvider.loadVideos();
+      
+      // Convertir YouTubeVideo a Episode
+      final episodes = _youtubeProvider.videos.map((video) => _youtubeProvider.convertToEpisode(video)).toList();
+      
       print('✅ Repository: ${episodes.length} episodios obtenidos');
       return episodes;
     } catch (e) {
@@ -51,8 +61,14 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
   @override
   Future<List<Episode>> getFeaturedEpisodes() async {
     try {
-      final episodes = await getAllEpisodes();
-      return episodes.where((episode) => episode.isFeatured).toList();
+      // Cargar videos desde YouTube (con caché)
+      await _youtubeProvider.loadVideos();
+      
+      // Convertir YouTubeVideo destacados a Episode
+      final featuredEpisodes = _youtubeProvider.featuredVideos.map((video) => _youtubeProvider.convertToEpisode(video)).toList();
+      
+      print('✅ Repository: ${featuredEpisodes.length} episodios destacados obtenidos');
+      return featuredEpisodes;
     } catch (e) {
       print('❌ Repository: Error al obtener episodios destacados - $e');
       rethrow;
@@ -169,6 +185,18 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
       return allTags.toSet().toList();
     } catch (e) {
       print('❌ Repository: Error al obtener tags - $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> clearCacheAndReload() async {
+    try {
+      print('🗑️ Repository: Limpiando caché y recargando episodios...');
+      await _youtubeProvider.clearCacheAndReload();
+      print('✅ Repository: Caché limpiado y episodios recargados');
+    } catch (e) {
+      print('❌ Repository: Error al limpiar caché - $e');
       rethrow;
     }
   }

@@ -7,12 +7,14 @@ class YouTubeVideoCard extends StatelessWidget {
   final YouTubeVideo video;
   final VoidCallback? onTap;
   final bool showChannelTitle;
+  final double? thumbnailHeight;
 
   const YouTubeVideoCard({
     super.key,
     required this.video,
     this.onTap,
     this.showChannelTitle = true,
+    this.thumbnailHeight,
   });
 
   @override
@@ -55,20 +57,23 @@ class YouTubeVideoCard extends StatelessWidget {
   }
 
   Widget _buildThumbnail() {
+    final height = thumbnailHeight ?? 160; // Usar altura personalizada o 160 por defecto
+    
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       child: Stack(
         children: [
           SizedBox(
             width: double.infinity,
-            height: 120,
+            height: height,
             child: CachedNetworkImage(
-              imageUrl: video.thumbnailUrl,
+              imageUrl: _getHighQualityThumbnail(video.thumbnailUrl),
               width: double.infinity,
-              height: 120,
+              height: height,
               fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
               placeholder: (context, url) => Container(
-                height: 120,
+                height: height,
                 color: BrandColors.grayDark,
                 child: const Center(
                   child: CircularProgressIndicator(
@@ -77,7 +82,7 @@ class YouTubeVideoCard extends StatelessWidget {
                 ),
               ),
               errorWidget: (context, url, error) => Container(
-                height: 120,
+                height: height,
                 color: BrandColors.grayDark,
                 child: const Icon(
                   Icons.error_outline,
@@ -143,44 +148,21 @@ class YouTubeVideoCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetadata() {
-    return Row(
-      children: [
-        if (showChannelTitle) ...[
-          Expanded(
-            child: Text(
-              video.channelTitle,
-              style: const TextStyle(
-                fontSize: 12,
-                color: BrandColors.grayMedium,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-        Text(
-          video.formattedPublishedAt,
-          style: const TextStyle(
-            fontSize: 10,
-            color: BrandColors.grayLight,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildDescription() {
-    return Text(
-      video.description,
-      style: const TextStyle(
-        fontSize: 13,
-        color: BrandColors.grayMedium,
-        height: 1.4,
-      ),
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-    );
+  String _getHighQualityThumbnail(String thumbnailUrl) {
+    // YouTube proporciona diferentes calidades de thumbnail
+    // Si es un thumbnail de YouTube, intentar obtener la versión de alta calidad
+    if (thumbnailUrl.contains('ytimg.com') || thumbnailUrl.contains('youtube.com')) {
+      // Reemplazar diferentes tamaños de thumbnail con la versión de alta calidad
+      final highQualityUrl = thumbnailUrl
+          .replaceAll('/default.jpg', '/maxresdefault.jpg')
+          .replaceAll('/mqdefault.jpg', '/maxresdefault.jpg')
+          .replaceAll('/hqdefault.jpg', '/maxresdefault.jpg')
+          .replaceAll('/sddefault.jpg', '/maxresdefault.jpg');
+      
+      return highQualityUrl;
+    }
+    return thumbnailUrl;
   }
 
   void _launchYouTubeVideo(BuildContext context) {
@@ -217,74 +199,137 @@ class YouTubeVideoListTile extends StatelessWidget {
           width: 2,
         ),
       ),
-      child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CachedNetworkImage(
-          imageUrl: video.thumbnailUrl,
-          width: 80,
-          height: 60,
-          fit: BoxFit.cover,
-          placeholder: (context, url) => Container(
-            width: 80,
-            height: 60,
-            color: BrandColors.grayDark,
-            child: const Center(
-              child: CircularProgressIndicator(
-                color: BrandColors.primaryOrange,
-                strokeWidth: 2,
+      child: InkWell(
+        onTap: onTap ?? () => _launchYouTubeVideo(context),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Thumbnail mejorado
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 100,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: BrandColors.grayDark,
+                  ),
+                  child: Stack(
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: _getHighQualityThumbnail(video.thumbnailUrl),
+                        width: 100,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        filterQuality: FilterQuality.high,
+                        placeholder: (context, url) => Container(
+                          width: 100,
+                          height: 80,
+                          color: BrandColors.grayDark,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: BrandColors.primaryOrange,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          width: 100,
+                          height: 80,
+                          color: BrandColors.grayDark,
+                          child: const Icon(
+                            Icons.error_outline,
+                            color: BrandColors.grayMedium,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                      // Play button overlay
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.play_circle_fill,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          errorWidget: (context, url, error) => Container(
-            width: 80,
-            height: 60,
-            color: BrandColors.grayDark,
-            child: const Icon(
-              Icons.error_outline,
-              color: BrandColors.grayMedium,
-            ),
+              const SizedBox(width: 12),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      video.title,
+                      style: const TextStyle(
+                        color: BrandColors.primaryWhite,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      video.channelTitle,
+                      style: const TextStyle(
+                        color: BrandColors.grayMedium,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      video.formattedPublishedAt,
+                      style: const TextStyle(
+                        color: BrandColors.grayLight,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Play icon
+              const Icon(
+                Icons.play_circle_outline,
+                color: BrandColors.primaryOrange,
+                size: 28,
+              ),
+            ],
           ),
         ),
-      ),
-      title: Text(
-        video.title,
-        style: const TextStyle(
-          color: BrandColors.primaryWhite,
-          fontWeight: FontWeight.w600,
-        ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 4),
-          Text(
-            video.channelTitle,
-            style: const TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            video.formattedPublishedAt,
-            style: const TextStyle(
-              color: BrandColors.grayLight,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-      trailing: const Icon(
-        Icons.play_circle_outline,
-        color: BrandColors.primaryOrange,
-        size: 28,
-      ),
-      onTap: onTap ?? () => _launchYouTubeVideo(context),
       ),
     );
+  }
+
+  String _getHighQualityThumbnail(String thumbnailUrl) {
+    // YouTube proporciona diferentes calidades de thumbnail
+    // Si es un thumbnail de YouTube, intentar obtener la versión de alta calidad
+    if (thumbnailUrl.contains('ytimg.com') || thumbnailUrl.contains('youtube.com')) {
+      // Reemplazar diferentes tamaños de thumbnail con la versión de alta calidad
+      final highQualityUrl = thumbnailUrl
+          .replaceAll('/default.jpg', '/maxresdefault.jpg')
+          .replaceAll('/mqdefault.jpg', '/maxresdefault.jpg')
+          .replaceAll('/hqdefault.jpg', '/maxresdefault.jpg')
+          .replaceAll('/sddefault.jpg', '/maxresdefault.jpg');
+      
+      return highQualityUrl;
+    }
+    return thumbnailUrl;
   }
 
   void _launchYouTubeVideo(BuildContext context) {

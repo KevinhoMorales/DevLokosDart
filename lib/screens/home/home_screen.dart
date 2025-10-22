@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
+import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../models/episode.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/episode_card.dart';
@@ -54,6 +55,10 @@ class _HomeScreenState extends State<HomeScreen>
     context.read<EpisodeBloc>().add(const RefreshEpisodes());
   }
 
+  void _clearCacheAndReload() {
+    context.read<EpisodeBloc>().add(const ClearCacheAndReload());
+  }
+
 
 
   @override
@@ -65,35 +70,57 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        // Si el usuario presiona el botón back, mostrar diálogo de confirmación
-        if (!didPop) {
-          final shouldPop = await _showExitDialog();
-          if (shouldPop && context.mounted) {
-            // Si el usuario confirma, salir de la app
-            Navigator.of(context).pop();
-          }
+    return BlocListener<AuthBlocSimple, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          // Forzar actualización de la UI cuando el usuario se autentique
+          setState(() {
+            // Esto forzará la reconstrucción del widget
+          });
         }
       },
-      child: Scaffold(
-        appBar: const CustomAppBar(title: ''),
-        body: Container(
-          decoration: const BoxDecoration(
-            color: BrandColors.primaryBlack,
-          ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _buildSearchBar(),
-                Expanded(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: _buildContent(),
-                  ),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          // Si el usuario presiona el botón back, mostrar diálogo de confirmación
+          if (!didPop) {
+            final shouldPop = await _showExitDialog();
+            if (shouldPop && context.mounted) {
+              // Si el usuario confirma, salir de la app
+              Navigator.of(context).pop();
+            }
+          }
+        },
+        child: Scaffold(
+          appBar: CustomAppBar(
+            title: '',
+            actions: [
+              IconButton(
+                onPressed: _clearCacheAndReload,
+                icon: const Icon(
+                  Icons.refresh,
+                  color: BrandColors.primaryOrange,
                 ),
-              ],
+                tooltip: 'Limpiar caché y recargar',
+              ),
+            ],
+          ),
+          body: Container(
+            decoration: const BoxDecoration(
+              color: BrandColors.primaryBlack,
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _buildSearchBar(),
+                  Expanded(
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: _buildContent(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

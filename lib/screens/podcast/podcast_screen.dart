@@ -504,6 +504,7 @@ class _PodcastScreenState extends State<PodcastScreen>
                           video: video,
                           onTap: () => _onVideoTap(video),
                           showChannelTitle: false,
+                          thumbnailHeight: 120, // Altura original para la sección DESCUBRE
                         ),
                       ),
                     );

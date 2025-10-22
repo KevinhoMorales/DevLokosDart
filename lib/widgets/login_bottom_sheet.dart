@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import '../../bloc/auth/auth_bloc_exports.dart';
-import '../../utils/brand_colors.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/gradient_button.dart';
+import '../bloc/auth/auth_bloc_exports.dart';
+import '../utils/brand_colors.dart';
+import '../utils/login_helper.dart';
+import '../widgets/custom_text_field.dart';
+import '../widgets/gradient_button.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class LoginBottomSheet extends StatefulWidget {
+  const LoginBottomSheet({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<LoginBottomSheet> createState() => _LoginBottomSheetState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
+class _LoginBottomSheetState extends State<LoginBottomSheet>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
@@ -84,13 +85,16 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          color: BrandColors.primaryBlack,
-        ),
-        child: SafeArea(
-          child: Center(
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85, // 85% de la pantalla
+      decoration: const BoxDecoration(
+        color: BrandColors.primaryBlack,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      child: Column(
+        children: [
+          _buildAppBar(),
+          Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: AnimatedBuilder(
@@ -119,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -128,8 +132,8 @@ class _LoginScreenState extends State<LoginScreen>
     return ScaleTransition(
       scale: _logoScaleAnimation,
       child: Container(
-        width: 160,
-        height: 160,
+        width: 120,
+        height: 120,
         decoration: BoxDecoration(
           color: BrandColors.primaryBlack,
           borderRadius: BorderRadius.circular(20),
@@ -138,8 +142,8 @@ class _LoginScreenState extends State<LoginScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 140,
-              height: 140,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
                 color: BrandColors.primaryBlack,
                 borderRadius: BorderRadius.circular(15),
@@ -148,8 +152,8 @@ class _LoginScreenState extends State<LoginScreen>
                 borderRadius: BorderRadius.circular(15),
                 child: Image.asset(
                   'assets/icons/devlokos_icon.png',
-                  width: 120,
-                  height: 120,
+                  width: 80,
+                  height: 80,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -182,6 +186,7 @@ class _LoginScreenState extends State<LoginScreen>
     return BlocConsumer<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
+          Navigator.of(context).pop(); // Cerrar el bottom sheet
           context.go('/home');
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -260,6 +265,7 @@ class _LoginScreenState extends State<LoginScreen>
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 24),
                 if (state is AuthLoading)
                   Container(
@@ -293,7 +299,10 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildForgotPasswordLink() {
     return TextButton(
-      onPressed: () => context.go('/forgot-password'),
+      onPressed: () {
+        Navigator.of(context).pop(); // Cerrar bottom sheet actual
+        LoginHelper.showForgotPasswordBottomSheet(context); // Mostrar forgot password bottom sheet
+      },
       child: const Text(
         '¿Olvidaste tu contraseña?',
         style: TextStyle(
@@ -326,7 +335,10 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
           TextButton(
-            onPressed: () => context.go('/register'),
+            onPressed: () {
+              Navigator.of(context).pop(); // Cerrar bottom sheet actual
+              LoginHelper.showRegisterBottomSheet(context); // Mostrar register bottom sheet
+            },
             child: const Text(
               'Regístrate aquí',
               style: TextStyle(
@@ -336,6 +348,40 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(
+        color: BrandColors.primaryBlack,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: BrandColors.primaryWhite,
+              size: 24,
+            ),
+          ),
+          const Expanded(
+            child: Text(
+              'Iniciar Sesión',
+              style: TextStyle(
+                color: BrandColors.primaryWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: 48), // Balance para centrar el título
         ],
       ),
     );

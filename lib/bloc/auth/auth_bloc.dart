@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:devlokos_podcast/utils/environment_manager.dart';
 import 'package:devlokos_podcast/utils/user_manager.dart';
+import '../../services/cache_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -21,6 +22,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onAuthLoginRequested);
     on<AuthRegisterRequested>(_onAuthRegisterRequested);
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
+    on<AuthDeleteAccountRequested>(_onAuthDeleteAccountRequested);
     on<AuthPasswordResetRequested>(_onAuthPasswordResetRequested);
     on<AuthErrorCleared>(_onAuthErrorCleared);
 
@@ -71,7 +73,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
           }
         }
       } else {
-        print('❌ No hay usuario autenticado');
+        print('ℹ️ No hay usuario autenticado - continuando sin autenticación');
         emit(const AuthUnauthenticated());
       }
     } catch (e) {
@@ -228,6 +230,14 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       // Limpiar datos locales
       await UserManager.deleteUser();
       
+      // Limpiar caché de videos
+      try {
+        await CacheService.clearCache();
+        print('✅ Cache: Caché limpiado al cerrar sesión');
+      } catch (e) {
+        print('⚠️ Cache: Error al limpiar caché: $e');
+      }
+      
       // Cerrar sesión en Firebase
       await _firebaseAuth.signOut();
       
@@ -236,6 +246,55 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       emit(AuthError(
         message: 'Error al cerrar sesión: $e',
         code: 'logout_error',
+      ));
+    }
+  }
+
+  /// Elimina la cuenta del usuario
+  Future<void> _onAuthDeleteAccountRequested(
+    AuthDeleteAccountRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        emit(AuthError(
+          message: 'No hay usuario autenticado',
+          code: 'no_user',
+        ));
+        return;
+      }
+
+      // Eliminar datos del usuario de Firestore
+      try {
+        await _firestore.collection('users').doc(user.uid).delete();
+        print('✅ Firestore: Datos del usuario eliminados');
+      } catch (e) {
+        print('⚠️ Firestore: Error al eliminar datos del usuario: $e');
+        // Continuar con la eliminación aunque falle Firestore
+      }
+
+      // Limpiar datos locales
+      await UserManager.deleteUser();
+      
+      // Limpiar caché de videos
+      try {
+        await CacheService.clearCache();
+        print('✅ Cache: Caché limpiado al eliminar cuenta');
+      } catch (e) {
+        print('⚠️ Cache: Error al limpiar caché: $e');
+      }
+      
+      // Eliminar la cuenta de Firebase Auth
+      await user.delete();
+      
+      emit(const AuthUnauthenticated());
+    } catch (e) {
+      emit(AuthError(
+        message: 'Error al eliminar cuenta: $e',
+        code: 'delete_account_error',
       ));
     }
   }

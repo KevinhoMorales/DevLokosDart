@@ -76,9 +76,9 @@ class _SplashScreenState extends State<SplashScreen>
             context.go('/home');
             return;
           } else {
-            // Usuario no existe en Firestore, limpiar local y ir a login
+            // Usuario no existe en Firestore, limpiar local y ir a home (sin login)
             await UserManager.deleteUser();
-            context.go('/login');
+            context.go('/home');
             return;
           }
         }
@@ -98,20 +98,20 @@ class _SplashScreenState extends State<SplashScreen>
           context.go('/home');
           return;
         } else {
-          // Usuario no existe en Firestore, cerrar sesión y ir a login
+          // Usuario no existe en Firestore, cerrar sesión y ir a home (sin login)
           await FirebaseAuth.instance.signOut();
-          context.go('/login');
+          context.go('/home');
           return;
         }
       }
 
-      // 3. No hay usuario en ningún lado, ir a login
-      context.go('/login');
+      // 3. No hay usuario en ningún lado, ir a home (sin login)
+      context.go('/home');
       
     } catch (e) {
-      // En caso de error, ir a login por seguridad
+      // En caso de error, ir a home por seguridad
       print('Error en _checkUserAndNavigate: $e');
-      context.go('/login');
+      context.go('/home');
     }
   }
 

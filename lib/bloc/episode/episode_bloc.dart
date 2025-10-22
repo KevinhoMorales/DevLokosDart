@@ -25,6 +25,7 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
     on<ClearFilters>(_onClearFilters);
     on<ToggleFavorite>(_onToggleFavorite);
     on<LoadRelatedEpisodes>(_onLoadRelatedEpisodes);
+    on<ClearCacheAndReload>(_onClearCacheAndReload);
   }
 
   /// Carga todos los episodios
@@ -239,6 +240,37 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
       }
     } catch (e) {
       emit(EpisodeError(message: 'Error al cargar episodios relacionados: $e'));
+    }
+  }
+
+  /// Limpia el caché y recarga los episodios
+  Future<void> _onClearCacheAndReload(
+    ClearCacheAndReload event,
+    Emitter<EpisodeState> emit,
+  ) async {
+    try {
+      print('🗑️ BLoC: Limpiando caché y recargando episodios...');
+      emit(const EpisodeLoading());
+      
+      await _repository.clearCacheAndReload();
+      
+      final episodes = await _repository.getAllEpisodes();
+      final featuredEpisodes = episodes.where((episode) => episode.isFeatured).toList();
+
+      print('✅ BLoC: Caché limpiado y ${episodes.length} episodios recargados');
+      print('⭐ BLoC: ${featuredEpisodes.length} episodios destacados');
+
+      emit(EpisodeLoaded(
+        episodes: episodes,
+        featuredEpisodes: featuredEpisodes,
+        filteredEpisodes: episodes,
+        searchQuery: '',
+      ));
+    } catch (e) {
+      print('❌ BLoC: Error al limpiar caché - $e');
+      emit(EpisodeError(
+        message: 'Error al limpiar caché: $e',
+      ));
     }
   }
 }

@@ -60,6 +60,11 @@ class AuthPasswordResetRequested extends AuthEvent {
   List<Object?> get props => [email];
 }
 
+/// Evento para eliminar cuenta
+class AuthDeleteAccountRequested extends AuthEvent {
+  const AuthDeleteAccountRequested();
+}
+
 /// Evento para limpiar errores
 class AuthErrorCleared extends AuthEvent {
   const AuthErrorCleared();

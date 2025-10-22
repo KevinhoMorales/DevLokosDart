@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/user_manager.dart';
+import '../../utils/login_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -38,8 +39,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return BlocListener<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
-          // Navegar a la pantalla de login cuando se cierre sesión
-          context.go('/login');
+          // Navegar a la pantalla de home cuando se cierre sesión
+          context.go('/home');
         } else if (state is AuthError) {
           // Mostrar error si hay algún problema
           ScaffoldMessenger.of(context).showSnackBar(
@@ -128,9 +129,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Por favor, inicia sesión nuevamente',
+              'Por favor, inicia sesión para acceder a tu perfil',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: BrandColors.grayMedium,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => LoginHelper.showLoginBottomSheet(context),
+              icon: const Icon(Icons.login),
+              label: const Text('Iniciar Sesión'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BrandColors.primaryOrange,
+                foregroundColor: BrandColors.primaryWhite,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],

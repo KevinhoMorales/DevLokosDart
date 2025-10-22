@@ -88,6 +88,11 @@ class LoadRelatedEpisodes extends EpisodeEvent {
   List<Object?> get props => [episodeId];
 }
 
+/// Evento para limpiar caché y recargar episodios
+class ClearCacheAndReload extends EpisodeEvent {
+  const ClearCacheAndReload();
+}
+
 
 
 

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../bloc/auth/auth_bloc_exports.dart';
 import '../utils/brand_colors.dart';
 import '../utils/user_manager.dart';
+import '../utils/login_helper.dart';
 
 class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
@@ -41,80 +44,90 @@ class _CustomAppBarState extends State<CustomAppBar> {
   }
 
   String _getGreeting() {
-    final userName = _currentUser?.displayName;
-    String greeting = '¡Hola Usuario!';
-    
-    if (userName != null && userName.isNotEmpty) {
-      // Split del nombre y tomar solo el primer nombre
-      final firstName = userName.split(' ').first;
-      greeting = '¡Hola $firstName!';
+    // Mostrar "¡Hola NOMBRE!" si hay usuario autenticado, sino "¡Bienvenido!"
+    if (_currentUser != null && _currentUser!.displayName?.isNotEmpty == true) {
+      return '¡Hola ${_currentUser!.displayName}!';
     }
-    
-    return greeting;
+    return '¡Bienvenido!';
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      leading: widget.showBackButton
-          ? IconButton(
+    return BlocListener<AuthBlocSimple, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated || state is AuthRegisterSuccess) {
+          // Recargar usuario cuando se autentique o registre
+          _loadUser();
+        }
+      },
+      child: AppBar(
+        leading: widget.showBackButton
+            ? IconButton(
+                onPressed: () {
+                  // Para iOS, usar siempre navegación directa para evitar problemas de navegación
+                  final currentRoute = GoRouterState.of(context).uri.path;
+                  
+                  if (currentRoute == '/settings') {
+                    context.go('/profile');
+                  } else if (currentRoute.startsWith('/episode/')) {
+                    context.go('/home');
+                  } else if (currentRoute == '/profile') {
+                    context.go('/home');
+                  } else {
+                    // Para cualquier otra ruta, ir a home
+                    context.go('/home');
+                  }
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: BrandColors.primaryWhite,
+                  size: 24,
+                ),
+              )
+            : null,
+        title: Text(
+          widget.showBackButton ? widget.title : 
+          widget.title == 'Mi Perfil' ? 'Mi Perfil' : 
+          widget.title == 'Acerca de DevLokos' ? 'Acerca de DevLokos' : 
+          _getGreeting(),
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: BrandColors.primaryWhite,
+          ),
+        ),
+        backgroundColor: BrandColors.primaryBlack,
+        foregroundColor: BrandColors.primaryWhite,
+        elevation: 0,
+        actions: [
+          // Solo mostrar el icono de perfil si no es la pantalla de perfil
+          if (!widget.showBackButton)
+            IconButton(
               onPressed: () {
-                // Para iOS, usar siempre navegación directa para evitar problemas de navegación
-                final currentRoute = GoRouterState.of(context).uri.path;
-                
-                if (currentRoute == '/settings') {
+                // Si hay usuario autenticado, ir a perfil, sino mostrar login bottom sheet
+                if (_currentUser != null) {
                   context.go('/profile');
-                } else if (currentRoute.startsWith('/episode/')) {
-                  context.go('/home');
-                } else if (currentRoute == '/profile') {
-                  context.go('/home');
                 } else {
-                  // Para cualquier otra ruta, ir a home
-                  context.go('/home');
+                  LoginHelper.showLoginBottomSheet(context);
                 }
               },
-              icon: const Icon(
-                Icons.arrow_back,
-                color: BrandColors.primaryWhite,
-                size: 24,
-              ),
-            )
-          : null,
-      title: Text(
-        widget.showBackButton ? widget.title : 
-        widget.title == 'Mi Perfil' ? 'Mi Perfil' : 
-        widget.title == 'Acerca de DevLokos' ? 'Acerca de DevLokos' : 
-        _getGreeting(),
-        style: const TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: BrandColors.primaryWhite,
-        ),
-      ),
-      backgroundColor: BrandColors.primaryBlack,
-      foregroundColor: BrandColors.primaryWhite,
-      elevation: 0,
-      actions: [
-        // Solo mostrar el icono de perfil si no es la pantalla de perfil
-        if (!widget.showBackButton)
-          IconButton(
-            onPressed: () => context.go('/profile'),
-            icon: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0xFF8B4513), // Color marrón oscuro
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.person,
-                color: BrandColors.primaryOrange,
-                size: 20,
+              icon: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B4513), // Color marrón oscuro
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: BrandColors.primaryOrange,
+                  size: 20,
+                ),
               ),
             ),
-          ),
-        if (widget.actions != null) ...widget.actions!,
-      ],
+          if (widget.actions != null) ...widget.actions!,
+        ],
+      ),
     );
   }
 }

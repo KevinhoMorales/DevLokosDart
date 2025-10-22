@@ -89,6 +89,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         }
       },
       child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: BrandColors.primaryBlack,
+          elevation: 0,
+          title: const Text(
+            'Recuperar Contraseña',
+            style: TextStyle(
+              color: BrandColors.primaryWhite,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          leading: IconButton(
+            onPressed: () => context.go('/login'),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: BrandColors.primaryWhite,
+            ),
+          ),
+        ),
         body: Container(
           decoration: const BoxDecoration(
             color: BrandColors.primaryBlack,
