@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/user_manager.dart';
@@ -279,6 +280,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 32),
 
+          // Footer text and email
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  'Hecho con 🧡 en Ecuador',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: BrandColors.grayMedium,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _openEmailApp,
+                  child: RichText(
+                    text: TextSpan(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: 'Colaboraciones: ',
+                          style: TextStyle(
+                            color: BrandColors.grayMedium,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'info@devlokos.com',
+                          style: TextStyle(
+                            color: BrandColors.primaryOrange,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // Actions
           _buildActionButton(
             title: 'Cerrar Sesión',
@@ -503,6 +546,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _openSettings() {
     context.go('/settings');
+  }
+
+  /// Opens the email app with the collaboration email
+  Future<void> _openEmailApp() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'info@devlokos.com',
+      query: 'subject=Colaboraciones DevLokos',
+    );
+    
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        _showErrorSnackBar('No se pudo abrir la aplicación de correo');
+      }
+    } catch (e) {
+      print('❌ Error al abrir email: $e');
+      _showErrorSnackBar('Error al abrir la aplicación de correo');
+    }
   }
 
   /// Muestra las opciones para seleccionar imagen
