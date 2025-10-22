@@ -104,11 +104,8 @@ final GoRouter _router = GoRouter(
       path: '/episode/:id',
       builder: (context, state) {
         final episodeId = state.pathParameters['id']!;
-        final extra = state.extra as Map<String, dynamic>?;
         return EpisodeDetailScreen(
           episodeId: episodeId,
-          episode: extra?['episode'],
-          youtubeVideo: extra?['youtubeVideo'],
         );
       },
     ),

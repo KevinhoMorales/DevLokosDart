@@ -200,9 +200,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (value == 'DevLokos Enterprise')
           GestureDetector(
             onTap: () async {
-              final uri = Uri.parse('https://linktr.ee/devlokos');
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              try {
+                final uri = Uri.parse('https://linktr.ee/devlokos');
+                print('🔗 Intentando abrir URL: $uri');
+                
+                if (await canLaunchUrl(uri)) {
+                  print('✅ URL puede ser abierta');
+                  await launchUrl(
+                    uri, 
+                    mode: LaunchMode.externalApplication,
+                  );
+                  print('✅ URL abierta exitosamente');
+                } else {
+                  print('❌ No se puede abrir la URL');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('No se puede abrir el enlace'),
+                        backgroundColor: BrandColors.error,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                print('❌ Error al abrir URL: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al abrir enlace: $e'),
+                      backgroundColor: BrandColors.error,
+                    ),
+                  );
+                }
               }
             },
             child: Text(
@@ -212,6 +241,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 decoration: TextDecoration.underline,
+                decorationColor: BrandColors.primaryOrange,
+                decorationThickness: 1.5,
               ),
             ),
           )

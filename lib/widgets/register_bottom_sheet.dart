@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../bloc/auth/auth_bloc_exports.dart';
 import '../utils/brand_colors.dart';
 import '../utils/login_helper.dart';
@@ -405,21 +406,35 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: BrandColors.grayMedium,
                 ),
-                children: const [
-                  TextSpan(text: 'Acepto los '),
-                  TextSpan(
-                    text: 'términos y condiciones',
-                    style: TextStyle(
-                      color: BrandColors.primaryOrange,
-                      fontWeight: FontWeight.w600,
+                children: [
+                  const TextSpan(text: 'Acepto los '),
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: () => _openTermsAndConditions(),
+                      child: const Text(
+                        'términos y condiciones',
+                        style: TextStyle(
+                          color: BrandColors.primaryOrange,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                          decorationColor: BrandColors.primaryOrange,
+                        ),
+                      ),
                     ),
                   ),
-                  TextSpan(text: ' y la '),
-                  TextSpan(
-                    text: 'política de privacidad',
-                    style: TextStyle(
-                      color: BrandColors.primaryOrange,
-                      fontWeight: FontWeight.w600,
+                  const TextSpan(text: ' y la '),
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: () => _openPrivacyPolicy(),
+                      child: const Text(
+                        'política de privacidad',
+                        style: TextStyle(
+                          color: BrandColors.primaryOrange,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                          decorationColor: BrandColors.primaryOrange,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -429,6 +444,46 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
         ),
       ],
     );
+  }
+
+  void _openTermsAndConditions() async {
+    const url = 'https://kevinhomorales.super.site/play-store/devlokos';
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo abrir el enlace: $e'),
+            backgroundColor: BrandColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _openPrivacyPolicy() async {
+    const url = 'https://kevinhomorales.super.site/play-store/devlokos';
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudo abrir el enlace: $e'),
+            backgroundColor: BrandColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    }
   }
 
 }
