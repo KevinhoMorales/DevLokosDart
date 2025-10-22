@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/brand_colors.dart';
-import '../utils/environment_manager.dart';
+import '../config/environment_config.dart';
 import '../utils/user_manager.dart';
 import '../constants/app_constants.dart';
 
@@ -118,7 +118,7 @@ class _SplashScreenState extends State<SplashScreen>
   Future<bool> _checkUserExistsInFirestore(String uid) async {
     try {
       final doc = await FirebaseFirestore.instance
-          .collection(EnvironmentManager.getUsersCollection())
+          .collection(EnvironmentConfig.getUsersCollectionPath())
           .doc(uid)
           .get();
       

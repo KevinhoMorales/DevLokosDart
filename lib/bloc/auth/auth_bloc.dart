@@ -76,6 +76,10 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       
       if (credential.user != null) {
         print('✅ Usuario autenticado: ${credential.user!.email}');
+        
+        // Cargar datos del usuario desde Firestore si existe
+        await _loadUserFromFirestore(credential.user!);
+        
         emit(AuthAuthenticated(user: credential.user!));
       } else {
         emit(AuthError(
@@ -168,8 +172,19 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
+      // 1. Cerrar sesión en Firebase Auth
       await _firebaseAuth.signOut();
       print('✅ Usuario cerró sesión exitosamente');
+      
+      // 2. Limpiar datos locales del UserManager
+      try {
+        await UserManager.deleteUser();
+        print('✅ Datos locales eliminados al cerrar sesión');
+      } catch (e) {
+        print('⚠️ Error al eliminar datos locales: $e');
+        // Continuar aunque falle la limpieza local
+      }
+      
       emit(const AuthUnauthenticated());
     } catch (e) {
       emit(AuthError(
@@ -272,14 +287,15 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
 
       // 2. Eliminar archivos de Storage organizados por UID
       try {
-        final userStoragePath = EnvironmentConfig.getUserStoragePath(userId, '');
-        print('🗂️ Eliminando archivos de Storage en: $userStoragePath');
+        // Eliminar específicamente la carpeta de fotos de perfil
+        final photoStoragePath = EnvironmentConfig.getUserStoragePath(userId, 'photo');
+        print('🗂️ Eliminando archivos de Storage en: $photoStoragePath');
         
-        // Listar todos los archivos del usuario
-        final userFolderRef = _storage.ref().child(userStoragePath);
-        final listResult = await userFolderRef.listAll();
+        // Listar todos los archivos en la carpeta photo
+        final photoFolderRef = _storage.ref().child(photoStoragePath);
+        final listResult = await photoFolderRef.listAll();
         
-        // Eliminar todos los archivos
+        // Eliminar todos los archivos de la carpeta photo
         for (final item in listResult.items) {
           try {
             await item.delete();
@@ -289,19 +305,17 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
           }
         }
         
-        // Eliminar todas las carpetas (subcarpetas)
-        for (final folder in listResult.prefixes) {
-          try {
-            await folder.delete();
-            print('🗑️ Carpeta eliminada: ${folder.name}');
-          } catch (e) {
-            print('⚠️ Error al eliminar carpeta ${folder.name}: $e');
-          }
+        // Eliminar la carpeta photo si está vacía
+        try {
+          await photoFolderRef.delete();
+          print('🗑️ Carpeta photo eliminada');
+        } catch (e) {
+          print('⚠️ Error al eliminar carpeta photo: $e');
         }
         
         print('✅ Storage: Todos los archivos del usuario eliminados');
       } catch (e) {
-        print('⚠️ Storage: Error al eliminar archivos del usuario: $e');
+        print('⚠️ Error al eliminar archivos del usuario: $e');
         // Continuar con la eliminación aunque falle Storage
       }
 
@@ -401,7 +415,10 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       
       print('📤 Datos a guardar: $userData');
       
-      await _firestore.doc(userDocPath).set(userData);
+      await _firestore
+          .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(user.uid)
+          .set(userData);
       
       print('✅ Datos de usuario guardados en Firestore exitosamente');
     } catch (e) {
@@ -430,6 +447,67 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       print('❌ Error al guardar datos localmente: $e');
       // No lanzar excepción para no interrumpir el registro
+    }
+  }
+
+  /// Carga los datos del usuario desde Firestore y los guarda en UserManager
+  Future<void> _loadUserFromFirestore(firebase_auth.User user) async {
+    try {
+      print('📥 Cargando datos del usuario desde Firestore...');
+      print('👤 UID: ${user.uid}');
+      
+      // Obtener documento del usuario desde Firestore
+      final doc = await _firestore
+          .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(user.uid)
+          .get();
+      
+      if (doc.exists && doc.data() != null) {
+        final userData = doc.data()!;
+        print('✅ Datos encontrados en Firestore:');
+        print('   - Email: ${userData['email']}');
+        print('   - Display Name: ${userData['displayName']}');
+        print('   - Photo URL: ${userData['photoURL']}');
+        print('   - Is Active: ${userData['isActive']}');
+        
+        // Guardar datos en UserManager
+        await UserManager.saveUser(UserModel(
+          uid: user.uid,
+          email: userData['email'] ?? user.email ?? '',
+          displayName: userData['displayName'] ?? '',
+          photoURL: userData['photoURL'] ?? '',
+        ));
+        
+        print('✅ Datos del usuario cargados y guardados localmente exitosamente');
+      } else {
+        print('⚠️ Usuario no encontrado en Firestore, usando datos básicos de Auth');
+        
+        // Si no existe en Firestore, usar datos básicos de Firebase Auth
+        await UserManager.saveUser(UserModel(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: user.displayName ?? '',
+          photoURL: user.photoURL ?? '',
+        ));
+        
+        print('✅ Datos básicos guardados localmente');
+      }
+    } catch (e) {
+      print('❌ Error al cargar datos desde Firestore: $e');
+      
+      // En caso de error, usar datos básicos de Firebase Auth
+      try {
+        await UserManager.saveUser(UserModel(
+          uid: user.uid,
+          email: user.email ?? '',
+          displayName: user.displayName ?? '',
+          photoURL: user.photoURL ?? '',
+        ));
+        print('✅ Datos básicos guardados como fallback');
+      } catch (fallbackError) {
+        print('❌ Error en fallback: $fallbackError');
+        // No lanzar excepción para no interrumpir el login
+      }
     }
   }
 

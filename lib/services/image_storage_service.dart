@@ -18,10 +18,10 @@ class ImageStorageService {
         throw Exception('Usuario no autenticado. Debe iniciar sesión para subir imágenes.');
       }
 
-      // Generar nombre único para la imagen
+      // Generar nombre único para la imagen (incluyendo UID del usuario)
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final extension = path.extension(imageFile.path);
-      final fileName = 'profile_${timestamp}${extension}';
+      final fileName = 'profile_${user.uid}_${timestamp}${extension}';
       
       // Referencia al archivo en Storage con estructura organizada por UID
       final storagePath = EnvironmentConfig.getUserStoragePath(user.uid, 'photo');
@@ -37,6 +37,8 @@ class ImageStorageService {
       );
 
       print('📤 Subiendo imagen a: $storagePath');
+      print('📁 Ruta completa del archivo: $storagePath/$fileName');
+      print('👤 Usuario UID: ${user.uid}');
 
       // Subir el archivo con metadatos
       final uploadTask = ref.putFile(imageFile, metadata);

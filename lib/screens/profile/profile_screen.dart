@@ -560,21 +560,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-            if (_currentUser?.photoURL != null) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: _buildImageOption(
-                  icon: Icons.delete,
-                  title: 'Eliminar Foto',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _removeProfileImage();
-                  },
-                  isDestructive: true,
-                ),
-              ),
-            ],
             const SizedBox(height: 20),
           ],
         ),
@@ -705,87 +690,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// Elimina la foto de perfil
-  Future<void> _removeProfileImage() async {
-    try {
-      // Mostrar diálogo de confirmación
-      final shouldRemove = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: BrandColors.blackLight,
-          title: const Text(
-            'Eliminar Foto',
-            style: TextStyle(color: BrandColors.primaryWhite),
-          ),
-          content: const Text(
-            '¿Estás seguro de que quieres eliminar tu foto de perfil?',
-            style: TextStyle(color: BrandColors.grayMedium),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(color: BrandColors.grayMedium),
-              ),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text(
-                'Eliminar',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        ),
-      );
-
-      if (shouldRemove == true && mounted) {
-        setState(() {
-          _isUploadingImage = true;
-        });
-
-        // Eliminar imagen del Storage si existe
-        if (_currentUser?.photoURL != null) {
-          try {
-            await ImageStorageService.deleteProfileImage(_currentUser!.photoURL!);
-          } catch (e) {
-            print('⚠️ Error al eliminar imagen del Storage: $e');
-            // Continuar aunque falle la eliminación del Storage
-          }
-        }
-
-        // Actualizar UserManager
-        await UserManager.updateUserPhotoURL('');
-
-        // Actualizar estado local
-        if (mounted) {
-          setState(() {
-            _currentUser = UserModel(
-              uid: _currentUser!.uid,
-              email: _currentUser!.email,
-              displayName: _currentUser!.displayName,
-              photoURL: null,
-              createdAt: _currentUser!.createdAt,
-            );
-          });
-          
-          _showSuccessSnackBar('Foto de perfil eliminada exitosamente');
-        }
-      }
-    } catch (e) {
-      print('❌ Error al eliminar imagen: $e');
-      if (mounted) {
-        _showErrorSnackBar('Error al eliminar imagen: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUploadingImage = false;
-        });
-      }
-    }
-  }
 
   /// Muestra un mensaje de éxito
   void _showSuccessSnackBar(String message) {
