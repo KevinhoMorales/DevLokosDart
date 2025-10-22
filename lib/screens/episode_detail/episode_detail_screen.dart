@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:go_router/go_router.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
@@ -27,22 +27,14 @@ class EpisodeDetailScreen extends StatefulWidget {
 }
 
 class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
-  YoutubePlayerController? _controller;
   Episode? _currentEpisode;
   YouTubeVideo? _currentYouTubeVideo;
-  bool _isPlayerReady = false;
-  String? _playerError;
+  late YoutubePlayerController _controller;
 
   @override
   void initState() {
     super.initState();
     _loadEpisodeData();
-  }
-
-  @override
-  void dispose() {
-    _controller?.close();
-    super.dispose();
   }
 
   void _loadEpisodeData() {
@@ -59,50 +51,13 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
       _loadEpisodeFromId();
     }
 
-    // Inicializar el reproductor si tenemos un video
-    _initializePlayer();
+    // Inicializar el controlador de YouTube
+    _initializeYouTubeController();
   }
 
-  void _loadEpisodeFromId() {
-    final episodeBloc = context.read<EpisodeBloc>();
-    if (episodeBloc.state is EpisodeLoaded) {
-      final episodes = (episodeBloc.state as EpisodeLoaded).episodes;
-      final foundEpisode = episodes.firstWhere(
-        (ep) => ep.id == widget.episodeId,
-        orElse: () => Episode(
-          id: '',
-          title: '',
-          description: '',
-          thumbnailUrl: '',
-          youtubeVideoId: '',
-          duration: '0:00',
-          publishedDate: DateTime.now(),
-          category: '',
-          tags: [],
-          isFeatured: false,
-        ),
-      );
-
-      if (foundEpisode.id.isNotEmpty) {
-        setState(() {
-          _currentEpisode = foundEpisode;
-          _currentYouTubeVideo = YouTubeVideo(
-            videoId: foundEpisode.youtubeVideoId,
-            title: foundEpisode.title,
-            description: foundEpisode.description,
-            thumbnailUrl: foundEpisode.thumbnailUrl,
-            channelTitle: 'DevLokos',
-            publishedAt: foundEpisode.publishedDate,
-            position: 0,
-          );
-        });
-        _initializePlayer();
-      }
-    }
-  }
-
-  void _initializePlayer() {
-    final videoId = _getVideoId();
+  void _initializeYouTubeController() {
+    final videoId = _currentYouTubeVideo?.videoId ?? widget.youtubeVideo?.videoId ?? '';
+    
     if (videoId.isNotEmpty) {
       _controller = YoutubePlayerController.fromVideoId(
         videoId: videoId,
@@ -114,114 +69,147 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
           loop: false,
           enableCaption: true,
           enableJavaScript: true,
-          strictRelatedVideos: false,
         ),
       );
-
-      _controller?.listen(_onPlayerStateChange);
     }
   }
 
-  void _onPlayerStateChange(YoutubePlayerValue value) {
-    setState(() {
-      _isPlayerReady = true;
-      _playerError = null;
-    });
-  }
-
-  String _getVideoId() {
-    return _currentYouTubeVideo?.videoId ?? 
-           widget.youtubeVideo?.videoId ?? 
-           _currentEpisode?.youtubeVideoId ?? 
-           widget.episode?.youtubeVideoId ?? 
-           '';
-  }
-
-  String _getPublishedDate() {
-    final publishedAt = _currentYouTubeVideo?.publishedAt ?? 
-                       widget.youtubeVideo?.publishedAt ?? 
-                       _currentEpisode?.publishedDate ?? 
-                       widget.episode?.publishedDate;
-    
-    if (publishedAt != null) {
+  void _loadEpisodeFromId() {
+    // Buscar el episodio en el bloc
+    final episodeBloc = context.read<EpisodeBloc>();
+    if (episodeBloc.state is EpisodeLoaded) {
+      final episodes = (episodeBloc.state as EpisodeLoaded).episodes;
       try {
-        DateTime date;
-        if (publishedAt is DateTime) {
-          date = publishedAt;
-        } else {
-          date = DateTime.parse(publishedAt.toString());
-        }
-        return '${date.day}/${date.month}/${date.year}';
+        _currentEpisode = episodes.firstWhere(
+          (episode) => episode.id == widget.episodeId,
+        );
       } catch (e) {
-        return publishedAt.toString();
+        _currentEpisode = null;
       }
     }
-    return 'Fecha no disponible';
+
+    // Buscar el video de YouTube correspondiente
+    final youtubeProvider = context.read<YouTubeProvider>();
+    if (_currentEpisode?.youtubeVideoId != null) {
+      try {
+        _currentYouTubeVideo = youtubeProvider.videos.firstWhere(
+          (video) => video.videoId == _currentEpisode!.youtubeVideoId,
+        );
+      } catch (e) {
+        _currentYouTubeVideo = null;
+      }
+    }
   }
 
-  Future<void> _shareEpisode() async {
-    final videoId = _getVideoId();
-    if (videoId.isNotEmpty) {
-      final url = 'https://www.youtube.com/watch?v=$videoId';
-      final episodeTitle = _currentYouTubeVideo?.title ?? 
-                          _currentEpisode?.title ?? 
-                          'Episodio DevLokos';
-      
-      await Share.share('¡Mira este episodio de DevLokos! "$episodeTitle"\n$url');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No se puede compartir, ID de video no disponible.'),
-          backgroundColor: BrandColors.error,
-        ),
-      );
+  @override
+  void dispose() {
+    if (_currentYouTubeVideo?.videoId != null || widget.youtubeVideo?.videoId != null) {
+      _controller.close();
     }
+    super.dispose();
+  }
+
+  String _getAppBarTitle() {
+    final fullTitle = _currentYouTubeVideo?.title ?? widget.youtubeVideo?.title ?? _currentEpisode?.title ?? widget.episode?.title ?? 'Episodio';
+    
+    // Dividir por el primer ||
+    final parts = fullTitle.split('||');
+    if (parts.length > 1) {
+      return parts[0].trim();
+    }
+    
+    return fullTitle;
+  }
+
+  String _getVideoTitle() {
+    final fullTitle = _currentYouTubeVideo?.title ?? widget.youtubeVideo?.title ?? _currentEpisode?.title ?? widget.episode?.title ?? 'Sin título';
+    
+    // Dividir por el primer ||
+    final parts = fullTitle.split('||');
+    if (parts.length > 1) {
+      // Tomar todo desde el primer || hacia la derecha
+      return parts.sublist(1).join('||').trim();
+    }
+    
+    return fullTitle;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.primaryBlack,
       appBar: CustomAppBar(
-        title: _currentEpisode?.title ?? 'Detalle del Episodio',
+        title: _getAppBarTitle(),
+        showBackButton: true,
       ),
-      body: Container(
-        color: BrandColors.primaryBlack,
-        child: SafeArea(
-          child: BlocBuilder<EpisodeBloc, EpisodeState>(
-            builder: (context, state) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildVideoPlayer(),
-                    const SizedBox(height: 24),
-                    _buildEpisodeInfo(),
-                    const SizedBox(height: 32),
-                    _buildRelatedEpisodes(state),
-                  ],
-                ),
-              );
-            },
-          ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Reproductor de video
+            _buildVideoPlayer(),
+            const SizedBox(height: 24),
+
+            // Información del episodio
+            _buildEpisodeInfo(),
+            const SizedBox(height: 24),
+
+            // Descripción del episodio
+            _buildEpisodeDescription(),
+            const SizedBox(height: 24),
+
+            // Información adicional de YouTube
+            if ((_currentYouTubeVideo ?? widget.youtubeVideo) != null) ...[
+              _buildYouTubeInfo(),
+              const SizedBox(height: 24),
+            ],
+
+            // Información del episodio de la base de datos
+            if ((_currentEpisode ?? widget.episode) != null) ...[
+              _buildDatabaseEpisodeInfo(),
+              const SizedBox(height: 24),
+            ],
+          ],
         ),
       ),
     );
   }
 
   Widget _buildVideoPlayer() {
-    final videoId = _getVideoId();
-    
-    if (videoId.isEmpty) {
-      return _buildErrorPlayer('No hay video disponible');
-    }
-
-    if (_controller == null) {
-      return _buildLoadingPlayer();
-    }
-
-    if (_playerError != null) {
-      return _buildErrorPlayer(_playerError!);
+    final videoId = _currentYouTubeVideo?.videoId ?? widget.youtubeVideo?.videoId;
+    if (videoId == null || videoId.isEmpty) {
+      return Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: BrandColors.blackLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: BrandColors.primaryOrange.withOpacity(0.2),
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.play_circle_outline,
+                color: BrandColors.grayMedium,
+                size: 48,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Video no disponible',
+                style: TextStyle(
+                  color: BrandColors.grayMedium,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Container(
@@ -232,310 +220,244 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: YoutubePlayer(
-          controller: _controller!,
+          controller: _controller,
           aspectRatio: 16 / 9,
         ),
       ),
     );
   }
 
-  Widget _buildLoadingPlayer() {
+  Widget _buildEpisodeInfo() {
+    final title = _getVideoTitle();
+    final publishedAt = _currentYouTubeVideo?.publishedAt ?? widget.youtubeVideo?.publishedAt ?? _currentEpisode?.publishedDate ?? widget.episode?.publishedDate;
+
     return Container(
-      height: 200,
-      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: BrandColors.blackLight,
-        borderRadius: BorderRadius.circular(12),
+        color: BrandColors.blackLight.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: BrandColors.primaryOrange.withOpacity(0.2),
         ),
+        boxShadow: BrandColors.blackShadow,
       ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: BrandColors.primaryWhite,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
             ),
-            SizedBox(height: 12),
-            Text(
-              'Cargando video...',
-              style: TextStyle(
-                color: BrandColors.grayMedium,
-                fontSize: 14,
-              ),
+          ),
+          if (publishedAt != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  color: BrandColors.primaryOrange,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatDate(publishedAt),
+                  style: const TextStyle(
+                    color: BrandColors.grayMedium,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
+          if ((_currentEpisode?.duration ?? widget.episode?.duration) != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time,
+                  color: BrandColors.primaryOrange,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  (_currentEpisode?.duration ?? widget.episode?.duration)!,
+                  style: const TextStyle(
+                    color: BrandColors.grayMedium,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  Widget _buildErrorPlayer(String message) {
+  Widget _buildEpisodeDescription() {
+    final description = _currentYouTubeVideo?.description ?? widget.youtubeVideo?.description ?? _currentEpisode?.description ?? widget.episode?.description ?? 'Sin descripción disponible.';
+
     return Container(
-      height: 200,
-      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: BrandColors.blackLight,
-        borderRadius: BorderRadius.circular(12),
+        color: BrandColors.blackLight.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: BrandColors.primaryOrange.withOpacity(0.2),
         ),
+        boxShadow: BrandColors.blackShadow,
       ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: BrandColors.grayMedium,
-              size: 48,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Descripción',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: BrandColors.primaryWhite,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Error al cargar el video',
+          ),
+          const SizedBox(height: 12),
+          Text(
+            description,
+            style: const TextStyle(
+              color: BrandColors.grayMedium,
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYouTubeInfo() {
+    final video = _currentYouTubeVideo ?? widget.youtubeVideo!;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: BrandColors.blackLight.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withOpacity(0.2),
+        ),
+        boxShadow: BrandColors.blackShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Información de YouTube',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: BrandColors.primaryWhite,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow('Canal', video.channelTitle),
+          _buildInfoRow('ID del Video', video.videoId),
+          _buildInfoRow('Fecha de Publicación', _formatDate(video.publishedAt)),
+          _buildInfoRow('Posición en Playlist', video.position.toString()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDatabaseEpisodeInfo() {
+    final episode = _currentEpisode ?? widget.episode!;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: BrandColors.blackLight.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withOpacity(0.2),
+        ),
+        boxShadow: BrandColors.blackShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Información del Episodio',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: BrandColors.primaryWhite,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow('ID', episode.id),
+          _buildInfoRow('YouTube ID', episode.youtubeVideoId),
+          _buildInfoRow('Destacado', episode.isFeatured ? 'Sí' : 'No'),
+          _buildInfoRow('Categoría', episode.category),
+          _buildInfoRow('Publicado', _formatDate(episode.publishedDate)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                color: BrandColors.grayMedium,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
               style: const TextStyle(
                 color: BrandColors.primaryWhite,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(
-                color: BrandColors.grayMedium,
                 fontSize: 14,
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _playerError = null;
-                  _isPlayerReady = false;
-                });
-                _initializePlayer();
-              },
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Reintentar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BrandColors.primaryOrange,
-                foregroundColor: BrandColors.primaryWhite,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEpisodeInfo() {
-    final title = _currentYouTubeVideo?.title ?? 
-                 widget.youtubeVideo?.title ?? 
-                 _currentEpisode?.title ?? 
-                 'Título no disponible';
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
     
-    final description = _currentYouTubeVideo?.description ?? 
-                      widget.youtubeVideo?.description ?? 
-                      _currentEpisode?.description ?? 
-                      'Descripción no disponible';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: BrandColors.primaryWhite,
-            fontSize: 22,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Icon(
-              Icons.calendar_today,
-              color: BrandColors.grayMedium,
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _getPublishedDate(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: BrandColors.grayMedium,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Descripción',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: BrandColors.primaryWhite,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          description,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: BrandColors.grayLight,
-            fontSize: 16,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 24),
-        _buildActionButtons(),
-      ],
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildActionButton(
-          icon: Icons.share,
-          label: 'Compartir',
-          onPressed: _shareEpisode,
-        ),
-        _buildActionButton(
-          icon: Icons.favorite_border,
-          label: 'Favorito',
-          onPressed: () {
-            // TODO: Implementar lógica de favoritos
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Funcionalidad de favoritos en desarrollo'),
-                backgroundColor: BrandColors.primaryOrange,
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return Column(
-      children: [
-        IconButton(
-          icon: Icon(icon, color: BrandColors.primaryOrange, size: 28),
-          onPressed: onPressed,
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: BrandColors.grayMedium,
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRelatedEpisodes(EpisodeState state) {
-    List<Episode> relatedEpisodes = [];
-    if (state is EpisodeSelected) {
-      relatedEpisodes = state.relatedEpisodes;
+    if (duration.inHours > 0) {
+      return '${duration.inHours}:$twoDigitMinutes:$twoDigitSeconds';
+    } else {
+      return '$twoDigitMinutes:$twoDigitSeconds';
     }
+  }
 
-    if (relatedEpisodes.isEmpty) {
-      return const SizedBox.shrink();
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}M';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}K';
+    } else {
+      return number.toString();
     }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'EPISODIOS RELACIONADOS',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: BrandColors.primaryWhite,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: relatedEpisodes.length,
-          itemBuilder: (context, index) {
-            final episode = relatedEpisodes[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: Card(
-                color: BrandColors.blackLight,
-                child: ListTile(
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      episode.thumbnailUrl,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 60,
-                          height: 60,
-                          color: BrandColors.grayMedium,
-                          child: const Icon(
-                            Icons.play_circle_outline,
-                            color: BrandColors.primaryOrange,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  title: Text(
-                    episode.title,
-                    style: const TextStyle(
-                      color: BrandColors.primaryWhite,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    episode.description,
-                    style: const TextStyle(
-                      color: BrandColors.grayMedium,
-                      fontSize: 12,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () {
-                    // Navegar al detalle del episodio relacionado
-                    context.read<EpisodeBloc>().add(SelectEpisode(episodeId: episode.id));
-                    // Reemplazar la ruta actual para que el botón de retroceso funcione correctamente
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => EpisodeDetailScreen(episodeId: episode.id),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
   }
 }
