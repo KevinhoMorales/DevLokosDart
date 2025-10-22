@@ -20,7 +20,7 @@ class RemoteConfigService {
     await _remoteConfig.setDefaults({
       'youtube_api_key': 'AIzaSyAKQUaIVnjM-WOKwJUtOk63Dax6_T7-q7s', // Fallback temporal
       'youtube_playlist_id': 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ', // Fallback temporal
-      'version_dart': '1.0.0', // Versión mínima requerida
+      'version_dart': '1.0.3', // Versión mínima requerida
     });
 
     // Configurar tiempo de expiración para desarrollo (12 horas)

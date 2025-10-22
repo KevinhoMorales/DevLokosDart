@@ -28,6 +28,7 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
   @override
   void initState() {
     super.initState();
+    print('🚀 VersionCheckWrapper: initState llamado');
     _setupAnimations();
     _setupLoadingMessages();
     _startMessageRotation();
@@ -89,33 +90,34 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
 
   Future<void> _checkVersion() async {
     try {
-      print('🔄 Iniciando verificación de versión...');
+      print('🔄 VersionCheckWrapper: Iniciando verificación de versión...');
       
       // Pequeña pausa para asegurar que Remote Config esté listo
       await Future.delayed(const Duration(milliseconds: 500));
       
       final remoteConfig = RemoteConfigService();
       
-      print('🔍 Verificando configuración de Remote Config...');
+      print('🔍 VersionCheckWrapper: Verificando configuración de Remote Config...');
       final isConfigured = remoteConfig.isRemoteConfigConfigured;
       print('   - Remote Config configurado: $isConfigured');
       
-      print('🔍 Obteniendo información de versión...');
+      print('🔍 VersionCheckWrapper: Obteniendo información de versión...');
       final currentVersion = remoteConfig.currentVersion;
       final minimumVersion = remoteConfig.minimumRequiredVersion;
       final needsUpdate = remoteConfig.needsUpdate;
       
-      print('📊 Información de versiones:');
+      print('📊 VersionCheckWrapper: Información de versiones:');
       print('   - Versión actual: $currentVersion');
       print('   - Versión mínima requerida: $minimumVersion');
       print('   - ¿Necesita actualización? $needsUpdate');
       
-      // TEMPORAL: Forzar alerta para testing
-      const forceUpdateAlert = true; // Cambiar a false para comportamiento normal
-      final finalNeedsUpdate = forceUpdateAlert || needsUpdate;
+      // Verificar si necesita actualización basado en Remote Config
+      final finalNeedsUpdate = needsUpdate;
       
-      if (forceUpdateAlert) {
-        print('🧪 MODO DEBUG: Forzando alerta de actualización para testing');
+      if (finalNeedsUpdate) {
+        print('🚨 VersionCheckWrapper: ACTUALIZACIÓN REQUERIDA: La versión remota es mayor que la actual');
+      } else {
+        print('✅ VersionCheckWrapper: No se requiere actualización');
       }
       
       setState(() {
@@ -124,15 +126,15 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
       });
       
       if (_needsUpdate) {
-        print('🚨 ACTUALIZACIÓN REQUERIDA DETECTADA');
+        print('🚨 VersionCheckWrapper: ACTUALIZACIÓN REQUERIDA DETECTADA');
         print('   - Versión actual: $currentVersion');
         print('   - Versión mínima: $minimumVersion');
         print('   - Se mostrará la alerta de actualización');
       } else {
-        print('✅ Versión actual es compatible, no se requiere actualización');
+        print('✅ VersionCheckWrapper: Versión actual es compatible, no se requiere actualización');
       }
     } catch (e) {
-      print('❌ Error al verificar versión: $e');
+      print('❌ VersionCheckWrapper: Error al verificar versión: $e');
       setState(() {
         _needsUpdate = false; // En caso de error, permitir continuar
         _isCheckingVersion = false;
@@ -144,27 +146,28 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
   Widget build(BuildContext context) {
     print('🔍 VersionCheckWrapper build - _isCheckingVersion: $_isCheckingVersion, _needsUpdate: $_needsUpdate');
     
-    // Mostrar loading mientras se verifica la versión
-    if (_isCheckingVersion) {
-      print('⏳ Mostrando pantalla de carga...');
-      return _buildDynamicLoadingScreen();
-    }
-    
-    // Si necesita actualización, mostrar alerta sobre la aplicación
+    // Si necesita actualización, no mostrar loading, ir directo a la app con alerta
     if (_needsUpdate) {
-      print('🚨 Necesita actualización, programando alerta...');
+      print('🚨 VersionCheckWrapper: Necesita actualización, mostrando app con alerta...');
       // Usar un Future.delayed para asegurar que el contexto esté listo
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
-          print('📱 Mostrando alerta de actualización...');
+          print('📱 VersionCheckWrapper: Mostrando alerta de actualización...');
           _showUpdateAlert(context);
         }
       });
-    } else {
-      print('✅ No necesita actualización, continuando normalmente');
+      return widget.child;
     }
     
-    // Siempre mostrar la aplicación normal, pero con alerta si es necesario
+    // Mostrar loading solo si está verificando y NO necesita actualización
+    if (_isCheckingVersion) {
+      print('⏳ VersionCheckWrapper: Mostrando pantalla de carga...');
+      return _buildDynamicLoadingScreen();
+    }
+    
+    print('✅ VersionCheckWrapper: No necesita actualización, continuando normalmente');
+    
+    // Siempre mostrar la aplicación normal
     return widget.child;
   }
 
@@ -174,33 +177,51 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper>
         
         showDialog(
           context: context,
-          barrierDismissible: false,
+          barrierDismissible: false, // No se puede cerrar tocando fuera
           builder: (BuildContext context) {
-            return AlertDialog(
-              backgroundColor: BrandColors.cardBackground,
-              title: const Text(
-                'ACTUALIZACIÓN DISPONIBLE',
-                style: TextStyle(
-                  color: BrandColors.primaryWhite,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Text(
-                'Una nueva versión de DevLokos está disponible.\n\nVersión actual: ${remoteConfig.currentVersion}\nNueva versión: ${remoteConfig.minimumRequiredVersion}\n\nPara continuar usando la aplicación, necesitas actualizar.',
-                style: const TextStyle(
-                  color: BrandColors.grayLight,
-                ),
-              ),
-              actions: [
-                ElevatedButton(
-                  onPressed: () => _launchUpdateUrl(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BrandColors.primaryOrange,
-                    foregroundColor: BrandColors.primaryWhite,
+            return WillPopScope(
+              onWillPop: () async => false, // No se puede cerrar con botón back
+              child: AlertDialog(
+                backgroundColor: BrandColors.cardBackground,
+                title: const Text(
+                  'ACTUALIZACIÓN REQUERIDA',
+                  style: TextStyle(
+                    color: BrandColors.primaryWhite,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
                   ),
-                  child: const Text('ACTUALIZAR'),
                 ),
-              ],
+                content: Text(
+                  'Una nueva versión de DevLokos está disponible.\n\nVersión actual: ${remoteConfig.currentVersion}\nNueva versión: ${remoteConfig.minimumRequiredVersion}\n\nPara continuar usando la aplicación, necesitas actualizar ahora.',
+                  style: const TextStyle(
+                    color: BrandColors.grayLight,
+                    fontSize: 14,
+                  ),
+                ),
+                actions: [
+                  Container(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _launchUpdateUrl(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: BrandColors.primaryOrange,
+                        foregroundColor: BrandColors.primaryWhite,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'ACTUALIZAR AHORA',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         );

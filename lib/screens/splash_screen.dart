@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../utils/brand_colors.dart';
 import '../config/environment_config.dart';
 import '../utils/user_manager.dart';
 import '../constants/app_constants.dart';
+import '../services/remote_config_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -62,6 +64,24 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkUserAndNavigate() async {
     try {
+      // 0. Verificar versión primero
+      print('🔄 SplashScreen: Verificando versión...');
+      final remoteConfig = RemoteConfigService();
+      final needsUpdate = remoteConfig.needsUpdate;
+      
+      print('📊 SplashScreen: Información de versiones:');
+      print('   - Versión actual: ${remoteConfig.currentVersion}');
+      print('   - Versión mínima requerida: ${remoteConfig.minimumRequiredVersion}');
+      print('   - ¿Necesita actualización? $needsUpdate');
+      
+      if (needsUpdate) {
+        print('🚨 SplashScreen: ACTUALIZACIÓN REQUERIDA - Mostrando alerta');
+        _showUpdateAlert();
+        return; // No continuar con la navegación si necesita actualización
+      }
+      
+      print('✅ SplashScreen: Versión OK, continuando con navegación...');
+      
       // 1. Verificar si hay un usuario guardado localmente
       final hasLocalUser = await UserManager.hasUser();
       
@@ -126,6 +146,78 @@ class _SplashScreenState extends State<SplashScreen>
     } catch (e) {
       print('Error al verificar usuario en Firestore: $e');
       return false;
+    }
+  }
+
+  void _showUpdateAlert() {
+    print('🚨 SplashScreen: _showUpdateAlert llamado - mostrando diálogo de actualización');
+    final remoteConfig = RemoteConfigService();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false, // No se puede cerrar tocando fuera
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false, // No se puede cerrar con botón back
+          child: AlertDialog(
+            backgroundColor: BrandColors.cardBackground,
+            title: const Text(
+              'ACTUALIZACIÓN REQUERIDA',
+              style: TextStyle(
+                color: BrandColors.primaryWhite,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            content: Text(
+              'Una nueva versión de DevLokos está disponible.\n\nVersión actual: ${remoteConfig.currentVersion}\nNueva versión: ${remoteConfig.minimumRequiredVersion}\n\nPara continuar usando la aplicación, necesitas actualizar ahora.',
+              style: const TextStyle(
+                color: BrandColors.grayLight,
+                fontSize: 14,
+              ),
+            ),
+            actions: [
+              Container(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _launchUpdateUrl(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: BrandColors.primaryOrange,
+                    foregroundColor: BrandColors.primaryWhite,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'ACTUALIZAR AHORA',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _launchUpdateUrl() async {
+    try {
+      const url = 'https://onelink.to/DevLokos';
+      if (await canLaunchUrl(Uri.parse(url))) {
+        await launchUrl(
+          Uri.parse(url),
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        print('❌ No se pudo abrir la URL de actualización');
+      }
+    } catch (e) {
+      print('❌ Error al abrir la URL de actualización: $e');
     }
   }
 
