@@ -18,7 +18,7 @@ class RemoteConfigService {
     
     // Configurar valores por defecto
     await _remoteConfig.setDefaults({
-      'youtube_api_key': 'AIzaSyAKQUaIVnjM-WOKwJUtOk63Dax6_T7-q7s', // Fallback temporal
+      'youtube_api_key': '', // Sin API key por defecto
       'youtube_playlist_id': 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ', // Fallback temporal
       'version_dart': '1.0.3', // Versión mínima requerida
     });
@@ -68,8 +68,8 @@ class RemoteConfigService {
   String get youtubeApiKey {
     final apiKey = _remoteConfig.getString('youtube_api_key');
     if (apiKey.isEmpty) {
-      print('⚠️ API Key vacía en Remote Config, usando fallback');
-      return 'AIzaSyAKQUaIVnjM-WOKwJUtOk63Dax6_T7-q7s';
+      print('⚠️ API Key no configurada en Remote Config');
+      return '';
     }
     print('✅ API Key obtenida desde Firebase Remote Config');
     return apiKey;
@@ -114,7 +114,8 @@ class RemoteConfigService {
     print('  - YouTube Playlist ID configurado: $hasPlaylistId');
     print('  - Versión configurada: $hasVersion');
     
-    return hasApiKey && hasPlaylistId && hasVersion;
+    // Solo requerir playlist ID y versión, la API key es opcional
+    return hasPlaylistId && hasVersion;
   }
 
   /// Obtener versión mínima requerida desde Remote Config
@@ -188,5 +189,6 @@ class RemoteConfigService {
     'current_version': currentVersion,
     'minimum_required_version': minimumRequiredVersion,
     'needs_update': needsUpdate,
+    'remote_config_configured': isRemoteConfigConfigured,
   };
 }

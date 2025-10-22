@@ -1,4 +1,5 @@
 import '../services/remote_config_service.dart';
+import '../services/youtube_service.dart';
 
 class YouTubeConfig {
   // Servicio de Remote Config para obtener configuración dinámicamente
@@ -28,16 +29,21 @@ class YouTubeConfig {
     'maxres': 'maxresdefault',
   };
   
-  // Validar configuración
-  static bool get isConfigured => 
-      apiKey.isNotEmpty && 
-      devLokosPlaylistId.isNotEmpty;
+  // Validar configuración - solo requiere playlist ID, API key es opcional
+  static bool get isConfigured => devLokosPlaylistId.isNotEmpty;
+  
+  // Verificar si la API key está disponible
+  static bool get hasApiKey => apiKey.isNotEmpty;
   
   // Método para obtener URL completa con parámetros opcionales
   static String buildPlaylistUrl({
     int maxResults = 50,
     String? pageToken,
   }) {
+    if (!hasApiKey) {
+      throw YouTubeServiceException('API Key de YouTube no configurada');
+    }
+    
     String url = '$baseUrl/playlistItems?part=snippet&maxResults=$maxResults&playlistId=$devLokosPlaylistId&key=$apiKey';
     
     if (pageToken != null) {

@@ -21,7 +21,14 @@ class YouTubeService {
       // Validar configuración
       if (!YouTubeConfig.isConfigured) {
         throw YouTubeServiceException(
-          'YouTube API no está configurada. Verifica el API Key y Playlist ID.',
+          'YouTube no está configurado. Verifica el Playlist ID.',
+        );
+      }
+      
+      // Validar que la API key esté disponible
+      if (!YouTubeConfig.hasApiKey) {
+        throw YouTubeServiceException(
+          'API Key de YouTube no configurada. Configura la API key en Firebase Remote Config.',
         );
       }
 
@@ -57,6 +64,13 @@ class YouTubeService {
   /// Obtiene información adicional de un video específico
   Future<Map<String, dynamic>> getVideoDetails(String videoId) async {
     try {
+      // Validar que la API key esté disponible
+      if (!YouTubeConfig.hasApiKey) {
+        throw YouTubeServiceException(
+          'API Key de YouTube no configurada. Configura la API key en Firebase Remote Config.',
+        );
+      }
+      
       final url = '$_baseUrl/videos?part=snippet,statistics&id=$videoId&key=${YouTubeConfig.apiKey}';
 
       final response = await http.get(
