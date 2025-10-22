@@ -11,6 +11,7 @@ import '../../widgets/custom_app_bar.dart';
 import '../../widgets/gradient_button.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../providers/youtube_provider.dart';
+import '../../config/environment_config.dart';
 import 'full_episode_screen.dart';
 
 class EpisodeDetailScreen extends StatefulWidget {
@@ -409,15 +410,27 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
 
   void _shareEpisode() {
     final episodeTitle = _getVideoTitle();
+    final appBarTitle = _getAppBarTitle();
+    
+    // Extraer información del título para crear un mensaje más atractivo
+    String learningContent = '';
+    if (episodeTitle.contains('||')) {
+      final parts = episodeTitle.split('||');
+      if (parts.length > 1) {
+        learningContent = parts[1].trim();
+      }
+    } else {
+      learningContent = episodeTitle;
+    }
+    
+    // Crear mensaje más atractivo
     final shareText = '''
-🎧 ¡Mira este episodio de DevLokos!
+🎧 Descubre el episodio "$appBarTitle", en donde aprenderás $learningContent
 
-$episodeTitle
+📱 Descarga la aplicación DevLokos y accede a cientos de episodios:
+${EnvironmentConfig.onelinkUrl}
 
-📱 Descarga la app DevLokos para ver todos nuestros episodios:
-https://onelink.to/devlokos
-
-#DevLokos #Podcast #Tech
+#DevLokos #Podcast #Tech #Aprendizaje
 ''';
 
     Share.share(shareText);

@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/youtube_video.dart';
+import '../config/environment_config.dart';
 
 /// Servicio para manejar el caché de videos de YouTube
 class CacheService {
-  static const String _videosCacheKey = 'youtube_videos_cache';
-  static const String _cacheTimestampKey = 'youtube_videos_cache_timestamp';
-  static const String _featuredVideosCacheKey = 'youtube_featured_videos_cache';
-  static const String _nextPageTokenCacheKey = 'youtube_next_page_token_cache';
-  static const String _hasMoreVideosCacheKey = 'youtube_has_more_videos_cache';
+  static String get _videosCacheKey => EnvironmentConfig.getCacheKey('youtube_videos_cache');
+  static String get _cacheTimestampKey => EnvironmentConfig.getCacheKey('youtube_videos_cache_timestamp');
+  static String get _featuredVideosCacheKey => EnvironmentConfig.getCacheKey('youtube_featured_videos_cache');
+  static String get _nextPageTokenCacheKey => EnvironmentConfig.getCacheKey('youtube_next_page_token_cache');
+  static String get _hasMoreVideosCacheKey => EnvironmentConfig.getCacheKey('youtube_has_more_videos_cache');
   
   // Duración del caché en horas (24 horas por defecto)
   static const int _cacheExpirationHours = 24;

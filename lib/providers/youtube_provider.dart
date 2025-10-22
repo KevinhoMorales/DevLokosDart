@@ -208,14 +208,34 @@ class YouTubeProvider extends ChangeNotifier {
   List<YouTubeVideo> getDiscoverVideos({int count = 4}) {
     if (_videos.isEmpty) return [];
     
-    // Mezclar todos los videos y tomar la cantidad solicitada
-    final shuffledVideos = List<YouTubeVideo>.from(_videos);
-    shuffledVideos.shuffle();
+    // Filtrar videos con títulos válidos (no vacíos, no "Sin título")
+    final validVideos = _videos.where((video) => 
+      video.title.isNotEmpty && 
+      video.title.trim().isNotEmpty &&
+      video.title != 'Sin título'
+    ).toList();
     
-    final discoverVideos = shuffledVideos.take(count).toList();
-    print('🎲 Videos de descubrimiento generados: ${discoverVideos.length} de ${_videos.length} videos totales');
+    print('🎲 Videos válidos para descubrimiento: ${validVideos.length} de ${_videos.length} videos totales');
     
-    return discoverVideos;
+    if (validVideos.isNotEmpty) {
+      // Mezclar videos válidos y tomar la cantidad solicitada
+      final shuffledVideos = List<YouTubeVideo>.from(validVideos);
+      shuffledVideos.shuffle();
+      
+      final discoverVideos = shuffledVideos.take(count).toList();
+      print('🎲 Videos de descubrimiento generados: ${discoverVideos.length} videos válidos');
+      
+      return discoverVideos;
+    } else {
+      // Si no hay videos válidos, usar todos los videos como fallback
+      final shuffledVideos = List<YouTubeVideo>.from(_videos);
+      shuffledVideos.shuffle();
+      
+      final discoverVideos = shuffledVideos.take(count).toList();
+      print('⚠️ Fallback: Usando todos los videos para descubrimiento: ${discoverVideos.length}');
+      
+      return discoverVideos;
+    }
   }
 
   /// Convierte un YouTubeVideo a Episode para mantener compatibilidad

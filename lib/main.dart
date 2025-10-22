@@ -9,6 +9,7 @@ import 'repository/episode_repository.dart';
 import 'providers/youtube_provider.dart';
 import 'models/episode.dart';
 import 'models/youtube_video.dart';
+import 'config/environment_config.dart';
 import 'screens/splash_screen.dart';
 import 'screens/episode_detail/episode_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -25,6 +26,12 @@ import 'services/remote_config_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Validar configuración del ambiente
+  EnvironmentConfig.validateEnvironment();
+  
+  // Ejemplo: Verificar rutas para un usuario de prueba
+  EnvironmentConfig.verifyUserPaths('test_user_123');
   
   // Inicializar Firebase
   await Firebase.initializeApp(

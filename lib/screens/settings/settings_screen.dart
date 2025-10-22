@@ -313,7 +313,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: TextStyle(color: BrandColors.primaryWhite),
         ),
         content: const Text(
-          '¿Estás seguro de que quieres eliminar tu cuenta permanentemente? Esta acción no se puede deshacer y se perderán todos tus datos.',
+          'Esta acción es irreversible. Se eliminarán todos tus datos, incluyendo:\n\n'
+          '• Tu perfil y configuración\n'
+          '• Tus imágenes de perfil\n'
+          '• Todos los datos asociados a tu cuenta\n\n'
+          'Para confirmar, necesitas ingresar tu contraseña actual.',
           style: TextStyle(color: BrandColors.grayMedium),
         ),
         actions: [
@@ -327,8 +331,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text(
-              'Eliminar',
-              style: TextStyle(color: Colors.red),
+              'Continuar',
+              style: TextStyle(color: BrandColors.primaryOrange),
             ),
           ),
         ],
@@ -336,8 +340,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (shouldDelete == true && mounted) {
-      // Eliminar la cuenta del usuario
-      context.read<AuthBlocSimple>().add(const AuthDeleteAccountRequested());
+      _showPasswordDialog();
     }
+  }
+
+  void _showPasswordDialog() {
+    final passwordController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: BrandColors.blackLight,
+        title: const Text(
+          'Confirmar Contraseña',
+          style: TextStyle(color: BrandColors.primaryWhite),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa tu contraseña actual para confirmar la eliminación:',
+              style: TextStyle(color: BrandColors.grayMedium),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              style: const TextStyle(color: BrandColors.primaryWhite),
+              decoration: const InputDecoration(
+                labelText: 'Contraseña',
+                labelStyle: TextStyle(color: BrandColors.grayMedium),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: BrandColors.grayMedium),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: BrandColors.primaryOrange),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: BrandColors.grayMedium),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              if (passwordController.text.isNotEmpty) {
+                context.read<AuthBlocSimple>().add(
+                  AuthDeleteAccountWithReauthRequested(
+                    password: passwordController.text,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Eliminar Cuenta',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/user_manager.dart';
+import '../config/environment_config.dart';
 
 class UserFirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -14,11 +15,12 @@ class UserFirestoreService {
         throw Exception('Usuario no autenticado');
       }
 
-      print('📤 Actualizando foto de perfil en Firestore para UID: ${user.uid}');
+      final userId = user.uid;
+      print('📤 Actualizando foto de perfil en Firestore para UID: $userId');
       
       await _firestore
-          .collection('dev_users')
-          .doc(user.uid)
+          .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(userId)
           .update({
         'photoURL': photoURL,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -39,11 +41,12 @@ class UserFirestoreService {
         throw Exception('Usuario no autenticado');
       }
 
-      print('📤 Actualizando nombre de usuario en Firestore para UID: ${user.uid}');
+      final userId = user.uid;
+      print('📤 Actualizando nombre de usuario en Firestore para UID: $userId');
       
       await _firestore
-          .collection('dev_users')
-          .doc(user.uid)
+          .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(userId)
           .update({
         'displayName': displayName,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -67,7 +70,7 @@ class UserFirestoreService {
       print('📥 Obteniendo datos de usuario desde Firestore para UID: ${user.uid}');
       
       final doc = await _firestore
-          .collection('dev_users')
+          .collection(EnvironmentConfig.getUsersCollectionPath())
           .doc(user.uid)
           .get();
 

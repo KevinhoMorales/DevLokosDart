@@ -65,6 +65,15 @@ class AuthDeleteAccountRequested extends AuthEvent {
   const AuthDeleteAccountRequested();
 }
 
+/// Evento para eliminar cuenta con re-autenticación
+class AuthDeleteAccountWithReauthRequested extends AuthEvent {
+  final String password;
+  
+  const AuthDeleteAccountWithReauthRequested({
+    required this.password,
+  });
+}
+
 /// Evento para limpiar errores
 class AuthErrorCleared extends AuthEvent {
   const AuthErrorCleared();

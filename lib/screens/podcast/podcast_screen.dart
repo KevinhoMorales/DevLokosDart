@@ -91,11 +91,28 @@ class _PodcastScreenState extends State<PodcastScreen>
 
         void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
           if (_discoverVideos == null && allVideos.isNotEmpty) {
-            // Mezclar todos los videos y tomar 4 aleatorios
-            final shuffledVideos = List<YouTubeVideo>.from(allVideos);
-            shuffledVideos.shuffle();
-            _discoverVideos = shuffledVideos.take(4).toList();
-            print('🎲 Videos de descubrimiento generados una sola vez: ${_discoverVideos!.length} de ${allVideos.length} videos totales');
+            // Filtrar videos con títulos válidos (no vacíos, no "Sin título")
+            final validVideos = allVideos.where((video) => 
+              video.title.isNotEmpty && 
+              video.title.trim().isNotEmpty &&
+              video.title != 'Sin título'
+            ).toList();
+            
+            print('🎲 Videos válidos para descubrimiento: ${validVideos.length} de ${allVideos.length} videos totales');
+            
+            if (validVideos.isNotEmpty) {
+              // Mezclar videos válidos y tomar 4 aleatorios
+              final shuffledVideos = List<YouTubeVideo>.from(validVideos);
+              shuffledVideos.shuffle();
+              _discoverVideos = shuffledVideos.take(4).toList();
+              print('🎲 Videos de descubrimiento generados una sola vez: ${_discoverVideos!.length} videos válidos');
+            } else {
+              // Si no hay videos válidos, usar todos los videos como fallback
+              final shuffledVideos = List<YouTubeVideo>.from(allVideos);
+              shuffledVideos.shuffle();
+              _discoverVideos = shuffledVideos.take(4).toList();
+              print('⚠️ Fallback: Usando todos los videos para descubrimiento: ${_discoverVideos!.length}');
+            }
           }
         }
 

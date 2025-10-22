@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../utils/user_manager.dart';
+import '../config/environment_config.dart';
 
 class ImageStorageService {
   static final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -22,8 +23,9 @@ class ImageStorageService {
       final extension = path.extension(imageFile.path);
       final fileName = 'profile_${timestamp}${extension}';
       
-      // Referencia al archivo en Storage con estructura organizada
-      final ref = _storage.ref().child('profile_images/${user.uid}/$fileName');
+      // Referencia al archivo en Storage con estructura organizada por UID
+      final storagePath = EnvironmentConfig.getUserStoragePath(user.uid, 'photo');
+      final ref = _storage.ref().child('$storagePath/$fileName');
 
       // Configurar metadatos
       final metadata = SettableMetadata(
@@ -34,7 +36,7 @@ class ImageStorageService {
         },
       );
 
-      print('📤 Subiendo imagen a: profile_images/${user.uid}/$fileName');
+      print('📤 Subiendo imagen a: $storagePath');
 
       // Subir el archivo con metadatos
       final uploadTask = ref.putFile(imageFile, metadata);
@@ -70,7 +72,8 @@ class ImageStorageService {
       final ref = _storage.refFromURL(imageUrl);
       
       // Verificar que la imagen pertenece al usuario actual
-      if (!ref.fullPath.startsWith('profile_images/${user.uid}/')) {
+      final expectedPath = EnvironmentConfig.getUserStoragePath(user.uid, 'photo');
+      if (!ref.fullPath.startsWith(expectedPath)) {
         throw Exception('No tienes permisos para eliminar esta imagen.');
       }
       

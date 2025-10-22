@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Reglas de seguridad para Firebase Firestore
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para usuarios en desarrollo
+    match /dev_users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas para usuarios en producción
+    match /prod_users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Reglas para otras colecciones (solo lectura para usuarios autenticados)
+    match /dev_{document=**} {
+      allow read: if request.auth != null;
+    }
+    
+    match /prod_{document=**} {
+      allow read: if request.auth != null;
+    }
+  }
+}
