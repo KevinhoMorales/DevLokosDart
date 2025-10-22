@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../models/episode.dart';
+import '../../models/youtube_video.dart';
+import '../../providers/youtube_provider.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/episode_card.dart';
 import '../../widgets/featured_episode_card.dart';
@@ -59,7 +62,27 @@ class _HomeScreenState extends State<HomeScreen>
     context.read<EpisodeBloc>().add(const ClearCacheAndReload());
   }
 
+  void _navigateToEpisodeDetail(Episode episode) {
+    // Buscar el video de YouTube correspondiente
+    final youtubeProvider = context.read<YouTubeProvider>();
+    YouTubeVideo? correspondingVideo;
+    
+    try {
+      correspondingVideo = youtubeProvider.videos.firstWhere(
+        (video) => video.videoId == episode.youtubeVideoId,
+      );
+    } catch (e) {
+      correspondingVideo = null;
+    }
 
+    // Navegar a la pantalla de detalle con los datos
+    context.go('/episode/${episode.id}', 
+      extra: {
+        'episode': episode,
+        'youtubeVideo': correspondingVideo,
+      }
+    );
+  }
 
   @override
   void dispose() {
@@ -220,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen>
         }
 
         if (state is EpisodeLoaded || state is EpisodeSearching) {
-          final episodes = state is EpisodeLoaded ? state.filteredEpisodes : (state as EpisodeSearching).episodes;
+          final episodes = state is EpisodeLoaded ? state.episodes : (state as EpisodeSearching).episodes;
           final featuredEpisodes = state is EpisodeLoaded ? state.featuredEpisodes : [];
           final searchQuery = state is EpisodeLoaded ? state.searchQuery : 
                             state is EpisodeSearching ? state.query : '';
@@ -311,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 child: FeaturedEpisodeCard(
                   episode: episode,
-                  onTap: () => context.go('/episode/${episode.id}'),
+                  onTap: () => _navigateToEpisodeDetail(episode),
                 ),
               );
             },
@@ -344,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen>
               padding: const EdgeInsets.only(bottom: 16),
               child: EpisodeCard(
                 episode: episode,
-                onTap: () => context.go('/episode/${episode.id}'),
+                onTap: () => _navigateToEpisodeDetail(episode),
               ),
             );
           },

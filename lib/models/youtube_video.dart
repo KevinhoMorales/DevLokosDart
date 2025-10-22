@@ -20,6 +20,9 @@ class YouTubeVideo {
   factory YouTubeVideo.fromJson(Map<String, dynamic> json) {
     final snippet = json['snippet'] as Map<String, dynamic>? ?? {};
     
+    // Debug: Log del snippet completo para entender qué datos llegan (solo para títulos problemáticos)
+    // print('🔍 Snippet completo: $snippet');
+    
     // Obtener thumbnail URL con fallbacks
     String thumbnailUrl = '';
     final thumbnails = snippet['thumbnails'] as Map<String, dynamic>?;
@@ -45,16 +48,27 @@ class YouTubeVideo {
       videoId = resourceId['videoId'] as String? ?? '';
     }
     
+    // Obtener título con mejor manejo
+    String title = snippet['title'] as String? ?? '';
+    final channelTitle = snippet['channelTitle'] as String? ?? 'Canal desconocido';
+    final position = snippet['position'] as int? ?? 0;
+    final publishedAt = snippet['publishedAt'] != null 
+        ? DateTime.parse(snippet['publishedAt'] as String)
+        : DateTime.now();
+    
+    // Solo usar "Sin título" si el título está realmente vacío
+    if (title.isEmpty || title.trim().isEmpty) {
+      title = 'Sin título';
+    }
+    
     return YouTubeVideo(
       videoId: videoId,
-      title: snippet['title'] as String? ?? 'Sin título',
+      title: title,
       description: snippet['description'] as String? ?? 'Sin descripción',
       thumbnailUrl: thumbnailUrl,
-      channelTitle: snippet['channelTitle'] as String? ?? 'Canal desconocido',
-      publishedAt: snippet['publishedAt'] != null 
-          ? DateTime.parse(snippet['publishedAt'] as String)
-          : DateTime.now(),
-      position: snippet['position'] as int? ?? 0,
+      channelTitle: channelTitle,
+      publishedAt: publishedAt,
+      position: position,
     );
   }
 

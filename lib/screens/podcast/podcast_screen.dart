@@ -89,14 +89,15 @@ class _PodcastScreenState extends State<PodcastScreen>
     });
   }
 
-  void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
-    if (_discoverVideos == null && allVideos.isNotEmpty) {
-      final shuffledVideos = List<YouTubeVideo>.from(allVideos);
-      shuffledVideos.shuffle();
-      _discoverVideos = shuffledVideos.take(4).toList();
-      print('🎲 Videos de descubrimiento generados una sola vez: ${_discoverVideos!.length}');
-    }
-  }
+        void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
+          if (_discoverVideos == null && allVideos.isNotEmpty) {
+            // Mezclar todos los videos y tomar 4 aleatorios
+            final shuffledVideos = List<YouTubeVideo>.from(allVideos);
+            shuffledVideos.shuffle();
+            _discoverVideos = shuffledVideos.take(4).toList();
+            print('🎲 Videos de descubrimiento generados una sola vez: ${_discoverVideos!.length} de ${allVideos.length} videos totales');
+          }
+        }
 
   void _generateSortedVideos(List<YouTubeVideo> allVideos) {
     if (allVideos.isNotEmpty) {

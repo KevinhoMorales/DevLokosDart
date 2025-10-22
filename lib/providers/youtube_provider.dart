@@ -40,20 +40,34 @@ class YouTubeProvider extends ChangeNotifier {
           _nextPageToken = cacheResult.nextPageToken;
           _hasMoreVideos = cacheResult.hasMoreVideos;
           
-          print('✅ Cache: ${_videos.length} videos cargados desde caché');
-          print('⭐ Cache: ${_featuredVideos.length} videos destacados desde caché');
+          // Verificar si hay videos con títulos problemáticos en el caché
+          final videosWithEmptyTitles = _videos.where((video) => 
+            video.title.isEmpty || 
+            video.title.trim().isEmpty
+          ).length;
           
-          // Mostrar los primeros 3 videos desde caché
-          if (_videos.isNotEmpty) {
-            print('🎬 Primeros 3 videos desde caché:');
-            for (int i = 0; i < _videos.length && i < 3; i++) {
-              final video = _videos[i];
-              print('  ${i + 1}. ${video.title} (${video.publishedAt})');
+          // Solo limpiar caché si hay títulos completamente vacíos (no "Sin título")
+          if (videosWithEmptyTitles > 0) {
+            print('⚠️ Cache: Se encontraron $videosWithEmptyTitles videos con títulos completamente vacíos en caché');
+            print('🔄 Cache: Limpiando caché y recargando desde API...');
+            await CacheService.clearCache();
+            // Continuar con la carga desde API en lugar de usar el caché
+          } else {
+            print('✅ Cache: ${_videos.length} videos cargados desde caché');
+            print('⭐ Cache: ${_featuredVideos.length} videos destacados desde caché');
+            
+            // Mostrar los primeros 3 videos desde caché
+            if (_videos.isNotEmpty) {
+              print('🎬 Primeros 3 videos desde caché:');
+              for (int i = 0; i < _videos.length && i < 3; i++) {
+                final video = _videos[i];
+                print('  ${i + 1}. ${video.title} (${video.publishedAt})');
+              }
             }
+            
+            notifyListeners();
+            return;
           }
-          
-          notifyListeners();
-          return;
         }
       }
 
@@ -188,6 +202,20 @@ class YouTubeProvider extends ChangeNotifier {
   /// Obtiene información del caché
   Future<CacheInfo?> getCacheInfo() async {
     return await CacheService.getCacheInfo();
+  }
+
+  /// Obtiene videos de descubrimiento aleatorios
+  List<YouTubeVideo> getDiscoverVideos({int count = 4}) {
+    if (_videos.isEmpty) return [];
+    
+    // Mezclar todos los videos y tomar la cantidad solicitada
+    final shuffledVideos = List<YouTubeVideo>.from(_videos);
+    shuffledVideos.shuffle();
+    
+    final discoverVideos = shuffledVideos.take(count).toList();
+    print('🎲 Videos de descubrimiento generados: ${discoverVideos.length} de ${_videos.length} videos totales');
+    
+    return discoverVideos;
   }
 
   /// Convierte un YouTubeVideo a Episode para mantener compatibilidad
