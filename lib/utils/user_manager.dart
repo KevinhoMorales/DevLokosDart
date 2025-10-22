@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/user_firestore_service.dart';
 
 /// Modelo de usuario para almacenamiento local
 class UserModel {
@@ -112,6 +113,32 @@ class UserManager {
     await saveUser(user);
   }
 
+  /// Actualiza solo la URL de la foto de perfil del usuario
+  static Future<void> updateUserPhotoURL(String photoURL) async {
+    try {
+      final user = await getUser();
+      if (user != null) {
+        // Actualizar localmente
+        final updatedUser = UserModel(
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: photoURL,
+          createdAt: user.createdAt,
+        );
+        await saveUser(updatedUser);
+        print('✅ URL de foto de perfil actualizada localmente: $photoURL');
+        
+        // Sincronizar con Firestore
+        await UserFirestoreService.updateUserPhotoURL(photoURL);
+        print('✅ URL de foto de perfil sincronizada con Firestore');
+      }
+    } catch (e) {
+      print('❌ Error al actualizar URL de foto: $e');
+      throw Exception('Error al actualizar foto de perfil: $e');
+    }
+  }
+
   /// Obtiene el UID del usuario guardado
   static Future<String?> getUserUid() async {
     try {
@@ -119,6 +146,48 @@ class UserManager {
       return user?.uid;
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Sincroniza los datos del usuario desde Firestore
+  static Future<UserModel?> syncUserFromFirestore() async {
+    try {
+      final firestoreUser = await UserFirestoreService.getUserFromFirestore();
+      if (firestoreUser != null) {
+        await saveUser(firestoreUser);
+        print('✅ Usuario sincronizado desde Firestore: ${firestoreUser.email}');
+        return firestoreUser;
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error al sincronizar usuario desde Firestore: $e');
+      return null;
+    }
+  }
+
+  /// Actualiza el nombre de usuario tanto local como en Firestore
+  static Future<void> updateUserDisplayName(String displayName) async {
+    try {
+      final user = await getUser();
+      if (user != null) {
+        // Actualizar localmente
+        final updatedUser = UserModel(
+          uid: user.uid,
+          email: user.email,
+          displayName: displayName,
+          photoURL: user.photoURL,
+          createdAt: user.createdAt,
+        );
+        await saveUser(updatedUser);
+        print('✅ Nombre de usuario actualizado localmente: $displayName');
+        
+        // Sincronizar con Firestore
+        await UserFirestoreService.updateUserDisplayName(displayName);
+        print('✅ Nombre de usuario sincronizado con Firestore');
+      }
+    } catch (e) {
+      print('❌ Error al actualizar nombre de usuario: $e');
+      throw Exception('Error al actualizar nombre de usuario: $e');
     }
   }
 }

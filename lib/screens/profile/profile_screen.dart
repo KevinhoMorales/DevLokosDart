@@ -1,11 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/user_manager.dart';
 import '../../utils/login_helper.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../services/image_storage_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,6 +21,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _currentUser;
   bool _isLoading = true;
+  bool _isUploadingImage = false;
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -161,21 +167,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           // Avatar Section
           Center(
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: BrandColors.primaryOrange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(60),
-                border: Border.all(
-                  color: BrandColors.primaryOrange.withOpacity(0.3),
-                  width: 2,
-                ),
-              ),
-              child: const Icon(
-                Icons.person,
-                size: 60,
-                color: BrandColors.primaryOrange,
+            child: GestureDetector(
+              onTap: _isUploadingImage ? null : _showImagePickerOptions,
+              child: Stack(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: BrandColors.primaryOrange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(60),
+                      border: Border.all(
+                        color: BrandColors.primaryOrange.withOpacity(0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: _currentUser?.photoURL != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(60),
+                            child: CachedNetworkImage(
+                              imageUrl: _currentUser!.photoURL!,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    BrandColors.primaryOrange,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => const Icon(
+                                Icons.person,
+                                size: 60,
+                                color: BrandColors.primaryOrange,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.person,
+                            size: 60,
+                            color: BrandColors.primaryOrange,
+                          ),
+                  ),
+                  if (_isUploadingImage)
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(60),
+                      ),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            BrandColors.primaryOrange,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: BrandColors.primaryOrange,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: BrandColors.primaryBlack,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: BrandColors.primaryWhite,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -193,14 +266,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: 'Correo Electrónico',
             value: _currentUser!.email,
             icon: Icons.email_outlined,
-          ),
-          const SizedBox(height: 16),
-          
-          _buildInfoCard(
-            title: 'ID de Usuario',
-            value: _currentUser!.uid,
-            icon: Icons.fingerprint,
-            isUid: true,
           ),
           const SizedBox(height: 32),
 
@@ -220,7 +285,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required String value,
     required IconData icon,
-    bool isUid = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -264,9 +328,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: BrandColors.primaryWhite,
                     fontWeight: FontWeight.w600,
-                    fontSize: isUid ? 12 : 16,
+                    fontSize: 16,
                   ),
-                  maxLines: isUid ? 2 : 1,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -398,6 +462,316 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _openSettings() {
     context.go('/settings');
+  }
+
+  /// Muestra las opciones para seleccionar imagen
+  Future<void> _showImagePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: BrandColors.blackLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: BrandColors.grayMedium,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Cambiar Foto de Perfil',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: BrandColors.primaryWhite,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildImageOption(
+                    icon: Icons.camera_alt,
+                    title: 'Cámara',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImage(ImageSource.camera);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildImageOption(
+                    icon: Icons.photo_library,
+                    title: 'Galería',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImage(ImageSource.gallery);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            if (_currentUser?.photoURL != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: _buildImageOption(
+                  icon: Icons.delete,
+                  title: 'Eliminar Foto',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeProfileImage();
+                  },
+                  isDestructive: true,
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Construye una opción de imagen
+  Widget _buildImageOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDestructive 
+            ? Colors.red.withOpacity(0.1)
+            : BrandColors.primaryOrange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDestructive 
+              ? Colors.red.withOpacity(0.3)
+              : BrandColors.primaryOrange.withOpacity(0.3),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Icon(
+                  icon,
+                  color: isDestructive ? Colors.red : BrandColors.primaryOrange,
+                  size: 32,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDestructive ? Colors.red : BrandColors.primaryWhite,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Selecciona una imagen desde la cámara o galería
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        final File imageFile = File(image.path);
+        
+        // Validar imagen
+        if (!ImageStorageService.validateImage(imageFile)) {
+          _showErrorSnackBar('Imagen no válida. Tamaño máximo: 5MB. Formatos: JPG, PNG, WEBP');
+          return;
+        }
+
+        // Comprimir imagen
+        final compressedFile = await ImageStorageService.compressImage(imageFile);
+        
+        // Subir imagen
+        await _uploadImage(compressedFile);
+      }
+    } catch (e) {
+      print('❌ Error al seleccionar imagen: $e');
+      _showErrorSnackBar('Error al seleccionar imagen: $e');
+    }
+  }
+
+  /// Sube la imagen a Firebase Storage
+  Future<void> _uploadImage(File imageFile) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      // Subir imagen a Firebase Storage
+      final imageUrl = await ImageStorageService.uploadProfileImage(imageFile);
+      
+      // Actualizar UserManager
+      await UserManager.updateUserPhotoURL(imageUrl);
+      
+      // Actualizar estado local
+      if (mounted) {
+        setState(() {
+          _currentUser = UserModel(
+            uid: _currentUser!.uid,
+            email: _currentUser!.email,
+            displayName: _currentUser!.displayName,
+            photoURL: imageUrl,
+            createdAt: _currentUser!.createdAt,
+          );
+        });
+        
+        _showSuccessSnackBar('Foto de perfil actualizada exitosamente');
+      }
+    } catch (e) {
+      print('❌ Error al subir imagen: $e');
+      if (mounted) {
+        _showErrorSnackBar('Error al subir imagen: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
+  }
+
+  /// Elimina la foto de perfil
+  Future<void> _removeProfileImage() async {
+    try {
+      // Mostrar diálogo de confirmación
+      final shouldRemove = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: BrandColors.blackLight,
+          title: const Text(
+            'Eliminar Foto',
+            style: TextStyle(color: BrandColors.primaryWhite),
+          ),
+          content: const Text(
+            '¿Estás seguro de que quieres eliminar tu foto de perfil?',
+            style: TextStyle(color: BrandColors.grayMedium),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancelar',
+                style: TextStyle(color: BrandColors.grayMedium),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldRemove == true && mounted) {
+        setState(() {
+          _isUploadingImage = true;
+        });
+
+        // Eliminar imagen del Storage si existe
+        if (_currentUser?.photoURL != null) {
+          try {
+            await ImageStorageService.deleteProfileImage(_currentUser!.photoURL!);
+          } catch (e) {
+            print('⚠️ Error al eliminar imagen del Storage: $e');
+            // Continuar aunque falle la eliminación del Storage
+          }
+        }
+
+        // Actualizar UserManager
+        await UserManager.updateUserPhotoURL('');
+
+        // Actualizar estado local
+        if (mounted) {
+          setState(() {
+            _currentUser = UserModel(
+              uid: _currentUser!.uid,
+              email: _currentUser!.email,
+              displayName: _currentUser!.displayName,
+              photoURL: null,
+              createdAt: _currentUser!.createdAt,
+            );
+          });
+          
+          _showSuccessSnackBar('Foto de perfil eliminada exitosamente');
+        }
+      }
+    } catch (e) {
+      print('❌ Error al eliminar imagen: $e');
+      if (mounted) {
+        _showErrorSnackBar('Error al eliminar imagen: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
+  }
+
+  /// Muestra un mensaje de éxito
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  /// Muestra un mensaje de error
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: BrandColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 }
 
