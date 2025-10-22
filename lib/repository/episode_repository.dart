@@ -96,13 +96,79 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
       if (query.isEmpty) return await getAllEpisodes();
       
       final episodes = await getAllEpisodes();
-      final lowercaseQuery = query.toLowerCase();
+      final lowercaseQuery = query.toLowerCase().trim();
       
-      return episodes.where((episode) {
-        return episode.title.toLowerCase().contains(lowercaseQuery) ||
-               episode.description.toLowerCase().contains(lowercaseQuery) ||
-               episode.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
+      print('🔍 Repository: Buscando "$lowercaseQuery" en ${episodes.length} episodios');
+      
+      final searchResults = episodes.where((episode) {
+        // Filtrar episodios con títulos vacíos o "Sin título"
+        if (episode.title.isEmpty || episode.title.toLowerCase() == 'sin título') {
+          return false;
+        }
+        
+        final titleLower = episode.title.toLowerCase();
+        final descriptionLower = episode.description.toLowerCase();
+        
+        // Búsqueda en el título completo
+        if (titleLower.contains(lowercaseQuery)) {
+          print('✅ Encontrado en título: ${episode.title}');
+          return true;
+        }
+        
+        // Búsqueda en las partes del título separadas por ||
+        // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
+        final titleParts = titleLower.split('||');
+        for (final part in titleParts) {
+          final cleanPart = part.trim();
+          if (cleanPart.contains(lowercaseQuery)) {
+            print('✅ Encontrado en parte del título: $cleanPart');
+            return true;
+          }
+        }
+        
+        // Búsqueda en la descripción
+        if (descriptionLower.contains(lowercaseQuery)) {
+          print('✅ Encontrado en descripción: ${episode.title}');
+          return true;
+        }
+        
+        // Búsqueda en tags
+        if (episode.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery))) {
+          print('✅ Encontrado en tags: ${episode.title}');
+          return true;
+        }
+        
+        // Búsqueda por palabras individuales en el título
+        final queryWords = lowercaseQuery.split(' ').where((word) => word.length >= 2).toList();
+        if (queryWords.isNotEmpty) {
+          final titleWords = titleLower.split(RegExp(r'[\s\|\|]+'));
+          bool allWordsFound = true;
+          
+          for (final queryWord in queryWords) {
+            bool wordFound = false;
+            for (final titleWord in titleWords) {
+              if (titleWord.contains(queryWord) || queryWord.contains(titleWord)) {
+                wordFound = true;
+                break;
+              }
+            }
+            if (!wordFound) {
+              allWordsFound = false;
+              break;
+            }
+          }
+          
+          if (allWordsFound) {
+            print('✅ Encontrado por palabras múltiples: ${episode.title}');
+            return true;
+          }
+        }
+        
+        return false;
       }).toList();
+      
+      print('✅ Repository: ${searchResults.length} resultados encontrados para "$lowercaseQuery"');
+      return searchResults;
     } catch (e) {
       print('❌ Repository: Error al buscar episodios - $e');
       rethrow;

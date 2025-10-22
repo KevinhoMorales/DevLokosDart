@@ -280,12 +280,7 @@ class _PodcastScreenState extends State<PodcastScreen>
             _searchQuery = value.trim();
           });
           
-          // Disparar búsqueda con BLoC para episodios de Firestore
-          if (_searchQuery.isNotEmpty) {
-            context.read<EpisodeBloc>().add(SearchEpisodes(query: _searchQuery));
-          } else {
-            context.read<EpisodeBloc>().add(const ClearSearch());
-          }
+          // No disparar eventos BLoC - usar búsqueda directa
         },
       ),
     );
@@ -415,9 +410,13 @@ class _PodcastScreenState extends State<PodcastScreen>
         if (state is EpisodeLoaded || state is EpisodeSearching) {
           final episodes = state is EpisodeLoaded ? state.filteredEpisodes : (state as EpisodeSearching).episodes;
           final featuredEpisodes = state is EpisodeLoaded ? state.featuredEpisodes : [];
-          final searchQuery = state is EpisodeLoaded ? state.searchQuery : 
-                            state is EpisodeSearching ? state.query : '';
 
+          // Si hay una búsqueda activa, usar búsqueda directa
+          if (_searchQuery.isNotEmpty) {
+            return _buildSearchResultsContent();
+          }
+
+          // Si no hay búsqueda, mostrar contenido normal
           if (episodes.isEmpty) {
             return Center(
               child: Column(
@@ -430,22 +429,11 @@ class _PodcastScreenState extends State<PodcastScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    searchQuery.isEmpty
-                        ? 'No hay episodios disponibles'
-                        : 'No se encontraron episodios',
+                    'No hay episodios disponibles',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: BrandColors.primaryWhite,
                     ),
                   ),
-                  if (searchQuery.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Intenta con otros términos de búsqueda',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: BrandColors.grayMedium,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             );
@@ -453,16 +441,14 @@ class _PodcastScreenState extends State<PodcastScreen>
 
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
-              child: _searchQuery.isNotEmpty
-                  ? _buildSearchResultsContent()
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
-                        const SizedBox(height: 12),
-                        _buildEpisodesSection(episodes),
-                      ],
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
+                const SizedBox(height: 12),
+                _buildEpisodesSection(episodes),
+              ],
+            ),
           );
         }
 
@@ -538,77 +524,8 @@ class _PodcastScreenState extends State<PodcastScreen>
   Widget _buildSearchResultsContent() {
     return Consumer<YouTubeProvider>(
       builder: (context, youtubeProvider, child) {
-        // Obtener todos los videos disponibles (de ambas temporadas)
-        List<YouTubeVideo> allVideosForSearch = [];
-        
-        // Agregar videos del provider actual
-        allVideosForSearch.addAll(youtubeProvider.videos);
-        
-        // Agregar videos en cache si están disponibles (para incluir ambas temporadas)
-        if (_allVideosSorted != null) {
-          allVideosForSearch.addAll(_allVideosSorted!);
-        }
-        
-        // Eliminar duplicados basándose en el ID del video
-        final uniqueVideos = <String, YouTubeVideo>{};
-        for (final video in allVideosForSearch) {
-          uniqueVideos[video.videoId] = video;
-        }
-        final deduplicatedVideos = uniqueVideos.values.toList();
-        
-        // Realizar búsqueda en todos los videos únicos
-        final lowercaseQuery = _searchQuery.toLowerCase().trim();
-        print('🔍 Buscando "${lowercaseQuery}" en ${deduplicatedVideos.length} videos únicos de ambas temporadas');
-        
-        // Si la búsqueda está vacía, no mostrar resultados
-        if (lowercaseQuery.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        
-        final searchResults = deduplicatedVideos
-            .where((video) {
-              final titleLower = video.title.toLowerCase();
-              
-              // Búsqueda exacta en el título completo
-              if (titleLower.contains(lowercaseQuery)) {
-                return true;
-              }
-              
-              // Búsqueda en las partes del título separadas por ||
-              // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
-              final titleParts = titleLower.split('||');
-              for (final part in titleParts) {
-                final cleanPart = part.trim();
-                if (cleanPart.contains(lowercaseQuery)) {
-                  return true;
-                }
-              }
-              
-              // Búsqueda por palabras individuales
-              final queryWords = lowercaseQuery.split(' ');
-              final titleWords = titleLower.split(RegExp(r'[\s\|\|]+'));
-              
-              // Buscar cada palabra de la consulta en las palabras del título
-              for (final queryWord in queryWords) {
-                if (queryWord.length >= 2) { // Reducir a 2 caracteres mínimo
-                  bool wordFound = false;
-                  for (final titleWord in titleWords) {
-                    if (titleWord.contains(queryWord) || queryWord.contains(titleWord)) {
-                      wordFound = true;
-                      break;
-                    }
-                  }
-                  if (!wordFound) {
-                    return false; // Si una palabra no se encuentra, excluir el video
-                  }
-                }
-              }
-              
-              return queryWords.isNotEmpty; // Si todas las palabras se encontraron
-            })
-            .toList();
-        
-        print('✅ Búsqueda completada: ${searchResults.length} resultados encontrados');
+        // Realizar búsqueda directamente en los videos de YouTube
+        final searchResults = _performDirectSearch(_searchQuery, youtubeProvider.videos);
         
         if (searchResults.isEmpty) {
           return Center(
@@ -704,6 +621,53 @@ class _PodcastScreenState extends State<PodcastScreen>
       },
     );
   }
+
+  /// Realiza búsqueda directa en los videos de YouTube
+  List<YouTubeVideo> _performDirectSearch(String query, List<YouTubeVideo> videos) {
+    if (query.isEmpty) return [];
+    
+    final lowercaseQuery = query.toLowerCase().trim();
+    print('🔍 Búsqueda directa: "$lowercaseQuery" en ${videos.length} videos');
+    
+    final searchResults = videos.where((video) {
+      // Filtrar videos con títulos vacíos o "Sin título"
+      if (video.title.isEmpty || video.title.toLowerCase() == 'sin título') {
+        return false;
+      }
+      
+      final titleLower = video.title.toLowerCase();
+      final descriptionLower = video.description.toLowerCase();
+      
+      // Búsqueda en el título completo
+      if (titleLower.contains(lowercaseQuery)) {
+        print('✅ Encontrado en título: ${video.title}');
+        return true;
+      }
+      
+      // Búsqueda en las partes del título separadas por ||
+      // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
+      final titleParts = titleLower.split('||');
+      for (final part in titleParts) {
+        final cleanPart = part.trim();
+        if (cleanPart.contains(lowercaseQuery)) {
+          print('✅ Encontrado en parte del título: $cleanPart');
+          return true;
+        }
+      }
+      
+      // Búsqueda en la descripción
+      if (descriptionLower.contains(lowercaseQuery)) {
+        print('✅ Encontrado en descripción: ${video.title}');
+        return true;
+      }
+      
+      return false;
+    }).toList();
+    
+    print('✅ Búsqueda directa: ${searchResults.length} resultados encontrados');
+    return searchResults;
+  }
+
 
   Widget _buildEpisodesSection(List<Episode> episodes) {
     return Consumer<YouTubeProvider>(
