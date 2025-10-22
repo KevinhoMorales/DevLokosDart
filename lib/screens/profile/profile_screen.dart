@@ -22,12 +22,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? _currentUser;
   bool _isLoading = true;
   bool _isUploadingImage = false;
+  bool _isUpdatingName = false;
   final ImagePicker _imagePicker = ImagePicker();
+  final TextEditingController _nameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadUser();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUser() async {
@@ -259,6 +267,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: 'Nombre',
             value: _currentUser!.displayName ?? 'No especificado',
             icon: Icons.person_outline,
+            isEditable: true,
+            onEdit: () => _showEditNameDialog(),
           ),
           const SizedBox(height: 16),
           
@@ -285,6 +295,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required String value,
     required IconData icon,
+    bool isEditable = false,
+    VoidCallback? onEdit,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -336,6 +348,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+          if (isEditable && onEdit != null) ...[
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: _isUpdatingName ? null : onEdit,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: BrandColors.primaryOrange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _isUpdatingName
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            BrandColors.primaryOrange,
+                          ),
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.edit,
+                        color: BrandColors.primaryOrange,
+                        size: 20,
+                      ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -772,6 +813,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  /// Muestra el diálogo para editar el nombre
+  Future<void> _showEditNameDialog() async {
+    _nameController.text = _currentUser?.displayName ?? '';
+    
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: BrandColors.blackLight,
+        title: const Text(
+          'Editar Nombre',
+          style: TextStyle(color: BrandColors.primaryWhite),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa tu nuevo nombre:',
+              style: TextStyle(color: BrandColors.grayMedium),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(color: BrandColors.primaryWhite),
+              decoration: InputDecoration(
+                hintText: 'Nombre completo',
+                hintStyle: const TextStyle(color: BrandColors.grayMedium),
+                filled: true,
+                fillColor: BrandColors.primaryBlack.withOpacity(0.5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: BrandColors.primaryOrange.withOpacity(0.3),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(
+                    color: BrandColors.primaryOrange.withOpacity(0.3),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: BrandColors.primaryOrange,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              maxLength: 50,
+              textCapitalization: TextCapitalization.words,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: BrandColors.grayMedium),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = _nameController.text.trim();
+              if (name.isNotEmpty) {
+                Navigator.of(context).pop(name);
+              }
+            },
+            child: const Text(
+              'Guardar',
+              style: TextStyle(color: BrandColors.primaryOrange),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (newName != null && newName.isNotEmpty && newName != _currentUser?.displayName) {
+      await _updateUserName(newName);
+    }
+  }
+
+  /// Actualiza el nombre del usuario
+  Future<void> _updateUserName(String newName) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isUpdatingName = true;
+    });
+
+    try {
+      // Actualizar UserManager (que sincroniza con Firestore)
+      await UserManager.updateUserDisplayName(newName);
+      
+      // Actualizar estado local
+      if (mounted) {
+        setState(() {
+          _currentUser = UserModel(
+            uid: _currentUser!.uid,
+            email: _currentUser!.email,
+            displayName: newName,
+            photoURL: _currentUser!.photoURL,
+            createdAt: _currentUser!.createdAt,
+          );
+        });
+        
+        _showSuccessSnackBar('Nombre actualizado exitosamente');
+      }
+    } catch (e) {
+      print('❌ Error al actualizar nombre: $e');
+      if (mounted) {
+        _showErrorSnackBar('Error al actualizar nombre: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingName = false;
+        });
+      }
+    }
   }
 }
 
