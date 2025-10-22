@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/gradient_button.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../providers/youtube_provider.dart';
 import 'full_episode_screen.dart';
@@ -27,7 +29,7 @@ class EpisodeDetailScreen extends StatefulWidget {
   State<EpisodeDetailScreen> createState() => _EpisodeDetailScreenState();
 }
 
-class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
+class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsBindingObserver {
   Episode? _currentEpisode;
   YouTubeVideo? _currentYouTubeVideo;
   YoutubePlayerController? _controller;
@@ -35,6 +37,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadEpisodeData();
   }
 
@@ -101,7 +104,19 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
   }
 
   @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    // Forzar reconstrucción del widget cuando cambie la orientación
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
   }
@@ -139,30 +154,35 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
         title: _getAppBarTitle(),
         showBackButton: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Reproductor de video
-            _buildVideoPlayer(),
-            const SizedBox(height: 24),
-
-            // Información del episodio
-            _buildEpisodeInfo(),
-            const SizedBox(height: 24),
-
-            // Descripción del episodio
-            _buildEpisodeDescription(),
-            const SizedBox(height: 24),
-
-
-            // Información del episodio de la base de datos
-            if ((_currentEpisode ?? widget.episode) != null) ...[
-              _buildDatabaseEpisodeInfo(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Reproductor de video
+              _buildVideoPlayer(),
               const SizedBox(height: 24),
+
+              // Información del episodio
+              _buildEpisodeInfo(),
+              const SizedBox(height: 24),
+
+              // Descripción del episodio
+              _buildEpisodeDescription(),
+              const SizedBox(height: 24),
+
+              // Botón de compartir
+              _buildShareButton(),
+              const SizedBox(height: 24),
+
+              // Información del episodio de la base de datos
+              if ((_currentEpisode ?? widget.episode) != null) ...[
+                _buildDatabaseEpisodeInfo(),
+                const SizedBox(height: 24),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -377,6 +397,31 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> {
     );
   }
 
+  Widget _buildShareButton() {
+    return GradientButton(
+      onPressed: _shareEpisode,
+      text: 'Compartir Episodio',
+      icon: Icons.share,
+      gradient: BrandColors.primaryGradient,
+      textColor: BrandColors.primaryWhite,
+    );
+  }
+
+  void _shareEpisode() {
+    final episodeTitle = _getVideoTitle();
+    final shareText = '''
+🎧 ¡Mira este episodio de DevLokos!
+
+$episodeTitle
+
+📱 Descarga la app DevLokos para ver todos nuestros episodios:
+https://onelink.to/devlokos
+
+#DevLokos #Podcast #Tech
+''';
+
+    Share.share(shareText);
+  }
 
   Widget _buildDatabaseEpisodeInfo() {
     final episode = _currentEpisode ?? widget.episode!;
