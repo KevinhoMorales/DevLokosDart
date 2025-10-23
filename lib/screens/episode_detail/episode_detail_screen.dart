@@ -428,24 +428,22 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
     final appBarTitle = _getAppBarTitle();
     
     // Extraer información del título para crear un mensaje más atractivo
-    String learningContent = '';
+    String guest = '';
     if (episodeTitle.contains('||')) {
       final parts = episodeTitle.split('||');
       if (parts.length > 1) {
-        learningContent = parts[1].trim();
+        guest = parts[1].trim();
       }
     } else {
-      learningContent = episodeTitle;
+      guest = episodeTitle;
     }
     
     // Crear mensaje más atractivo
     final shareText = '''
-🎧 Descubre el episodio "$appBarTitle", en donde aprenderás $learningContent
+🎧 Descubre el episodio "$appBarTitle", en donde aprenderás con $guest
 
 📱 Descarga la aplicación DevLokos y accede a cientos de episodios:
 ${EnvironmentConfig.onelinkUrl}
-
-#DevLokos #Podcast #Tech #Aprendizaje
 ''';
 
     Share.share(shareText);

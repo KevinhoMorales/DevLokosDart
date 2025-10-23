@@ -37,15 +37,70 @@ class EpisodeProvider extends ChangeNotifier {
     }
   }
 
-  /// Busca episodios por título o descripción
+  /// Normaliza texto removiendo tildes y acentos para búsqueda
+  String _normalizeText(String text) {
+    const Map<String, String> accents = {
+      // A con acentos
+      'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ā': 'a', 'ã': 'a', 'å': 'a', 'ǎ': 'a', 'ă': 'a', 'ą': 'a',
+      'Á': 'A', 'À': 'A', 'Ä': 'A', 'Â': 'A', 'Ā': 'A', 'Ã': 'A', 'Å': 'A', 'Ǎ': 'A', 'Ă': 'A', 'Ą': 'A',
+      // E con acentos
+      'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e', 'ē': 'e', 'ě': 'e', 'ĕ': 'e', 'ė': 'e', 'ę': 'e',
+      'É': 'E', 'È': 'E', 'Ë': 'E', 'Ê': 'E', 'Ē': 'E', 'Ě': 'E', 'Ĕ': 'E', 'Ė': 'E', 'Ę': 'E',
+      // I con acentos
+      'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i', 'ī': 'i', 'ǐ': 'i', 'ĭ': 'i', 'į': 'i',
+      'Í': 'I', 'Ì': 'I', 'Ï': 'I', 'Î': 'I', 'Ī': 'I', 'Ǐ': 'I', 'Ĭ': 'I', 'Į': 'I',
+      // O con acentos
+      'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o', 'ō': 'o', 'õ': 'o', 'ǒ': 'o', 'ŏ': 'o', 'ø': 'o', 'ǫ': 'o',
+      'Ó': 'O', 'Ò': 'O', 'Ö': 'O', 'Ô': 'O', 'Ō': 'O', 'Õ': 'O', 'Ǒ': 'O', 'Ŏ': 'O', 'Ø': 'O', 'Ǫ': 'O',
+      // U con acentos
+      'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u', 'ū': 'u', 'ǔ': 'u', 'ŭ': 'u', 'ų': 'u',
+      'Ú': 'U', 'Ù': 'U', 'Ü': 'U', 'Û': 'U', 'Ū': 'U', 'Ǔ': 'U', 'Ŭ': 'U', 'Ų': 'U',
+      // N con acentos
+      'ñ': 'n', 'ń': 'n', 'ň': 'n', 'ņ': 'n',
+      'Ñ': 'N', 'Ń': 'N', 'Ň': 'N', 'Ņ': 'N',
+      // C con acentos
+      'ç': 'c', 'ć': 'c', 'č': 'c', 'ĉ': 'c', 'ċ': 'c',
+      'Ç': 'C', 'Ć': 'C', 'Č': 'C', 'Ĉ': 'C', 'Ċ': 'C',
+      // S con acentos
+      'ś': 's', 'š': 's', 'ş': 's', 'ŝ': 's',
+      'Ś': 'S', 'Š': 'S', 'Ş': 'S', 'Ŝ': 'S',
+      // Z con acentos
+      'ź': 'z', 'ž': 'z', 'ż': 'z',
+      'Ź': 'Z', 'Ž': 'Z', 'Ż': 'Z',
+      // D con acentos
+      'đ': 'd', 'ď': 'd',
+      'Đ': 'D', 'Ď': 'D',
+      // L con acentos
+      'ł': 'l', 'ľ': 'l', 'ĺ': 'l',
+      'Ł': 'L', 'Ľ': 'L', 'Ĺ': 'L',
+      // R con acentos
+      'ř': 'r', 'ŕ': 'r',
+      'Ř': 'R', 'Ŕ': 'R',
+      // T con acentos
+      'ť': 't', 'ţ': 't',
+      'Ť': 'T', 'Ţ': 'T',
+    };
+    
+    String normalized = text.toLowerCase();
+    accents.forEach((accent, replacement) {
+      normalized = normalized.replaceAll(accent, replacement);
+    });
+    
+    // Debug: imprimir la normalización para verificar
+    print('🔤 Provider normalizando: "$text" -> "$normalized"');
+    
+    return normalized;
+  }
+
+  /// Busca episodios por título o descripción (ignorando tildes)
   List<Episode> searchEpisodes(String query) {
     if (query.isEmpty) return _episodes;
     
-    final lowercaseQuery = query.toLowerCase();
+    final normalizedQuery = _normalizeText(query);
     return _episodes.where((episode) {
-      return episode.title.toLowerCase().contains(lowercaseQuery) ||
-             episode.description.toLowerCase().contains(lowercaseQuery) ||
-             episode.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
+      return _normalizeText(episode.title).contains(normalizedQuery) ||
+             _normalizeText(episode.description).contains(normalizedQuery) ||
+             episode.tags.any((tag) => _normalizeText(tag).contains(normalizedQuery));
     }).toList();
   }
 

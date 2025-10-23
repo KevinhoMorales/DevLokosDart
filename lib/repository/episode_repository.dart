@@ -90,15 +90,71 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
     }
   }
 
+  /// Normaliza texto removiendo tildes y acentos para búsqueda
+  String _normalizeText(String text) {
+    // Mapa completo de caracteres con acentos a sus equivalentes sin acento
+    const Map<String, String> accents = {
+      // A con acentos
+      'á': 'a', 'à': 'a', 'ä': 'a', 'â': 'a', 'ā': 'a', 'ã': 'a', 'å': 'a', 'ǎ': 'a', 'ă': 'a', 'ą': 'a',
+      'Á': 'A', 'À': 'A', 'Ä': 'A', 'Â': 'A', 'Ā': 'A', 'Ã': 'A', 'Å': 'A', 'Ǎ': 'A', 'Ă': 'A', 'Ą': 'A',
+      // E con acentos
+      'é': 'e', 'è': 'e', 'ë': 'e', 'ê': 'e', 'ē': 'e', 'ě': 'e', 'ĕ': 'e', 'ė': 'e', 'ę': 'e',
+      'É': 'E', 'È': 'E', 'Ë': 'E', 'Ê': 'E', 'Ē': 'E', 'Ě': 'E', 'Ĕ': 'E', 'Ė': 'E', 'Ę': 'E',
+      // I con acentos
+      'í': 'i', 'ì': 'i', 'ï': 'i', 'î': 'i', 'ī': 'i', 'ǐ': 'i', 'ĭ': 'i', 'į': 'i',
+      'Í': 'I', 'Ì': 'I', 'Ï': 'I', 'Î': 'I', 'Ī': 'I', 'Ǐ': 'I', 'Ĭ': 'I', 'Į': 'I',
+      // O con acentos
+      'ó': 'o', 'ò': 'o', 'ö': 'o', 'ô': 'o', 'ō': 'o', 'õ': 'o', 'ǒ': 'o', 'ŏ': 'o', 'ø': 'o', 'ǫ': 'o',
+      'Ó': 'O', 'Ò': 'O', 'Ö': 'O', 'Ô': 'O', 'Ō': 'O', 'Õ': 'O', 'Ǒ': 'O', 'Ŏ': 'O', 'Ø': 'O', 'Ǫ': 'O',
+      // U con acentos
+      'ú': 'u', 'ù': 'u', 'ü': 'u', 'û': 'u', 'ū': 'u', 'ǔ': 'u', 'ŭ': 'u', 'ų': 'u',
+      'Ú': 'U', 'Ù': 'U', 'Ü': 'U', 'Û': 'U', 'Ū': 'U', 'Ǔ': 'U', 'Ŭ': 'U', 'Ų': 'U',
+      // N con acentos
+      'ñ': 'n', 'ń': 'n', 'ň': 'n', 'ņ': 'n',
+      'Ñ': 'N', 'Ń': 'N', 'Ň': 'N', 'Ņ': 'N',
+      // C con acentos
+      'ç': 'c', 'ć': 'c', 'č': 'c', 'ĉ': 'c', 'ċ': 'c',
+      'Ç': 'C', 'Ć': 'C', 'Č': 'C', 'Ĉ': 'C', 'Ċ': 'C',
+      // S con acentos
+      'ś': 's', 'š': 's', 'ş': 's', 'ŝ': 's',
+      'Ś': 'S', 'Š': 'S', 'Ş': 'S', 'Ŝ': 'S',
+      // Z con acentos
+      'ź': 'z', 'ž': 'z', 'ż': 'z',
+      'Ź': 'Z', 'Ž': 'Z', 'Ż': 'Z',
+      // D con acentos
+      'đ': 'd', 'ď': 'd',
+      'Đ': 'D', 'Ď': 'D',
+      // L con acentos
+      'ł': 'l', 'ľ': 'l', 'ĺ': 'l',
+      'Ł': 'L', 'Ľ': 'L', 'Ĺ': 'L',
+      // R con acentos
+      'ř': 'r', 'ŕ': 'r',
+      'Ř': 'R', 'Ŕ': 'R',
+      // T con acentos
+      'ť': 't', 'ţ': 't',
+      'Ť': 'T', 'Ţ': 'T',
+    };
+    
+    String normalized = text.toLowerCase();
+    accents.forEach((accent, replacement) {
+      normalized = normalized.replaceAll(accent, replacement);
+    });
+    
+    // Debug: imprimir la normalización para verificar
+    print('🔤 Normalizando: "$text" -> "$normalized"');
+    
+    return normalized;
+  }
+
   @override
   Future<List<Episode>> searchEpisodes(String query) async {
     try {
       if (query.isEmpty) return await getAllEpisodes();
       
       final episodes = await getAllEpisodes();
-      final lowercaseQuery = query.toLowerCase().trim();
+      final normalizedQuery = _normalizeText(query.trim());
       
-      print('🔍 Repository: Buscando "$lowercaseQuery" en ${episodes.length} episodios');
+      print('🔍 Repository: Buscando "$normalizedQuery" en ${episodes.length} episodios');
       
       final searchResults = episodes.where((episode) {
         // Filtrar episodios con títulos vacíos o "Sin título"
@@ -106,42 +162,42 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
           return false;
         }
         
-        final titleLower = episode.title.toLowerCase();
-        final descriptionLower = episode.description.toLowerCase();
+        final normalizedTitle = _normalizeText(episode.title);
+        final normalizedDescription = _normalizeText(episode.description);
         
-        // Búsqueda en el título completo
-        if (titleLower.contains(lowercaseQuery)) {
+        // Búsqueda en el título completo (normalizado)
+        if (normalizedTitle.contains(normalizedQuery)) {
           print('✅ Encontrado en título: ${episode.title}');
           return true;
         }
         
         // Búsqueda en las partes del título separadas por ||
         // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
-        final titleParts = titleLower.split('||');
+        final titleParts = normalizedTitle.split('||');
         for (final part in titleParts) {
           final cleanPart = part.trim();
-          if (cleanPart.contains(lowercaseQuery)) {
+          if (cleanPart.contains(normalizedQuery)) {
             print('✅ Encontrado en parte del título: $cleanPart');
             return true;
           }
         }
         
-        // Búsqueda en la descripción
-        if (descriptionLower.contains(lowercaseQuery)) {
+        // Búsqueda en la descripción (normalizada)
+        if (normalizedDescription.contains(normalizedQuery)) {
           print('✅ Encontrado en descripción: ${episode.title}');
           return true;
         }
         
-        // Búsqueda en tags
-        if (episode.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery))) {
+        // Búsqueda en tags (normalizados)
+        if (episode.tags.any((tag) => _normalizeText(tag).contains(normalizedQuery))) {
           print('✅ Encontrado en tags: ${episode.title}');
           return true;
         }
         
-        // Búsqueda por palabras individuales en el título
-        final queryWords = lowercaseQuery.split(' ').where((word) => word.length >= 2).toList();
+        // Búsqueda por palabras individuales en el título (normalizadas)
+        final queryWords = normalizedQuery.split(' ').where((word) => word.length >= 2).toList();
         if (queryWords.isNotEmpty) {
-          final titleWords = titleLower.split(RegExp(r'[\s\|\|]+'));
+          final titleWords = normalizedTitle.split(RegExp(r'[\s\|\|]+'));
           bool allWordsFound = true;
           
           for (final queryWord in queryWords) {
@@ -167,7 +223,7 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
         return false;
       }).toList();
       
-      print('✅ Repository: ${searchResults.length} resultados encontrados para "$lowercaseQuery"');
+      print('✅ Repository: ${searchResults.length} resultados encontrados para "$normalizedQuery"');
       return searchResults;
     } catch (e) {
       print('❌ Repository: Error al buscar episodios - $e');
