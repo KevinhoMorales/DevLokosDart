@@ -20,6 +20,8 @@ class UserFirestoreService {
       
       await _firestore
           .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(EnvironmentConfig.getUsersCollectionPath())
+          .collection("users")
           .doc(userId)
           .update({
         'photoURL': photoURL,
@@ -46,6 +48,8 @@ class UserFirestoreService {
       
       await _firestore
           .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(EnvironmentConfig.getUsersCollectionPath())
+          .collection("users")
           .doc(userId)
           .update({
         'displayName': displayName,
@@ -71,6 +75,8 @@ class UserFirestoreService {
       
       final doc = await _firestore
           .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(EnvironmentConfig.getUsersCollectionPath())
+          .collection("users")
           .doc(user.uid)
           .get();
 

@@ -139,6 +139,8 @@ class _SplashScreenState extends State<SplashScreen>
     try {
       final doc = await FirebaseFirestore.instance
           .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(EnvironmentConfig.getUsersCollectionPath())
+          .collection("users")
           .doc(uid)
           .get();
       

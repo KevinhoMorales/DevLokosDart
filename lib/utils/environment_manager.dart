@@ -10,7 +10,7 @@ class EnvironmentManager {
   
   /// Obtiene la ruta completa de la colección de usuarios
   static String getUsersCollection() {
-    return _isDevelopment ? 'dev_users' : 'users';
+    return _isDevelopment ? 'dev' : 'users';
   }
   
   /// Obtiene la ruta completa de la colección de episodios

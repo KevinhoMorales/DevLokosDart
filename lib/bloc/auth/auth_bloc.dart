@@ -417,6 +417,8 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       
       await _firestore
           .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(EnvironmentConfig.getUsersCollectionPath())
+          .collection("users")
           .doc(user.uid)
           .set(userData);
       
@@ -459,6 +461,8 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       // Obtener documento del usuario desde Firestore
       final doc = await _firestore
           .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(EnvironmentConfig.getUsersCollectionPath())
+          .collection("users")
           .doc(user.uid)
           .get();
       
