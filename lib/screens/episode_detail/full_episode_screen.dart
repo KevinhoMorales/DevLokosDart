@@ -8,11 +8,13 @@ import '../../utils/brand_colors.dart';
 class FullEpisodeScreen extends StatefulWidget {
   final Episode? episode;
   final YouTubeVideo? youtubeVideo;
+  final Duration? initialPosition;
 
   const FullEpisodeScreen({
     super.key,
     this.episode,
     this.youtubeVideo,
+    this.initialPosition,
   });
 
   @override
@@ -21,6 +23,7 @@ class FullEpisodeScreen extends StatefulWidget {
 
 class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindingObserver {
   YoutubePlayerController? _controller;
+  Duration? _currentPosition;
 
   @override
   void initState() {
@@ -34,23 +37,29 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
     final videoId = widget.youtubeVideo?.videoId ?? '';
     
     if (videoId.isNotEmpty) {
-              _controller = YoutubePlayerController(
-                initialVideoId: videoId,
-                flags: const YoutubePlayerFlags(
-                  autoPlay: true,
-                  mute: false,
-                  isLive: false,
-                  forceHD: true,
-                  enableCaption: false,
-                  hideControls: false,
-                  showLiveFullscreenButton: false,
-                  controlsVisibleAtStart: true,
-                  disableDragSeek: false,
-                  loop: false,
-                  useHybridComposition: false,
-                  hideThumbnail: true,
-                ),
-              );
+      _controller = YoutubePlayerController(
+        initialVideoId: videoId,
+        flags: const YoutubePlayerFlags(
+          autoPlay: true,
+          mute: false,
+          isLive: false,
+          forceHD: true,
+          enableCaption: false,
+          hideControls: false,
+          showLiveFullscreenButton: false,
+          controlsVisibleAtStart: true,
+          disableDragSeek: false,
+          loop: false,
+          useHybridComposition: false,
+          hideThumbnail: true,
+        ),
+      );
+      
+      // Si hay una posición inicial, configurarla después de que el reproductor esté listo
+      if (widget.initialPosition != null) {
+        print('🎯 Posición inicial configurada: ${widget.initialPosition!.inSeconds} segundos');
+        _currentPosition = widget.initialPosition;
+      }
     }
   }
 
@@ -66,6 +75,12 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
   }
 
   void _exitFullScreen() {
+    // Guardar la posición actual del video antes de salir
+    if (_controller != null) {
+      _currentPosition = _controller!.value.position;
+      print('💾 Posición guardada: ${_currentPosition?.inSeconds} segundos');
+    }
+    
     // Restaurar barras del sistema
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     
@@ -75,8 +90,8 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
       DeviceOrientation.portraitDown,
     ]);
     
-    // Regresar a la pantalla anterior
-    Navigator.of(context).pop();
+    // Regresar a la pantalla anterior con la posición guardada
+    Navigator.of(context).pop(_currentPosition);
   }
 
   @override
@@ -123,6 +138,11 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
                       ),
                       onReady: () {
                         print('✅ Reproductor de pantalla completa listo');
+                        // Si hay una posición inicial, buscarla
+                        if (widget.initialPosition != null && _controller != null) {
+                          print('🎯 Buscando a posición inicial: ${widget.initialPosition!.inSeconds} segundos');
+                          _controller!.seekTo(widget.initialPosition!);
+                        }
                       },
                       onEnded: (data) {
                         print('🏁 Video terminado en pantalla completa');

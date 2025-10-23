@@ -34,6 +34,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   Episode? _currentEpisode;
   YouTubeVideo? _currentYouTubeVideo;
   YoutubePlayerController? _controller;
+  Duration? _savedPosition;
 
   @override
   void initState() {
@@ -254,16 +255,30 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
               bottom: 8,
               right: 8,
               child: GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
+                onTap: () async {
+                  // Guardar la posición actual antes de ir al fullscreen
+                  if (_controller != null) {
+                    _savedPosition = _controller!.value.position;
+                    print('💾 Posición guardada antes del fullscreen: ${_savedPosition?.inSeconds} segundos');
+                  }
+                  
+                  // Navegar al fullscreen y esperar el resultado
+                  final result = await Navigator.of(context).push<Duration?>(
                     MaterialPageRoute(
                       builder: (context) => FullEpisodeScreen(
                         episode: _currentEpisode ?? widget.episode,
                         youtubeVideo: _currentYouTubeVideo ?? widget.youtubeVideo,
+                        initialPosition: _savedPosition,
                       ),
                       fullscreenDialog: true,
                     ),
                   );
+                  
+                  // Si regresó con una posición, usarla para continuar el video
+                  if (result != null && _controller != null) {
+                    print('🔄 Restaurando posición: ${result.inSeconds} segundos');
+                    _controller!.seekTo(result);
+                  }
                 },
                 child: Container(
                   width: 32,
