@@ -113,42 +113,23 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
               Center(
                 child: Stack(
                   children: [
-                            YoutubePlayer(
-                              controller: _controller!,
-                              showVideoProgressIndicator: true, // Mostrar barra de progreso nativa
-                              progressIndicatorColor: BrandColors.primaryOrange,
-                              progressColors: const ProgressBarColors(
-                                playedColor: BrandColors.primaryOrange,
-                                handleColor: BrandColors.primaryOrange,
-                              ),
-                              onReady: () {
-                                print('✅ Reproductor de pantalla completa listo');
-                              },
-                              onEnded: (data) {
-                                print('🏁 Video terminado en pantalla completa');
-                                _exitFullScreen();
-                              },
-                            ),
-                            // Overlay solo en la esquina inferior derecha para cubrir el botón de pantalla completa
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: IgnorePointer(
-                                ignoring: false,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    // Interceptar toques solo en esta área
-                                    print('Toque interceptado en área de pantalla completa');
-                                  },
-                                  child: Container(
-                                    width: 60,
-                                    height: 60,
-                                    color: Colors.transparent,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    // Logo de DevLokos para cubrir el botón de pantalla completa
+                    YoutubePlayer(
+                      controller: _controller!,
+                      showVideoProgressIndicator: true,
+                      progressIndicatorColor: BrandColors.primaryOrange,
+                      progressColors: const ProgressBarColors(
+                        playedColor: BrandColors.primaryOrange,
+                        handleColor: BrandColors.primaryOrange,
+                      ),
+                      onReady: () {
+                        print('✅ Reproductor de pantalla completa listo');
+                      },
+                      onEnded: (data) {
+                        print('🏁 Video terminado en pantalla completa');
+                        _exitFullScreen();
+                      },
+                    ),
+                    // Botón de salir de pantalla completa
                     Positioned(
                       bottom: 8,
                       right: 8,
@@ -183,7 +164,7 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
                 ),
               ),
 
-            // Botón de salir en la esquina superior izquierda
+            // Botón de cerrar en la esquina superior izquierda
             Positioned(
               top: 16,
               left: 16,
@@ -203,45 +184,6 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
               ),
             ),
 
-            // Información del episodio en la esquina superior derecha
-            if (widget.episode != null || widget.youtubeVideo != null)
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _getEpisodeTitle(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
-                      if (widget.youtubeVideo?.channelTitle != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.youtubeVideo!.channelTitle,
-                          style: const TextStyle(
-                            color: BrandColors.grayMedium,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
 
           ],
         ),
