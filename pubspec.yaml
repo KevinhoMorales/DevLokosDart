@@ -2,7 +2,7 @@ name: devlokos_podcast
 description: "DevLokos App - Lista de episodios con scraping de YouTube"
 publish_to: 'none'
 
-version: 1.0.4+104
+version: 1.0.6+106
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -40,7 +40,7 @@ dependencies:
   shared_preferences: ^2.2.2
   package_info_plus: ^8.0.0
   url_launcher: ^6.2.5
-  share_plus: ^7.2.2
+  share_plus: ^10.0.0
   image_picker: ^1.0.7
   path_provider: ^2.1.2
   flutter_lints: ^3.0.2
