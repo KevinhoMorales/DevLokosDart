@@ -95,6 +95,33 @@ class UserFirestoreService {
     }
   }
 
+  /// Obtiene los datos del usuario desde Firestore usando un UID específico
+  static Future<UserModel?> getUserFromFirestoreByUid(String uid) async {
+    try {
+      print('📥 Obteniendo datos de usuario desde Firestore para UID: $uid');
+      
+      final doc = await _firestore
+          .collection(EnvironmentConfig.getUsersCollectionPath())
+          .doc(EnvironmentConfig.getUsersCollectionPath())
+          .collection("users")
+          .doc(uid)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        final userModel = UserModel.fromMap(data);
+        print('✅ Datos de usuario obtenidos desde Firestore exitosamente para UID: $uid');
+        return userModel;
+      } else {
+        print('❌ Usuario no encontrado en Firestore con UID: $uid');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Error al obtener datos de usuario desde Firestore con UID $uid: $e');
+      return null;
+    }
+  }
+
   /// Sincroniza los datos locales con Firestore
   static Future<UserModel?> syncUserData() async {
     try {

@@ -49,6 +49,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// Recarga el usuario y actualiza la UI
+  Future<void> _refreshUser() async {
+    await _loadUser();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBlocSimple, AuthState>(
@@ -56,6 +61,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (state is AuthUnauthenticated) {
           // Navegar a la pantalla de home cuando se cierre sesión
           context.go('/home');
+        } else if (state is AuthAuthenticated) {
+          // Refrescar datos del usuario cuando se autentique
+          _refreshUser();
         } else if (state is AuthError) {
           // Mostrar error si hay algún problema
           ScaffoldMessenger.of(context).showSnackBar(
@@ -195,10 +203,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(60),
                             child: CachedNetworkImage(
+                              key: ValueKey(_currentUser!.photoURL), // Forzar actualización cuando cambie la URL
                               imageUrl: _currentUser!.photoURL!,
                               width: 120,
                               height: 120,
                               fit: BoxFit.cover,
+                              cacheKey: '${_currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}', // Cache key único
                               placeholder: (context, url) => const Center(
                                 child: CircularProgressIndicator(
                                   valueColor: AlwaysStoppedAnimation<Color>(

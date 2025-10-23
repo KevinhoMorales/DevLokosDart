@@ -43,13 +43,39 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
-      // Verificación simple sin usar authStateChanges
-      final user = _firebaseAuth.currentUser;
-      if (user != null && user.uid.isNotEmpty) {
-        print('🔍 Usuario autenticado encontrado: ${user.email}');
-        emit(AuthAuthenticated(user: user));
+      // Verificar si hay un usuario guardado localmente
+      print('🔍 AUTH CHECK: Verificando usuario local guardado...');
+      final localUser = await UserManager.getUser();
+      
+      if (localUser != null) {
+        print('🔍 Usuario local encontrado: ${localUser.email}');
+        print('🔍 UID local: ${localUser.uid}');
+        
+        // Sincronizar datos del usuario desde Firestore al iniciar la app
+        print('🔄 Sincronizando datos del usuario desde Firestore...');
+        final syncedUser = await UserManager.syncUserOnAppStart();
+        
+        if (syncedUser != null) {
+          print('✅ Sincronización completada: ${syncedUser.email}');
+          print('✅ PhotoURL sincronizada: ${syncedUser.photoURL}');
+        } else {
+          print('⚠️ No se pudo sincronizar, usando datos locales');
+        }
+        
+        // Emitir estado autenticado con el usuario local sincronizado
+        print('✅ Usuario local sincronizado, emitiendo estado autenticado');
+        final firebaseUser = _firebaseAuth.currentUser;
+        if (firebaseUser != null) {
+          emit(AuthAuthenticated(user: firebaseUser));
+        } else {
+          // Si no hay usuario de Firebase Auth pero sí local, crear un usuario temporal
+          // o simplemente emitir unauthenticated y esperar login
+          print('⚠️ No hay usuario de Firebase Auth, emitiendo unauthenticated');
+          emit(const AuthUnauthenticated());
+        }
       } else {
-        print('🔍 No hay usuario autenticado');
+        print('🔍 No hay usuario local guardado - no se ejecutará sincronización');
+        print('🔍 Esperando que el usuario se loguee');
         emit(const AuthUnauthenticated());
       }
     } catch (e) {

@@ -440,13 +440,19 @@ class _PodcastScreenState extends State<PodcastScreen>
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            padding: EdgeInsets.only(
+              left: 10.0,
+              right: 10.0,
+              bottom: MediaQuery.of(context).padding.bottom + 100.0, // Aumentar padding significativamente
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
                 const SizedBox(height: 12),
                 _buildEpisodesSection(episodes),
+                // Agregar espacio adicional al final
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 50.0),
               ],
             ),
           );
@@ -603,6 +609,9 @@ class _PodcastScreenState extends State<PodcastScreen>
             ),
             Expanded(
               child: ListView.builder(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom + 100.0, // Aumentar padding significativamente
+                ),
                 itemCount: searchResults.length,
                 itemBuilder: (context, index) {
                   final video = searchResults[index];
@@ -750,6 +759,9 @@ class _PodcastScreenState extends State<PodcastScreen>
               ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).padding.bottom + 100.0, // Aumentar padding significativamente
+                  ),
                   itemCount: filteredVideos.length + (youtubeProvider.hasMoreVideos ? 1 : 0), // +1 solo si hay más videos en la API
                   itemBuilder: (context, index) {
                     if (index == filteredVideos.length) {

@@ -32,12 +32,32 @@ class UserModel {
 
   /// Crea un UserModel desde un Map
   factory UserModel.fromMap(Map<String, dynamic> map) {
+    DateTime? createdAt;
+    
+    // Manejar diferentes tipos de createdAt (String, Timestamp, DateTime)
+    if (map['createdAt'] != null) {
+      try {
+        if (map['createdAt'] is String) {
+          createdAt = DateTime.parse(map['createdAt']);
+        } else if (map['createdAt'].toString().contains('Timestamp')) {
+          // Es un Timestamp de Firestore, convertir a DateTime
+          final timestamp = map['createdAt'];
+          createdAt = timestamp.toDate();
+        } else if (map['createdAt'] is DateTime) {
+          createdAt = map['createdAt'];
+        }
+      } catch (e) {
+        print('⚠️ Error al convertir createdAt: $e');
+        createdAt = null;
+      }
+    }
+    
     return UserModel(
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       displayName: map['displayName'],
       photoURL: map['photoURL'],
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,
+      createdAt: createdAt,
     );
   }
 
@@ -162,6 +182,71 @@ class UserManager {
     } catch (e) {
       print('❌ Error al sincronizar usuario desde Firestore: $e');
       return null;
+    }
+  }
+
+  /// Sincroniza automáticamente los datos del usuario al iniciar la app
+  /// Si el usuario existe en Firestore, sobrescribe los datos locales
+  static Future<UserModel?> syncUserOnAppStart() async {
+    try {
+      print('🔄 Iniciando sincronización automática de usuario al iniciar la app...');
+      
+      // Verificar si hay un usuario guardado localmente
+      final currentUser = await getUser();
+      if (currentUser == null) {
+        print('🔍 No hay usuario local, no se puede sincronizar');
+        return null;
+      }
+
+      print('👤 Usuario local encontrado: ${currentUser.email}');
+      print('👤 UID local: ${currentUser.uid}');
+      print('👤 Datos locales actuales:');
+      print('   - Email: ${currentUser.email}');
+      print('   - Display Name: ${currentUser.displayName}');
+      print('   - Photo URL: ${currentUser.photoURL}');
+      
+      // Intentar obtener datos actualizados desde Firestore usando el UID local
+      print('🔍 Consultando Firestore con UID: ${currentUser.uid}');
+      final firestoreUser = await UserFirestoreService.getUserFromFirestoreByUid(currentUser.uid);
+      
+      if (firestoreUser != null) {
+        print('📥 Datos encontrados en Firestore, comparando...');
+        print('📥 Datos de Firestore:');
+        print('   - Email: ${firestoreUser.email}');
+        print('   - Display Name: ${firestoreUser.displayName}');
+        print('   - Photo URL: ${firestoreUser.photoURL}');
+        
+        // Verificar si hay diferencias
+        final hasChanges = currentUser.email != firestoreUser.email ||
+                          currentUser.displayName != firestoreUser.displayName ||
+                          currentUser.photoURL != firestoreUser.photoURL;
+        
+        print('🔍 Comparando datos:');
+        print('   - Email local: ${currentUser.email} vs Firestore: ${firestoreUser.email}');
+        print('   - DisplayName local: ${currentUser.displayName} vs Firestore: ${firestoreUser.displayName}');
+        print('   - PhotoURL local: ${currentUser.photoURL} vs Firestore: ${firestoreUser.photoURL}');
+        print('   - ¿Hay cambios?: $hasChanges');
+        
+        if (hasChanges) {
+          print('🔄 Se encontraron diferencias, sobrescribiendo datos locales...');
+          // Sobrescribir datos locales con los de Firestore
+          await saveUser(firestoreUser);
+          print('✅ Datos locales sobrescritos con información de Firestore');
+          print('✅ Nueva PhotoURL guardada: ${firestoreUser.photoURL}');
+        } else {
+          print('✅ Los datos locales están actualizados, no se requiere sincronización');
+        }
+        
+        return firestoreUser;
+      } else {
+        print('⚠️ Usuario no encontrado en Firestore con UID: ${currentUser.uid}');
+        print('⚠️ Manteniendo datos locales');
+        return currentUser;
+      }
+    } catch (e) {
+      print('❌ Error en sincronización automática: $e');
+      // En caso de error, devolver datos locales si existen
+      return await getUser();
     }
   }
 
