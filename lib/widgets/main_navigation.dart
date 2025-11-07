@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/brand_colors.dart';
 import '../screens/podcast/podcast_screen.dart';
-import '../screens/profile/profile_screen.dart';
 import '../screens/academy/academy_screen.dart';
 import '../screens/tutorials/tutorials_screen.dart';
 import '../screens/enterprise/enterprise_screen.dart';
@@ -16,12 +15,11 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  // TEMPORAL: Solo mostrar tab de Podcast, ocultar otros tabs
   final List<Widget> _screens = [
     const PodcastScreen(),
-    // const TutorialsScreen(), // OCULTO TEMPORALMENTE
-    // const AcademyScreen(), // OCULTO TEMPORALMENTE  
-    // const EnterpriseScreen(), // OCULTO TEMPORALMENTE
+    const TutorialsScreen(),
+    const AcademyScreen(),
+    const EnterpriseScreen(),
   ];
 
   final List<BottomNavigationBarItem> _navItems = [
@@ -30,22 +28,21 @@ class _MainNavigationState extends State<MainNavigation> {
       activeIcon: Icon(Icons.radio),
       label: 'Podcast',
     ),
-    // TEMPORAL: Tabs ocultos para esta versión
-    // const BottomNavigationBarItem(
-    //   icon: Icon(Icons.play_lesson_outlined),
-    //   activeIcon: Icon(Icons.play_lesson),
-    //   label: 'Tutoriales',
-    // ),
-    // const BottomNavigationBarItem(
-    //   icon: Icon(Icons.school_outlined),
-    //   activeIcon: Icon(Icons.school),
-    //   label: 'Academia',
-    // ),
-    // const BottomNavigationBarItem(
-    //   icon: Icon(Icons.business_outlined),
-    //   activeIcon: Icon(Icons.business),
-    //   label: 'Empresarial',
-    // ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.play_lesson_outlined),
+      activeIcon: Icon(Icons.play_lesson),
+      label: 'Tutoriales',
+    ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.school_outlined),
+      activeIcon: Icon(Icons.school),
+      label: 'Academia',
+    ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.business_outlined),
+      activeIcon: Icon(Icons.business),
+      label: 'Empresarial',
+    ),
   ];
 
   void _onItemTapped(int index) {
@@ -56,14 +53,11 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    // TEMPORAL: Si solo hay un tab, mostrar solo el contenido sin BottomNavigationBar
-    if (_screens.length == 1) {
-      return _screens[0];
-    }
-    
-    // Para múltiples tabs, usar BottomNavigationBar normal
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: BrandColors.primaryBlack,

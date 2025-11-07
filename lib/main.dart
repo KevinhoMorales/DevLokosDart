@@ -91,47 +91,193 @@ final GoRouter _router = GoRouter(
   routes: [
     GoRoute(
       path: '/splash',
-      builder: (context, state) => const SplashScreen(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const SplashScreen(),
+        state: state,
+        transitionType: 'fade', // Splash usa fade
+      ),
     ),
     GoRoute(
       path: '/login',
-      builder: (context, state) => const LoginScreen(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const LoginScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const RegisterScreen(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const RegisterScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
     ),
     GoRoute(
       path: '/forgot-password',
-      builder: (context, state) => const ForgotPasswordScreen(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const ForgotPasswordScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const MainNavigation(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const MainNavigation(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
     ),
     GoRoute(
       path: '/episode/:id',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final episodeId = state.pathParameters['id']!;
         final extra = state.extra as Map<String, dynamic>?;
-        return EpisodeDetailScreen(
-          episodeId: episodeId,
-          episode: extra?['episode'] as Episode?,
-          youtubeVideo: extra?['youtubeVideo'] as YouTubeVideo?,
+        return _buildPageWithTransition(
+          child: EpisodeDetailScreen(
+            episodeId: episodeId,
+            episode: extra?['episode'] as Episode?,
+            youtubeVideo: extra?['youtubeVideo'] as YouTubeVideo?,
+          ),
+          state: state,
+          transitionType: 'horizontal',
+          maintainState: true,
         );
       },
     ),
     GoRoute(
       path: '/profile',
-      builder: (context, state) => const ProfileScreen(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const ProfileScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
     ),
     GoRoute(
       path: '/settings',
-      builder: (context, state) => const SettingsScreen(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const SettingsScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
     ),
     GoRoute(
       path: '/youtube',
-      builder: (context, state) => const YouTubeScreen(),
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const YouTubeScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
     ),
   ],
 );
+
+// Función helper para crear páginas con transiciones personalizadas
+CustomTransitionPage _buildPageWithTransition({
+  required Widget child,
+  required GoRouterState state,
+  required String transitionType,
+  bool maintainState = false,
+}) {
+  switch (transitionType) {
+    case 'horizontal':
+      return CustomTransitionPage(
+        key: state.pageKey,
+        child: child,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // Animación horizontal suave estilo iOS
+          // Nueva pantalla viene desde la derecha
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOutCubic;
+
+          // Para avanzar: nueva pantalla entra desde la derecha
+          // Para retroceder: pantalla sale hacia la derecha
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+        maintainState: maintainState,
+      );
+    case 'fade':
+      return CustomTransitionPage(
+        key: state.pageKey,
+        child: child,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        maintainState: maintainState,
+      );
+    default:
+      return CustomTransitionPage(
+        key: state.pageKey,
+        child: child,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve),
+          );
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 280),
+        maintainState: maintainState,
+      );
+  }
+}
+
+// Widget de página personalizada que extiende NoTransitionPage
+class CustomTransitionPage extends Page<void> {
+  final Widget child;
+  final Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)? transitionsBuilder;
+  final Duration transitionDuration;
+  final Duration? reverseTransitionDuration;
+  final bool maintainState;
+
+  const CustomTransitionPage({
+    required LocalKey key,
+    required this.child,
+    this.transitionsBuilder,
+    this.transitionDuration = const Duration(milliseconds: 300),
+    this.reverseTransitionDuration,
+    this.maintainState = false,
+  }) : super(key: key);
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    return PageRouteBuilder(
+      settings: this,
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+      transitionsBuilder: transitionsBuilder ?? 
+        (context, animation, secondaryAnimation, child) => child,
+      transitionDuration: transitionDuration,
+      reverseTransitionDuration: reverseTransitionDuration ?? transitionDuration,
+      maintainState: maintainState,
+    );
+  }
+}

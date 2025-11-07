@@ -19,7 +19,7 @@ class PodcastScreen extends StatefulWidget {
 }
 
 class _PodcastScreenState extends State<PodcastScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   final TextEditingController _searchController = TextEditingController();
@@ -31,16 +31,24 @@ class _PodcastScreenState extends State<PodcastScreen>
   List<YouTubeVideo>? _s2VideosSorted; // Cache para videos de temporada 2 ordenados
   bool _isInitialLoading = true; // Estado de carga inicial
   String _loadingMessage = 'Cargando videos...'; // Mensaje de loading
+  bool _hasLoaded = false; // Flag para asegurar que solo se carga una vez
+
+  @override
+  bool get wantKeepAlive => true; // Mantener el estado vivo cuando se navega
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
     // Cargar episodios y videos de YouTube después de que el widget esté montado
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadEpisodes();
-      _loadYouTubeVideos();
-    });
+    // Solo cargar si no se ha cargado antes
+    if (!_hasLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadEpisodes();
+        _loadYouTubeVideos();
+        _hasLoaded = true;
+      });
+    }
   }
 
   void _setupAnimations() {
@@ -68,9 +76,11 @@ class _PodcastScreenState extends State<PodcastScreen>
     final youtubeProvider = context.read<YouTubeProvider>();
     
     // Actualizar mensaje de loading
-    setState(() {
-      _loadingMessage = 'CARGANDO EPISODIOS';
-    });
+    if (mounted) {
+      setState(() {
+        _loadingMessage = 'CARGANDO EPISODIOS';
+      });
+    }
     
     await youtubeProvider.loadVideos();
     
@@ -84,9 +94,11 @@ class _PodcastScreenState extends State<PodcastScreen>
     _generateSortedVideos(youtubeProvider.videos);
     
     // Finalizar loading
-    setState(() {
-      _isInitialLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isInitialLoading = false;
+      });
+    }
   }
 
         void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
@@ -171,9 +183,11 @@ class _PodcastScreenState extends State<PodcastScreen>
     while ((s2Videos < 100 || s1Videos < 100) && provider.hasMoreVideos && attempts < maxAttempts) {
       try {
         // Actualizar mensaje de loading
-        setState(() {
-          _loadingMessage = 'CARGANDO EPISODIOS';
-        });
+        if (mounted) {
+          setState(() {
+            _loadingMessage = 'CARGANDO EPISODIOS';
+          });
+        }
         
         await provider.loadMoreVideos();
         attempts++;
@@ -213,6 +227,7 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Necesario para AutomaticKeepAliveClientMixin
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
