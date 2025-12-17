@@ -32,6 +32,8 @@ class _PodcastScreenState extends State<PodcastScreen>
   bool _isInitialLoading = true; // Estado de carga inicial
   String _loadingMessage = 'Cargando videos...'; // Mensaje de loading
   bool _hasLoaded = false; // Flag para asegurar que solo se carga una vez
+  final ScrollController _episodesScrollController = ScrollController();
+  bool _isLoadingMoreEpisodes = false;
 
   @override
   bool get wantKeepAlive => true; // Mantener el estado vivo cuando se navega
@@ -40,6 +42,7 @@ class _PodcastScreenState extends State<PodcastScreen>
   void initState() {
     super.initState();
     _setupAnimations();
+    _setupScrollListener();
     // Cargar episodios y videos de YouTube después de que el widget esté montado
     // Solo cargar si no se ha cargado antes
     if (!_hasLoaded) {
@@ -82,27 +85,54 @@ class _PodcastScreenState extends State<PodcastScreen>
       });
     }
     
-    await youtubeProvider.loadVideos();
+    // Carga inicial rápida: solo 30 videos para mostrar la UI rápidamente
+    await youtubeProvider.loadVideos(initialLoad: true, maxResults: 30);
     
-    // Cargar más videos si no tenemos suficientes de todas las temporadas
-    await _ensureEnoughVideosForAllSeasons(youtubeProvider);
-    
-    // Generar videos de descubrimiento una sola vez
+    // Generar videos de descubrimiento con los videos iniciales
     _generateDiscoverVideos(youtubeProvider.videos);
     
-    // Generar videos ordenados una sola vez
+    // Generar videos ordenados con los videos iniciales
     _generateSortedVideos(youtubeProvider.videos);
     
-    // Finalizar loading
+    // Finalizar loading inicial para mostrar la UI inmediatamente
     if (mounted) {
       setState(() {
         _isInitialLoading = false;
       });
     }
+    
+    // Cargar más videos en segundo plano sin bloquear la UI
+    _loadMoreVideosInBackground(youtubeProvider);
+  }
+  
+  /// Carga más videos en segundo plano sin bloquear la UI
+  Future<void> _loadMoreVideosInBackground(YouTubeProvider provider) async {
+    // Cargar más videos gradualmente en segundo plano
+    // Esto permite que el usuario vea contenido mientras se cargan más episodios
+    int loadedBatches = 0;
+    const maxInitialBatches = 3; // Cargar 3 batches adicionales en segundo plano (30 + 60 = 90 videos)
+    
+    while (loadedBatches < maxInitialBatches && provider.hasMoreVideos && mounted) {
+      await Future.delayed(const Duration(milliseconds: 500)); // Pequeña pausa entre batches
+      
+      if (!mounted) break;
+      
+      await provider.loadMoreVideos(batchSize: 30);
+      loadedBatches++;
+      
+      // Regenerar caches con los nuevos videos
+      if (mounted) {
+        _generateSortedVideos(provider.videos);
+        _generateDiscoverVideos(provider.videos);
+      }
+    }
+    
+    print('✅ Carga en segundo plano completada: ${provider.videos.length} videos totales');
   }
 
         void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
-          if (_discoverVideos == null && allVideos.isNotEmpty) {
+          // Regenerar siempre para incluir nuevos videos cargados
+          if (allVideos.isNotEmpty) {
             // Filtrar videos con títulos válidos (no vacíos, no "Sin título")
             final validVideos = allVideos.where((video) => 
               video.title.isNotEmpty && 
@@ -117,7 +147,7 @@ class _PodcastScreenState extends State<PodcastScreen>
               final shuffledVideos = List<YouTubeVideo>.from(validVideos);
               shuffledVideos.shuffle();
               _discoverVideos = shuffledVideos.take(4).toList();
-              print('🎲 Videos de descubrimiento generados una sola vez: ${_discoverVideos!.length} videos válidos');
+              print('🎲 Videos de descubrimiento regenerados: ${_discoverVideos!.length} videos válidos');
             } else {
               // Si no hay videos válidos, usar todos los videos como fallback
               final shuffledVideos = List<YouTubeVideo>.from(allVideos);
@@ -168,60 +198,35 @@ class _PodcastScreenState extends State<PodcastScreen>
     }
   }
 
-
-  Future<void> _ensureEnoughVideosForAllSeasons(YouTubeProvider provider) async {
-    // Verificar si tenemos videos de ambas temporadas
-    int s1Videos = provider.videos.where((v) => v.title.contains('S1')).length;
-    int s2Videos = provider.videos.where((v) => v.title.contains('S2')).length;
-    
-    print('🔍 Videos iniciales - S1: $s1Videos, S2: $s2Videos');
-    
-    // Priorizar cargar videos de S2 (por defecto) y luego S1
-    int attempts = 0;
-    const maxAttempts = 25; // Aumentar intentos para conseguir más videos
-    
-    while ((s2Videos < 100 || s1Videos < 100) && provider.hasMoreVideos && attempts < maxAttempts) {
-      try {
-        // Actualizar mensaje de loading
-        if (mounted) {
-          setState(() {
-            _loadingMessage = 'CARGANDO EPISODIOS';
-          });
+  void _setupScrollListener() {
+    _episodesScrollController.addListener(() {
+      if (_episodesScrollController.position.pixels >= 
+          _episodesScrollController.position.maxScrollExtent * 0.8) {
+        // Cuando el usuario llega al 80% del scroll, cargar más videos
+        if (!_isLoadingMoreEpisodes && mounted) {
+          final youtubeProvider = context.read<YouTubeProvider>();
+          if (youtubeProvider.hasMoreVideos && !youtubeProvider.isLoading) {
+            _isLoadingMoreEpisodes = true;
+            youtubeProvider.loadMoreVideos(batchSize: 30).then((_) {
+              _isLoadingMoreEpisodes = false;
+              // Regenerar caches con los nuevos videos
+              if (mounted) {
+                setState(() {
+                  _generateSortedVideos(youtubeProvider.videos);
+                });
+              }
+            });
+          }
         }
-        
-        await provider.loadMoreVideos();
-        attempts++;
-        
-        final updatedS1Videos = provider.videos.where((v) => v.title.contains('S1')).length;
-        final updatedS2Videos = provider.videos.where((v) => v.title.contains('S2')).length;
-        
-        print('🔄 Intento $attempts - S1: $updatedS1Videos, S2: $updatedS2Videos');
-        
-        // Regenerar caches con todos los videos actuales
-        _generateSortedVideos(provider.videos);
-        s1Videos = updatedS1Videos;
-        s2Videos = updatedS2Videos;
-        
-        // Si ya tenemos suficientes videos de ambas temporadas, podemos salir antes
-        if (s2Videos >= 100 && s1Videos >= 100) {
-          break;
-        }
-        
-        // Pequeña pausa para evitar sobrecargar la API
-        await Future.delayed(const Duration(milliseconds: 1000));
-      } catch (e) {
-        print('❌ Error en _ensureEnoughVideosForAllSeasons: $e');
-        break; // Salir del loop si hay error
       }
-    }
-    
-    print('✅ Carga completada - S1: $s1Videos, S2: $s2Videos videos');
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _searchController.dispose();
+    _episodesScrollController.dispose();
     super.dispose();
   }
 
@@ -771,53 +776,67 @@ class _PodcastScreenState extends State<PodcastScreen>
                 ),
               )
             else
-              ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).padding.bottom + 100.0, // Aumentar padding significativamente
-                  ),
-                  itemCount: filteredVideos.length + (youtubeProvider.hasMoreVideos ? 1 : 0), // +1 solo si hay más videos en la API
-                  itemBuilder: (context, index) {
-                    if (index == filteredVideos.length) {
-                      // Botón para cargar más videos de la API
-                      return Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: youtubeProvider.isLoading
-                            ? const Center(
-                                child: CircularProgressIndicator(
-                                  color: BrandColors.primaryOrange,
-                                ),
-                              )
-                            : ElevatedButton(
-                                onPressed: () async {
-                                  await youtubeProvider.loadMoreVideos();
-                                  // Regenerar caches con los nuevos videos
-                                  _generateSortedVideos(youtubeProvider.videos);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: BrandColors.primaryOrange,
-                                  foregroundColor: BrandColors.primaryWhite,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: const Text('Cargar más videos'),
-                              ),
-                      );
-                    }
-
-                    final video = filteredVideos[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: YouTubeVideoCard(
-                        video: video,
-                        onTap: () => _onVideoTap(video),
-                      ),
-                    );
-                  },
-                ),
+              _buildEpisodesListView(filteredVideos, youtubeProvider),
           ],
+        );
+      },
+    );
+  }
+
+  /// Construye la lista de episodios con scroll infinito
+  Widget _buildEpisodesListView(List<YouTubeVideo> filteredVideos, YouTubeProvider youtubeProvider) {
+    return ListView.builder(
+      controller: _episodesScrollController,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 100.0,
+      ),
+      itemCount: filteredVideos.length + (youtubeProvider.hasMoreVideos ? 1 : 0),
+      itemBuilder: (context, index) {
+        // Mostrar indicador de carga al final si hay más videos
+        if (index == filteredVideos.length) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: youtubeProvider.isLoading || _isLoadingMoreEpisodes
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: BrandColors.primaryOrange,
+                    ),
+                  )
+                : ElevatedButton(
+                    onPressed: () async {
+                      if (!_isLoadingMoreEpisodes) {
+                        _isLoadingMoreEpisodes = true;
+                        await youtubeProvider.loadMoreVideos(batchSize: 30);
+                        // Regenerar caches con los nuevos videos
+                        if (mounted) {
+                          setState(() {
+                            _generateSortedVideos(youtubeProvider.videos);
+                            _isLoadingMoreEpisodes = false;
+                          });
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: BrandColors.primaryOrange,
+                      foregroundColor: BrandColors.primaryWhite,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Cargar más videos'),
+                  ),
+          );
+        }
+
+        final video = filteredVideos[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: YouTubeVideoCard(
+            video: video,
+            onTap: () => _onVideoTap(video),
+          ),
         );
       },
     );
@@ -927,11 +946,11 @@ class _PodcastScreenState extends State<PodcastScreen>
       print('📅 Videos ordenados en tiempo real (${_selectedSeason}): ${allFilteredVideos.length} videos');
     }
     
-    // Mostrar los primeros 100 videos de la temporada seleccionada
-    final limitedVideos = allFilteredVideos.take(100).toList();
-    print('📄 Mostrando ${limitedVideos.length} videos (primeros 100) de ${_selectedSeason}');
+    // No limitar la cantidad - mostrar todos los videos disponibles
+    // La paginación se manejará con scroll infinito
+    print('📄 Mostrando ${allFilteredVideos.length} videos de ${_selectedSeason}');
     
-    return limitedVideos;
+    return allFilteredVideos;
   }
 
   Future<void> _loadMoreVideosForSeason(String season) async {
@@ -939,38 +958,22 @@ class _PodcastScreenState extends State<PodcastScreen>
     final seasonPattern = season == 'Temporada 1' ? 'S1' : 'S2';
     final currentSeasonVideos = youtubeProvider.videos.where((v) => v.title.contains(seasonPattern)).length;
     
-    print('🔍 Cargando más videos para $season - Actualmente: $currentSeasonVideos videos');
+    print('🔍 Temporada seleccionada: $season - Actualmente: $currentSeasonVideos videos');
     
-    // Cargar más videos hasta tener al menos 100 de la temporada seleccionada
-    int attempts = 0;
-    const maxAttempts = 30; // Aumentar intentos para conseguir más videos
-    
-    try {
-      while (currentSeasonVideos < 100 && youtubeProvider.hasMoreVideos && attempts < maxAttempts) {
-        await youtubeProvider.loadMoreVideos();
-        attempts++;
-        
-        // Verificar si hemos ganado videos de la temporada
-        final updatedSeasonVideos = youtubeProvider.videos.where((v) => v.title.contains(seasonPattern)).length;
-        print('🔄 Intento $attempts - Videos de $season: $updatedSeasonVideos');
+    // Cargar solo un batch adicional si hay pocos videos de la temporada seleccionada
+    // El scroll infinito se encargará de cargar más cuando sea necesario
+    if (currentSeasonVideos < 10 && youtubeProvider.hasMoreVideos && !youtubeProvider.isLoading) {
+      try {
+        await youtubeProvider.loadMoreVideos(batchSize: 30);
         
         // Regenerar caches con los nuevos videos
         _generateSortedVideos(youtubeProvider.videos);
         
-        // Si no ganamos videos en este intento, salir para evitar loops infinitos
-        if (updatedSeasonVideos == currentSeasonVideos) {
-          print('⚠️ No se encontraron más videos de $season, deteniendo carga');
-          break;
-        }
-        
-        // Pequeña pausa para evitar sobrecargar la API
-        await Future.delayed(const Duration(milliseconds: 500));
+        final updatedSeasonVideos = youtubeProvider.videos.where((v) => v.title.contains(seasonPattern)).length;
+        print('✅ Carga rápida para $season completada - Total videos: $updatedSeasonVideos');
+      } catch (e) {
+        print('❌ Error en _loadMoreVideosForSeason: $e');
       }
-    } catch (e) {
-      print('❌ Error en _loadMoreVideosForSeason: $e');
     }
-    
-    final finalSeasonVideos = youtubeProvider.videos.where((v) => v.title.contains(seasonPattern)).length;
-    print('✅ Carga completada para $season - Total videos: $finalSeasonVideos');
   }
 }

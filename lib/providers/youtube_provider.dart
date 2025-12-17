@@ -21,7 +21,9 @@ class YouTubeProvider extends ChangeNotifier {
   bool get hasMoreVideos => _hasMoreVideos;
 
   /// Carga los videos desde YouTube usando la API oficial
-  Future<void> loadVideos({bool refresh = false}) async {
+  /// [initialLoad] si es true, carga solo una cantidad pequeña para mostrar rápido
+  /// [maxResults] cantidad de videos a cargar (por defecto 30 para carga inicial rápida)
+  Future<void> loadVideos({bool refresh = false, bool initialLoad = false, int? maxResults}) async {
     try {
       if (refresh) {
         _videos.clear();
@@ -31,7 +33,7 @@ class YouTubeProvider extends ChangeNotifier {
       }
 
       // Si no es refresh, intentar cargar desde caché primero
-      if (!refresh) {
+      if (!refresh && !initialLoad) {
         final cacheResult = await CacheService.loadVideosFromCache();
         if (cacheResult != null) {
           print('📱 Cache: Cargando videos desde caché...');
@@ -71,12 +73,15 @@ class YouTubeProvider extends ChangeNotifier {
         }
       }
 
-      print('🔄 Cargando videos desde YouTube API...');
+      // Determinar cantidad de videos a cargar
+      final resultsToLoad = maxResults ?? (initialLoad ? 30 : 100);
+      
+      print('🔄 Cargando videos desde YouTube API... (${initialLoad ? 'carga inicial rápida' : 'carga completa'})');
       _setLoading(true);
       _clearError();
 
       final response = await _youtubeService.getPlaylistVideos(
-        maxResults: 100, // Aumentar a 100 videos por carga
+        maxResults: resultsToLoad,
         pageToken: _nextPageToken,
       );
 
@@ -95,13 +100,15 @@ class YouTubeProvider extends ChangeNotifier {
       // Marcar algunos videos como destacados (ejemplo: los 3 más recientes)
       _updateFeaturedVideos();
       
-      // Guardar en caché
-      await CacheService.saveVideosToCache(
-        videos: _videos,
-        featuredVideos: _featuredVideos,
-        nextPageToken: _nextPageToken,
-        hasMoreVideos: _hasMoreVideos,
-      );
+      // Solo guardar en caché si no es carga inicial (para evitar guardar datos incompletos)
+      if (!initialLoad) {
+        await CacheService.saveVideosToCache(
+          videos: _videos,
+          featuredVideos: _featuredVideos,
+          nextPageToken: _nextPageToken,
+          hasMoreVideos: _hasMoreVideos,
+        );
+      }
       
       print('✅ ${response.videos.length} videos cargados desde YouTube API');
       print('📊 Total de videos: ${_videos.length}');
@@ -124,15 +131,16 @@ class YouTubeProvider extends ChangeNotifier {
   }
 
   /// Carga más videos (paginación)
-  Future<void> loadMoreVideos() async {
+  /// [batchSize] cantidad de videos a cargar en este batch (por defecto 20)
+  Future<void> loadMoreVideos({int batchSize = 20}) async {
     if (_isLoading || !_hasMoreVideos) return;
     
     try {
-      print('🔄 Cargando más videos...');
+      print('🔄 Cargando más videos... (batch de $batchSize)');
       _setLoading(true);
 
       final response = await _youtubeService.getPlaylistVideos(
-        maxResults: 20,
+        maxResults: batchSize,
         pageToken: _nextPageToken,
       );
 
@@ -144,7 +152,19 @@ class YouTubeProvider extends ChangeNotifier {
       _nextPageToken = response.nextPageToken;
       _hasMoreVideos = response.hasMoreVideos;
       
+      // Actualizar videos destacados
+      _updateFeaturedVideos();
+      
+      // Guardar en caché después de cada carga adicional
+      await CacheService.saveVideosToCache(
+        videos: _videos,
+        featuredVideos: _featuredVideos,
+        nextPageToken: _nextPageToken,
+        hasMoreVideos: _hasMoreVideos,
+      );
+      
       print('✅ ${newVideos.length} videos nuevos cargados (${response.videos.length - newVideos.length} duplicados evitados)');
+      print('📊 Total de videos: ${_videos.length}');
     } catch (e) {
       _setError('Error al cargar más videos: $e');
       print('❌ Error al cargar más videos: $e');
