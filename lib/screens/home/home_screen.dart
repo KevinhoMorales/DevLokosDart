@@ -75,8 +75,8 @@ class _HomeScreenState extends State<HomeScreen>
       correspondingVideo = null;
     }
 
-    // Navegar a la pantalla de detalle con los datos
-    context.go('/episode/${episode.id}', 
+    // Navegar a la pantalla de detalle con los datos usando push para mantener el historial
+    context.push('/episode/${episode.id}', 
       extra: {
         'episode': episode,
         'youtubeVideo': correspondingVideo,

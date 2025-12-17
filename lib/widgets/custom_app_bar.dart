@@ -64,17 +64,11 @@ class _CustomAppBarState extends State<CustomAppBar> {
         leading: widget.showBackButton
             ? IconButton(
                 onPressed: () {
-                  // Para iOS, usar siempre navegación directa para evitar problemas de navegación
-                  final currentRoute = GoRouterState.of(context).uri.path;
-                  
-                  if (currentRoute == '/settings') {
-                    context.go('/profile');
-                  } else if (currentRoute.startsWith('/episode/')) {
-                    context.go('/home');
-                  } else if (currentRoute == '/profile') {
-                    context.go('/home');
+                  // Usar pop para navegar hacia atrás en el historial
+                  if (context.canPop()) {
+                    context.pop();
                   } else {
-                    // Para cualquier otra ruta, ir a home
+                    // Si no hay historial, ir a home como fallback
                     context.go('/home');
                   }
                 },

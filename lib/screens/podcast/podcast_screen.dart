@@ -858,8 +858,8 @@ class _PodcastScreenState extends State<PodcastScreen>
       }
     }
 
-    // Navegar a la pantalla de detalle
-    context.go('/episode/${correspondingEpisode?.id ?? video.videoId}', 
+    // Navegar a la pantalla de detalle usando push para mantener el historial de navegación
+    context.push('/episode/${correspondingEpisode?.id ?? video.videoId}', 
       extra: {
         'episode': correspondingEpisode,
         'youtubeVideo': video,
