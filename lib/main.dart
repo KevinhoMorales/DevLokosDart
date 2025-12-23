@@ -5,7 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'bloc/episode/episode_bloc_exports.dart';
 import 'bloc/auth/auth_bloc_exports.dart';
+import 'bloc/tutorial/tutorial_bloc_exports.dart';
+import 'bloc/academy/academy_bloc_exports.dart';
+import 'bloc/enterprise/enterprise_bloc_exports.dart';
 import 'repository/episode_repository.dart';
+import 'repository/tutorial_repository.dart';
+import 'repository/academy_repository.dart';
+import 'repository/enterprise_repository.dart';
 import 'providers/youtube_provider.dart';
 import 'models/episode.dart';
 import 'models/youtube_video.dart';
@@ -69,6 +75,21 @@ class DevLokosApp extends StatelessWidget {
             create: (context) => EpisodeBloc(
               repository: EpisodeRepositoryImpl(),
             )..add(const LoadEpisodes()),
+          ),
+          BlocProvider<TutorialBloc>(
+            create: (context) => TutorialBloc(
+              repository: TutorialRepositoryImpl(),
+            )..add(const LoadTutorials()),
+          ),
+          BlocProvider<AcademyBloc>(
+            create: (context) => AcademyBloc(
+              repository: AcademyRepositoryImpl(),
+            )..add(const LoadCourses()),
+          ),
+          BlocProvider<EnterpriseBloc>(
+            create: (context) => EnterpriseBloc(
+              repository: EnterpriseRepositoryImpl(),
+            )..add(const LoadServices()),
           ),
         ],
         child: VersionCheckWrapper(
