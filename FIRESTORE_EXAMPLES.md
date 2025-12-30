@@ -355,3 +355,4 @@ exports.onContactSubmission = functions.firestore
 4. **Indexes**: Create composite indexes in Firestore Console for efficient queries
 5. **Security**: All collections require authentication for reads; writes are admin-only except contact submissions
 
+

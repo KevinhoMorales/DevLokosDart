@@ -80,3 +80,4 @@ class AcademyError extends AcademyState {
   List<Object?> get props => [message, cachedCourses];
 }
 
+

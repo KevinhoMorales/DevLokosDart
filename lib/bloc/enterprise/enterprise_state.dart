@@ -65,3 +65,4 @@ class ContactFormError extends EnterpriseState {
   List<Object?> get props => [message];
 }
 
+

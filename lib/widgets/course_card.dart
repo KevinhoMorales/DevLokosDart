@@ -230,3 +230,4 @@ class CourseCard extends StatelessWidget {
   }
 }
 
+

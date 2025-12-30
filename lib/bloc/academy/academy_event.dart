@@ -59,3 +59,4 @@ class ClearFilters extends AcademyEvent {
   const ClearFilters();
 }
 
+

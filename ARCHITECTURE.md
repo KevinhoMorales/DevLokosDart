@@ -272,3 +272,4 @@ For questions about the architecture or implementation, refer to:
 - Code comments in BLoC and repository files
 - Flutter BLoC documentation: https://bloclibrary.dev/
 
+
