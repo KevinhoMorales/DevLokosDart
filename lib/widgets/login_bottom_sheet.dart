@@ -189,6 +189,17 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
         if (state is AuthAuthenticated) {
           Navigator.of(context).pop(); // Cerrar el bottom sheet
           context.go('/home');
+        } else if (state is AuthResendVerificationEmailSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: BrandColors.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
         } else if (state is AuthError) {
           if (state.code == 'email-not-verified') {
             showDialog(
@@ -205,8 +216,18 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      context.read<AuthBlocSimple>().add(const AuthLogoutRequested());
+                    },
                     child: Text('Entendido', style: TextStyle(color: BrandColors.primaryOrange)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      context.read<AuthBlocSimple>().add(const AuthResendVerificationEmailRequested());
+                    },
+                    child: Text('Enviar de nuevo el email', style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

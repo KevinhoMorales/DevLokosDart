@@ -38,24 +38,42 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(12),
+        color: BrandColors.blackLight.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.3),
+          color: BrandColors.primaryOrange.withOpacity(0.15),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: TextField(
         controller: widget.controller,
         onChanged: widget.onChanged,
-        style: const TextStyle(color: BrandColors.primaryWhite),
+        style: const TextStyle(
+          color: BrandColors.primaryWhite,
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
+        ),
         decoration: InputDecoration(
           hintText: widget.hintText,
           hintStyle: TextStyle(
-            color: BrandColors.grayMedium.withOpacity(0.7),
+            color: BrandColors.grayMedium.withOpacity(0.8),
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
           ),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: BrandColors.primaryOrange,
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 12),
+            child: Icon(
+              Icons.search_rounded,
+              color: BrandColors.primaryOrange.withOpacity(0.9),
+              size: 22,
+            ),
           ),
           suffixIcon: widget.controller.text.isNotEmpty
               ? IconButton(
@@ -63,17 +81,20 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     widget.controller.clear();
                     widget.onChanged('');
                   },
-                  icon: const Icon(
-                    Icons.clear,
-                    color: BrandColors.grayMedium,
+                  icon: Icon(
+                    Icons.cancel_rounded,
+                    color: BrandColors.grayMedium.withOpacity(0.8),
+                    size: 20,
                   ),
                 )
               : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
-            vertical: 12,
+            vertical: 16,
           ),
+          filled: true,
+          fillColor: Colors.transparent,
         ),
       ),
     );

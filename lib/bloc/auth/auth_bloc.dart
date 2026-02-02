@@ -30,6 +30,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     on<AuthDeleteAccountWithReauthRequested>(_onAuthDeleteAccountWithReauthRequested);
     on<AuthPasswordResetRequested>(_onAuthPasswordResetRequested);
     on<AuthErrorCleared>(_onAuthErrorCleared);
+    on<AuthResendVerificationEmailRequested>(_onAuthResendVerificationEmailRequested);
 
     // Verificación inicial simple
     add(const AuthCheckRequested());
@@ -118,9 +119,9 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         await user.reload();
         final refreshedUser = _firebaseAuth.currentUser;
         if (refreshedUser == null || !refreshedUser.emailVerified) {
-          await _firebaseAuth.signOut();
+          // No cerrar sesión: el usuario puede reenviar el email de verificación
           emit(AuthError(
-            message: 'Tu email está pendiente de verificación. Revisa tu correo y haz clic en el enlace para activar tu cuenta.',
+            message: 'Tu cuenta está creada pero tu email aún está pendiente de aceptación. Revisa tu correo y haz clic en el enlace que te enviamos para activar tu cuenta.',
             code: 'email-not-verified',
           ));
           return;
@@ -448,6 +449,37 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(const AuthInitial());
+  }
+
+  /// Reenvía el email de verificación
+  Future<void> _onAuthResendVerificationEmailRequested(
+    AuthResendVerificationEmailRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        await _firebaseAuth.signOut();
+        emit(const AuthUnauthenticated());
+        return;
+      }
+
+      await user.sendEmailVerification();
+      await _firebaseAuth.signOut();
+
+      emit(const AuthResendVerificationEmailSuccess(
+        message: 'Email de verificación enviado. Revisa tu correo y haz clic en el enlace.',
+      ));
+      emit(const AuthUnauthenticated());
+    } catch (e) {
+      print('❌ Error al reenviar email de verificación: $e');
+      await _firebaseAuth.signOut();
+      emit(AuthError(
+        message: 'No se pudo enviar el email. Intenta más tarde.',
+        code: 'resend_failed',
+      ));
+      emit(const AuthUnauthenticated());
+    }
   }
 
   /// Guarda los datos del usuario en Firestore

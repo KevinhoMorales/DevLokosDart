@@ -79,5 +79,17 @@ class AuthPasswordResetSent extends AuthState {
   const AuthPasswordResetSent();
 }
 
+/// Email de verificación reenviado correctamente
+class AuthResendVerificationEmailSuccess extends AuthState {
+  final String message;
+
+  const AuthResendVerificationEmailSuccess({
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [message];
+}
+
 
 

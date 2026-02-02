@@ -184,6 +184,17 @@ class _LoginScreenState extends State<LoginScreen>
         if (!context.mounted) return;
         if (state is AuthAuthenticated) {
           context.go('/home');
+        } else if (state is AuthResendVerificationEmailSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: BrandColors.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
         } else if (state is AuthError) {
           if (state.code == 'email-not-verified') {
             showDialog(
@@ -200,8 +211,18 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      context.read<AuthBlocSimple>().add(const AuthLogoutRequested());
+                    },
                     child: Text('Entendido', style: TextStyle(color: BrandColors.primaryOrange)),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      context.read<AuthBlocSimple>().add(const AuthResendVerificationEmailRequested());
+                    },
+                    child: Text('Enviar de nuevo el email', style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

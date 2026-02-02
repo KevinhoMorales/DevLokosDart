@@ -19,129 +19,177 @@ class YouTubeVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-      color: BrandColors.cardBackground,
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(
-          color: BrandColors.primaryOrange,
-          width: 2,
-        ),
-      ),
+    final isCompact = thumbnailHeight != null && thumbnailHeight! < 140;
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap ?? () => _launchYouTubeVideo(context),
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail
-            _buildThumbnail(),
-            
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title only
-                  _buildTitle(),
-                ],
-              ),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: BrandColors.blackLight.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: BrandColors.primaryOrange.withOpacity(0.15),
+              width: 1,
             ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+                spreadRadius: 0,
+              ),
+              BoxShadow(
+                color: BrandColors.primaryOrange.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 2),
+                spreadRadius: -4,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildThumbnail(),
+                Padding(
+                  padding: EdgeInsets.all(isCompact ? 12 : 16),
+                  child: _buildTitle(),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildThumbnail() {
-    final height = thumbnailHeight ?? 160; // Usar altura personalizada o 160 por defecto
+    final height = thumbnailHeight ?? 180;
+    final playSize = height < 140 ? 48.0 : 56.0;
     
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      child: Stack(
-        children: [
-          SizedBox(
+    return Stack(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: height,
+          child: CachedNetworkImage(
+            imageUrl: _getHighQualityThumbnail(video.thumbnailUrl),
             width: double.infinity,
             height: height,
-            child: CachedNetworkImage(
-              imageUrl: _getHighQualityThumbnail(video.thumbnailUrl),
-              width: double.infinity,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.high,
+            placeholder: (context, url) => Container(
               height: height,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-              placeholder: (context, url) => Container(
-                height: height,
-                color: BrandColors.grayDark,
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    color: BrandColors.primaryOrange,
+              color: BrandColors.grayDark.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: BrandColors.primaryOrange,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+            errorWidget: (context, url, error) => Container(
+              height: height,
+              color: BrandColors.grayDark.withOpacity(0.5),
+              child: Icon(
+                Icons.play_circle_outline,
+                color: BrandColors.primaryOrange.withOpacity(0.5),
+                size: 48,
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.4),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Center(
+            child: SizedBox(
+              width: playSize + 16,
+              height: playSize + 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: BrandColors.primaryOrange.withOpacity(0.35),
+                      blurRadius: 12,
+                      spreadRadius: 0,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  gradient: LinearGradient(
+                    colors: [
+                      BrandColors.primaryOrange,
+                      BrandColors.orangeLight,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: playSize,
                   ),
                 ),
               ),
-              errorWidget: (context, url, error) => Container(
-                height: height,
-                color: BrandColors.grayDark,
-                child: const Icon(
-                  Icons.error_outline,
-                  color: BrandColors.grayMedium,
-                  size: 48,
-                ),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 12,
+          right: 12,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.75),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              video.formattedPublishedAt,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
               ),
             ),
           ),
-          
-          // Play button overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.15),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.play_circle_fill,
-                  color: Colors.white,
-                  size: 64,
-                ),
-              ),
-            ),
-          ),
-          
-          // Duration badge (si estuviera disponible)
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                video.formattedPublishedAt,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildTitle() {
     return Text(
       video.title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
+      style: TextStyle(
+        fontSize: thumbnailHeight != null && thumbnailHeight! < 140 ? 13 : 15,
+        fontWeight: FontWeight.w600,
         color: BrandColors.primaryWhite,
-        height: 1.2,
+        height: 1.35,
+        letterSpacing: 0.2,
       ),
       maxLines: 2,
       overflow: TextOverflow.ellipsis,

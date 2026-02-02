@@ -79,5 +79,10 @@ class AuthErrorCleared extends AuthEvent {
   const AuthErrorCleared();
 }
 
+/// Evento para reenviar el email de verificación
+class AuthResendVerificationEmailRequested extends AuthEvent {
+  const AuthResendVerificationEmailRequested();
+}
+
 
 

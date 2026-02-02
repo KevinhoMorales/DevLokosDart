@@ -248,8 +248,17 @@ class _PodcastScreenState extends State<PodcastScreen>
       child: Scaffold(
         appBar: const CustomAppBar(title: ''),
         body: Container(
-          decoration: const BoxDecoration(
-            color: BrandColors.primaryBlack,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                BrandColors.primaryBlack,
+                BrandColors.primaryBlack,
+                BrandColors.blackDark.withOpacity(0.95),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
           ),
           child: SafeArea(
             child: Column(
@@ -291,7 +300,7 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
+      padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 16.0),
       child: SearchBarWidget(
         controller: _searchController,
         hintText: 'Buscar episodios, invitado o tema...',
@@ -299,8 +308,6 @@ class _PodcastScreenState extends State<PodcastScreen>
           setState(() {
             _searchQuery = value.trim();
           });
-          
-          // No disparar eventos BLoC - usar búsqueda directa
         },
       ),
     );
@@ -461,17 +468,16 @@ class _PodcastScreenState extends State<PodcastScreen>
 
           return SingleChildScrollView(
             padding: EdgeInsets.only(
-              left: 10.0,
-              right: 10.0,
-              bottom: MediaQuery.of(context).padding.bottom + 100.0, // Aumentar padding significativamente
+              left: 20.0,
+              right: 20.0,
+              bottom: MediaQuery.of(context).padding.bottom + 100.0,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
-                const SizedBox(height: 12),
+                const SizedBox(height: 32),
                 _buildEpisodesSection(episodes),
-                // Agregar espacio adicional al final
                 SizedBox(height: MediaQuery.of(context).padding.bottom + 50.0),
               ],
             ),
@@ -507,34 +513,52 @@ class _PodcastScreenState extends State<PodcastScreen>
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'DESCUBRE LOS PODCAST',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: BrandColors.primaryWhite,
-                  fontSize: 16,
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: BrandColors.primaryOrange,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Descubre',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: BrandColors.primaryWhite,
+                        fontSize: 20,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               SizedBox(
-                height: 200,
+                height: 220,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  clipBehavior: Clip.none,
                   itemCount: discoverVideos.length,
                   itemBuilder: (context, index) {
                     final video = discoverVideos[index];
-                    print('🎥 Mostrando video ${index + 1}: ${video.title}');
                     return SizedBox(
-                      width: 280, // Ancho fijo para evitar problemas de layout
+                      width: 300,
                       child: Padding(
                         padding: EdgeInsets.only(
-                          right: index < discoverVideos.length - 1 ? 8 : 0,
+                          right: index < discoverVideos.length - 1 ? 16 : 0,
                         ),
                         child: YouTubeVideoCard(
                           video: video,
                           onTap: () => _onVideoTap(video),
                           showChannelTitle: false,
-                          thumbnailHeight: 120, // Altura original para la sección DESCUBRE
+                          thumbnailHeight: 140,
                         ),
                       ),
                     );
@@ -607,21 +631,25 @@ class _PodcastScreenState extends State<PodcastScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.search,
-                    color: BrandColors.primaryOrange,
-                    size: 20,
+                  Container(
+                    width: 4,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: BrandColors.primaryOrange,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Text(
-                    'RESULTADOS DE BÚSQUEDA (${searchResults.length})',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    'Resultados (${searchResults.length})',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: BrandColors.primaryWhite,
+                      fontSize: 18,
                     ),
                   ),
                 ],
@@ -636,10 +664,11 @@ class _PodcastScreenState extends State<PodcastScreen>
                 itemBuilder: (context, index) {
                   final video = searchResults[index];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
                     child: YouTubeVideoCard(
                       video: video,
                       onTap: () => _onVideoTap(video),
+                      thumbnailHeight: 200,
                     ),
                   );
                 },
@@ -709,21 +738,37 @@ class _PodcastScreenState extends State<PodcastScreen>
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Text(
-                    'TODOS LOS EPISODIOS',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: BrandColors.primaryWhite,
-                      fontSize: 16,
-                    ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: BrandColors.primaryOrange,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Episodios',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: BrandColors.primaryWhite,
+                          fontSize: 20,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 _buildSeasonFilter(),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             
             // Mostrar videos de YouTube en lugar de episodios tradicionales
             if (youtubeProvider.isLoading && youtubeProvider.videos.isEmpty)
@@ -797,45 +842,76 @@ class _PodcastScreenState extends State<PodcastScreen>
         // Mostrar indicador de carga al final si hay más videos
         if (index == filteredVideos.length) {
           return Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 24),
             child: youtubeProvider.isLoading || _isLoadingMoreEpisodes
                 ? const Center(
-                    child: CircularProgressIndicator(
-                      color: BrandColors.primaryOrange,
-                    ),
-                  )
-                : ElevatedButton(
-                    onPressed: () async {
-                      if (!_isLoadingMoreEpisodes) {
-                        _isLoadingMoreEpisodes = true;
-                        await youtubeProvider.loadMoreVideos(batchSize: 30);
-                        // Regenerar caches con los nuevos videos
-                        if (mounted) {
-                          setState(() {
-                            _generateSortedVideos(youtubeProvider.videos);
-                            _isLoadingMoreEpisodes = false;
-                          });
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: BrandColors.primaryOrange,
-                      foregroundColor: BrandColors.primaryWhite,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        color: BrandColors.primaryOrange,
+                        strokeWidth: 2,
                       ),
                     ),
-                    child: const Text('Cargar más videos'),
+                  )
+                : Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () async {
+                        if (!_isLoadingMoreEpisodes) {
+                          _isLoadingMoreEpisodes = true;
+                          await youtubeProvider.loadMoreVideos(batchSize: 30);
+                          if (mounted) {
+                            setState(() {
+                              _generateSortedVideos(youtubeProvider.videos);
+                              _isLoadingMoreEpisodes = false;
+                            });
+                          }
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                        decoration: BoxDecoration(
+                          color: BrandColors.blackLight.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: BrandColors.primaryOrange.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: BrandColors.primaryOrange,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Cargar más episodios',
+                              style: TextStyle(
+                                color: BrandColors.primaryWhite,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
           );
         }
 
         final video = filteredVideos[index];
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(bottom: 16),
           child: YouTubeVideoCard(
             video: video,
             onTap: () => _onVideoTap(video),
+            thumbnailHeight: 200,
           ),
         );
       },
@@ -869,42 +945,41 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   Widget _buildSeasonFilter() {
     return Container(
-      height: 36, // Reducir altura del contenedor
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // Reducir padding
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: BrandColors.primaryBlack,
-        borderRadius: BorderRadius.circular(12), // Reducir border radius
+        color: BrandColors.blackLight.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.3),
+          color: BrandColors.primaryOrange.withOpacity(0.2),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: DropdownButton<String>(
         value: _selectedSeason,
-        dropdownColor: BrandColors.cardBackground,
+        dropdownColor: BrandColors.blackLight,
         style: const TextStyle(
           color: BrandColors.primaryWhite,
-          fontSize: 12,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
         ),
         underline: const SizedBox(),
-        icon: const Icon(
-          Icons.keyboard_arrow_down,
-          color: BrandColors.primaryOrange,
-          size: 16,
+        icon: Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: BrandColors.primaryOrange.withOpacity(0.9),
+          size: 20,
         ),
         items: ['Temporada 1', 'Temporada 2'].map((String season) {
           return DropdownMenuItem<String>(
             value: season,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4), // Reducir padding
-              child: Text(
-                season,
-                style: const TextStyle(
-                  color: BrandColors.primaryWhite,
-                  fontSize: 12,
-                ),
-              ),
-            ),
+            child: Text(season),
           );
         }).toList(),
         onChanged: (String? newValue) async {
