@@ -210,32 +210,20 @@ class UserManager {
       final firestoreUser = await UserFirestoreService.getUserFromFirestoreByUid(currentUser.uid);
       
       if (firestoreUser != null) {
-        print('📥 Datos encontrados en Firestore, comparando...');
-        print('📥 Datos de Firestore:');
+        print('📥 Datos encontrados en Firestore');
         print('   - Email: ${firestoreUser.email}');
         print('   - Display Name: ${firestoreUser.displayName}');
         print('   - Photo URL: ${firestoreUser.photoURL}');
         
-        // Verificar si hay diferencias
+        // Siempre sobrescribir con Firestore (fuente de verdad)
         final hasChanges = currentUser.email != firestoreUser.email ||
                           currentUser.displayName != firestoreUser.displayName ||
                           currentUser.photoURL != firestoreUser.photoURL;
-        
-        print('🔍 Comparando datos:');
-        print('   - Email local: ${currentUser.email} vs Firestore: ${firestoreUser.email}');
-        print('   - DisplayName local: ${currentUser.displayName} vs Firestore: ${firestoreUser.displayName}');
-        print('   - PhotoURL local: ${currentUser.photoURL} vs Firestore: ${firestoreUser.photoURL}');
-        print('   - ¿Hay cambios?: $hasChanges');
-        
         if (hasChanges) {
-          print('🔄 Se encontraron diferencias, sobrescribiendo datos locales...');
-          // Sobrescribir datos locales con los de Firestore
-          await saveUser(firestoreUser);
-          print('✅ Datos locales sobrescritos con información de Firestore');
-          print('✅ Nueva PhotoURL guardada: ${firestoreUser.photoURL}');
-        } else {
-          print('✅ Los datos locales están actualizados, no se requiere sincronización');
+          print('🔄 Sobrescribiendo datos locales con Firestore');
         }
+        await saveUser(firestoreUser);
+        print('✅ UserManager actualizado con datos de Firestore');
         
         return firestoreUser;
       } else {

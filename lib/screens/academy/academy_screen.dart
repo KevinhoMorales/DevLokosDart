@@ -237,45 +237,33 @@ class _AcademyScreenState extends State<AcademyScreen>
           );
         }
 
+        // Mostrar empty state para errores de índice o cuando no hay cursos
         if (state is AcademyError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: BrandColors.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error al cargar cursos',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: BrandColors.primaryWhite,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  state.message,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: BrandColors.grayMedium,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    context.read<AcademyBloc>().add(const RefreshCourses());
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('REINTENTAR'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BrandColors.primaryOrange,
-                    foregroundColor: BrandColors.primaryWhite,
-                  ),
-                ),
-              ],
-            ),
+          // Si hay cursos en caché, mostrarlos en lugar del error
+          if (state.cachedCourses != null && state.cachedCourses!.isNotEmpty) {
+            return ListView.builder(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).padding.bottom + 100,
+              ),
+              itemCount: state.cachedCourses!.length,
+              itemBuilder: (context, index) {
+                final course = state.cachedCourses![index];
+                return CourseCard(
+                  course: course,
+                  onTap: () => _onCourseTap(course),
+                );
+              },
+            );
+          }
+          
+          // Mostrar empty state amigable en lugar del error técnico
+          return _buildEmptyState(
+            icon: Icons.school_outlined,
+            title: 'Aún no hay cursos disponibles',
+            message: 'Estamos preparando contenido increíble para ti. ¡Vuelve pronto!',
+            showRetry: true,
           );
         }
 
@@ -283,34 +271,15 @@ class _AcademyScreenState extends State<AcademyScreen>
           final courses = _showUpcoming ? state.upcomingCourses : state.filteredCourses;
 
           if (courses.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _showUpcoming ? Icons.schedule : Icons.school_outlined,
-                    size: 64,
-                    color: BrandColors.grayMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _showUpcoming ? 'No hay cursos próximos' : 'No se encontraron cursos',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: BrandColors.primaryWhite,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _showUpcoming
-                        ? 'Mantente al tanto de los próximos lanzamientos'
-                        : 'Intenta con otros filtros o términos de búsqueda',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: BrandColors.grayMedium,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+            return _buildEmptyState(
+              icon: _showUpcoming ? Icons.schedule_outlined : Icons.search_off,
+              title: _showUpcoming 
+                  ? 'No hay cursos próximos' 
+                  : 'No se encontraron cursos',
+              message: _showUpcoming
+                  ? 'Mantente al tanto de los próximos lanzamientos'
+                  : 'Intenta con otros filtros o términos de búsqueda',
+              showRetry: false,
             );
           }
 
@@ -331,8 +300,99 @@ class _AcademyScreenState extends State<AcademyScreen>
           );
         }
 
-        return const SizedBox.shrink();
+        // Estado inicial - mostrar empty state
+        return _buildEmptyState(
+          icon: Icons.school_outlined,
+          title: 'Explora nuestros cursos',
+          message: 'Descubre contenido educativo de calidad',
+          showRetry: false,
+        );
       },
+    );
+  }
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
+    required bool showRetry,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icono con fondo decorativo
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: BrandColors.primaryOrange.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 64,
+                color: BrandColors.primaryOrange,
+              ),
+            ),
+            const SizedBox(height: 32),
+            
+            // Título
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: BrandColors.primaryWhite,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            
+            // Mensaje
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 16,
+                color: BrandColors.grayMedium,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            
+            // Botón de reintentar (si aplica)
+            if (showRetry)
+              ElevatedButton.icon(
+                onPressed: () {
+                  context.read<AcademyBloc>().add(const RefreshCourses());
+                },
+                icon: const Icon(Icons.refresh, size: 20),
+                label: const Text(
+                  'REINTENTAR',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: BrandColors.primaryOrange,
+                  foregroundColor: BrandColors.primaryWhite,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 0,
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 

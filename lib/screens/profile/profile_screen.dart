@@ -11,6 +11,7 @@ import '../../utils/user_manager.dart';
 import '../../utils/login_helper.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../services/image_storage_service.dart';
+import '../../services/admin_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -24,6 +25,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isUploadingImage = false;
   bool _isUpdatingName = false;
+  bool _isAdmin = false;
+  bool _isCheckingAdmin = true;
   final ImagePicker _imagePicker = ImagePicker();
   final TextEditingController _nameController = TextEditingController();
 
@@ -40,12 +43,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    final user = await UserManager.getUser();
+    var user = await UserManager.getUser();
+    // Si faltan nombre o foto, intentar sincronizar desde Firestore
+    if (user != null && (user.displayName == null || user.displayName!.isEmpty || user.photoURL == null || user.photoURL!.isEmpty)) {
+      final synced = await UserManager.syncUserOnAppStart();
+      if (synced != null) user = synced;
+    }
     if (mounted) {
       setState(() {
         _currentUser = user;
         _isLoading = false;
       });
+      // Verificar si es admin
+      _checkAdminStatus();
+    }
+  }
+
+  Future<void> _checkAdminStatus() async {
+    if (_currentUser?.email == null) {
+      setState(() {
+        _isCheckingAdmin = false;
+        _isAdmin = false;
+      });
+      return;
+    }
+
+    try {
+      final isAdmin = await AdminService.isEmailAdmin(_currentUser!.email);
+      if (mounted) {
+        setState(() {
+          _isAdmin = isAdmin;
+          _isCheckingAdmin = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error al verificar admin: $e');
+      if (mounted) {
+        setState(() {
+          _isAdmin = false;
+          _isCheckingAdmin = false;
+        });
+      }
     }
   }
 
@@ -289,6 +327,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.email_outlined,
           ),
           const SizedBox(height: 32),
+
+          // Botón de Administración (solo si es admin)
+          if (_isAdmin) ...[
+            _buildActionButton(
+              title: 'Administración',
+              icon: Icons.admin_panel_settings,
+              onTap: () => context.push('/admin/modules'),
+              isDestructive: false,
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Footer text and email
           Center(

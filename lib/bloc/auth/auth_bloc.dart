@@ -103,7 +103,11 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       if (credential.user != null) {
         print('✅ Usuario autenticado: ${credential.user!.email}');
         
-        // Cargar datos del usuario desde Firestore si existe
+        // Guardar en UserManager inmediatamente (datos básicos de Firebase Auth)
+        await UserManager.saveUser(UserModel.fromFirebaseUser(credential.user!));
+        print('✅ Usuario guardado en UserManager');
+        
+        // Cargar datos enriquecidos desde Firestore si existe (actualiza UserManager)
         await _loadUserFromFirestore(credential.user!);
         
         emit(AuthAuthenticated(user: credential.user!));

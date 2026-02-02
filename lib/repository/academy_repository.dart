@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/course.dart';
+import '../config/environment_config.dart';
 
 abstract class AcademyRepository {
   Future<List<Course>> getAllCourses();
@@ -14,18 +15,24 @@ abstract class AcademyRepository {
 
 class AcademyRepositoryImpl implements AcademyRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const String _collection = 'courses';
+  
+  // Obtiene la referencia a la colección de cursos según el ambiente
+  CollectionReference get _coursesCollection {
+    return _firestore
+        .collection(EnvironmentConfig.getUsersCollectionPath())
+        .doc(EnvironmentConfig.getUsersCollectionPath())
+        .collection('courses');
+  }
 
   @override
   Future<List<Course>> getAllCourses() async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
+      final snapshot = await _coursesCollection
           .orderBy('createdAt', descending: true)
           .get();
 
       return snapshot.docs
-          .map((doc) => Course.fromFirestore(doc.data(), doc.id))
+          .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
       print('❌ Error al obtener cursos: $e');
@@ -36,14 +43,13 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getPublishedCourses() async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
+      final snapshot = await _coursesCollection
           .where('isPublished', isEqualTo: true)
           .orderBy('publishedAt', descending: true)
           .get();
 
       return snapshot.docs
-          .map((doc) => Course.fromFirestore(doc.data(), doc.id))
+          .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
       print('❌ Error al obtener cursos publicados: $e');
@@ -54,14 +60,13 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getUpcomingCourses() async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
+      final snapshot = await _coursesCollection
           .where('isPublished', isEqualTo: false)
           .orderBy('createdAt', descending: true)
           .get();
 
       return snapshot.docs
-          .map((doc) => Course.fromFirestore(doc.data(), doc.id))
+          .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
       print('❌ Error al obtener cursos próximos: $e');
@@ -72,15 +77,14 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getCoursesByLearningPath(String path) async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
+      final snapshot = await _coursesCollection
           .where('isPublished', isEqualTo: true)
           .where('learningPaths', arrayContains: path)
           .orderBy('publishedAt', descending: true)
           .get();
 
       return snapshot.docs
-          .map((doc) => Course.fromFirestore(doc.data(), doc.id))
+          .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
       print('❌ Error al obtener cursos por learning path: $e');
@@ -91,15 +95,14 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getCoursesByDifficulty(String difficulty) async {
     try {
-      final snapshot = await _firestore
-          .collection(_collection)
+      final snapshot = await _coursesCollection
           .where('isPublished', isEqualTo: true)
           .where('difficulty', isEqualTo: difficulty)
           .orderBy('publishedAt', descending: true)
           .get();
 
       return snapshot.docs
-          .map((doc) => Course.fromFirestore(doc.data(), doc.id))
+          .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
     } catch (e) {
       print('❌ Error al obtener cursos por dificultad: $e');
@@ -110,9 +113,9 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<Course?> getCourseById(String id) async {
     try {
-      final doc = await _firestore.collection(_collection).doc(id).get();
-      if (doc.exists) {
-        return Course.fromFirestore(doc.data()!, doc.id);
+      final doc = await _coursesCollection.doc(id).get();
+      if (doc.exists && doc.data() != null) {
+        return Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
       }
       return null;
     } catch (e) {

@@ -24,6 +24,11 @@ import 'screens/auth/forgot_password_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/youtube/youtube_screen.dart';
+import 'screens/admin/admin_modules_screen.dart';
+import 'screens/admin/courses_list_screen.dart';
+import 'screens/admin/course_form_screen.dart';
+import 'repository/course_admin_repository.dart';
+import 'models/course.dart';
 import 'widgets/main_navigation.dart';
 import 'widgets/version_check_wrapper.dart';
 import 'utils/brand_colors.dart';
@@ -197,6 +202,56 @@ final GoRouter _router = GoRouter(
         transitionType: 'horizontal',
         maintainState: true,
       ),
+    ),
+    // Rutas de administración
+    GoRoute(
+      path: '/admin/modules',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const AdminModulesScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/admin/courses',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const CoursesListScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/admin/courses/new',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const CourseFormScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/admin/courses/:id',
+      pageBuilder: (context, state) {
+        final courseId = state.pathParameters['id']!;
+        return _buildPageWithTransition(
+          child: FutureBuilder<Course?>(
+            future: CourseAdminRepository().getCourseById(courseId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              return CourseFormScreen(course: snapshot.data);
+            },
+          ),
+          state: state,
+          transitionType: 'horizontal',
+          maintainState: true,
+        );
+      },
     ),
   ],
 );

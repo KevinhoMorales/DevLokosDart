@@ -18,6 +18,8 @@ class Course {
   final DateTime updatedAt;
   final DateTime? publishedAt;
   final int? enrollmentCount;
+  final String? professor; // Nombre del profesor/instructor
+  final String? link; // Enlace externo del curso
 
   Course({
     required this.id,
@@ -37,6 +39,8 @@ class Course {
     required this.updatedAt,
     this.publishedAt,
     this.enrollmentCount,
+    this.professor,
+    this.link,
   });
 
   factory Course.fromFirestore(Map<String, dynamic> data, String id) {
@@ -61,6 +65,8 @@ class Course {
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       publishedAt: (data['publishedAt'] as Timestamp?)?.toDate(),
       enrollmentCount: data['enrollmentCount'],
+      professor: data['professor'],
+      link: data['link'],
     );
   }
 
@@ -82,6 +88,8 @@ class Course {
       'updatedAt': Timestamp.fromDate(updatedAt),
       'publishedAt': publishedAt != null ? Timestamp.fromDate(publishedAt!) : null,
       'enrollmentCount': enrollmentCount,
+      'professor': professor,
+      'link': link,
     };
   }
 
@@ -114,6 +122,8 @@ class Course {
     DateTime? updatedAt,
     DateTime? publishedAt,
     int? enrollmentCount,
+    String? professor,
+    String? link,
   }) {
     return Course(
       id: id ?? this.id,
@@ -133,6 +143,8 @@ class Course {
       updatedAt: updatedAt ?? this.updatedAt,
       publishedAt: publishedAt ?? this.publishedAt,
       enrollmentCount: enrollmentCount ?? this.enrollmentCount,
+      professor: professor ?? this.professor,
+      link: link ?? this.link,
     );
   }
 }

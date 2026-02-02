@@ -8,6 +8,7 @@ import '../config/environment_config.dart';
 import '../utils/user_manager.dart';
 import '../constants/app_constants.dart';
 import '../services/remote_config_service.dart';
+import '../services/user_firestore_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -86,13 +87,14 @@ class _SplashScreenState extends State<SplashScreen>
       final hasLocalUser = await UserManager.hasUser();
       
       if (hasLocalUser) {
-        // Si hay usuario local, verificar si existe en Firestore
+        // Si hay usuario local, verificar si existe en Firestore y sincronizar
         final localUser = await UserManager.getUser();
         if (localUser != null) {
           final existsInFirestore = await _checkUserExistsInFirestore(localUser.uid);
           
           if (existsInFirestore) {
-            // Usuario existe en Firestore, ir a home
+            // Usuario existe en Firestore: sincronizar y sobrescribir si hay cambios
+            await UserManager.syncUserOnAppStart();
             context.go('/home');
             return;
           } else {
@@ -112,9 +114,16 @@ class _SplashScreenState extends State<SplashScreen>
         final existsInFirestore = await _checkUserExistsInFirestore(firebaseUser.uid);
         
         if (existsInFirestore) {
-          // Usuario existe en Firestore, guardar localmente y ir a home
-          final userModel = UserModel.fromFirebaseUser(firebaseUser);
-          await UserManager.saveUser(userModel);
+          // Obtener datos completos desde Firestore (nombre, foto, etc.)
+          final firestoreUser = await UserFirestoreService.getUserFromFirestoreByUid(firebaseUser.uid);
+          if (firestoreUser != null) {
+            await UserManager.saveUser(firestoreUser);
+            print('✅ Splash: Usuario cargado desde Firestore y guardado en UserManager');
+          } else {
+            // Fallback: datos básicos de Firebase Auth
+            await UserManager.saveUser(UserModel.fromFirebaseUser(firebaseUser));
+            print('⚠️ Splash: Usando datos básicos de Firebase Auth (Firestore no respondió)');
+          }
           context.go('/home');
           return;
         } else {

@@ -13,6 +13,30 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // Colección admin (dev): dev/dev/admin - lectura para usuarios autenticados
+    match /dev/dev/admin/{adminId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Solo se edita desde Firebase Console
+    }
+    
+    // Colección admin (prod): prod/prod/admin
+    match /prod/prod/admin/{adminId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    // Colección courses (dev): dev/dev/courses
+    match /dev/dev/courses/{courseId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Colección courses (prod): prod/prod/courses
+    match /prod/prod/courses/{courseId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
     // Reglas para otras colecciones (solo lectura para usuarios autenticados)
     match /dev_{document=**} {
       allow read: if request.auth != null;
