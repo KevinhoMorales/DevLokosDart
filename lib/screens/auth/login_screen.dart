@@ -181,19 +181,53 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildLoginForm() {
     return BlocConsumer<AuthBlocSimple, AuthState>(
       listener: (context, state) {
+        if (!context.mounted) return;
         if (state is AuthAuthenticated) {
           context.go('/home');
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: BrandColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          if (state.code == 'email-not-verified') {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: BrandColors.cardBackground,
+                title: const Text(
+                  'Email pendiente de verificación',
+                  style: TextStyle(color: BrandColors.primaryWhite),
+                ),
+                content: Text(
+                  'Tu cuenta está creada pero tu email aún está pendiente de aceptación. Revisa tu correo y haz clic en el enlace que te enviamos para activar tu cuenta.',
+                  style: const TextStyle(color: BrandColors.grayLight),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text('Entendido', style: TextStyle(color: BrandColors.primaryOrange)),
+                  ),
+                ],
               ),
-            ),
-          );
+            );
+          } else {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: BrandColors.cardBackground,
+                title: const Text(
+                  'Error al iniciar sesión',
+                  style: TextStyle(color: BrandColors.primaryWhite),
+                ),
+                content: Text(
+                  state.message,
+                  style: const TextStyle(color: BrandColors.grayLight),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text('Entendido', style: TextStyle(color: BrandColors.primaryOrange)),
+                  ),
+                ],
+              ),
+            );
+          }
         }
       },
       builder: (context, state) {

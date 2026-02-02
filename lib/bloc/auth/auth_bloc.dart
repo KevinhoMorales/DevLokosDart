@@ -62,11 +62,20 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
           print('⚠️ No se pudo sincronizar, usando datos locales');
         }
         
-        // Emitir estado autenticado con el usuario local sincronizado
-        print('✅ Usuario local sincronizado, emitiendo estado autenticado');
+        // Verificar que el email esté verificado
         final firebaseUser = _firebaseAuth.currentUser;
         if (firebaseUser != null) {
-          emit(AuthAuthenticated(user: firebaseUser));
+          await firebaseUser.reload();
+          final refreshedUser = _firebaseAuth.currentUser;
+          if (refreshedUser == null || !refreshedUser.emailVerified) {
+            await _firebaseAuth.signOut();
+            await UserManager.deleteUser();
+            print('⚠️ Email no verificado, cerrando sesión');
+            emit(const AuthUnauthenticated());
+            return;
+          }
+          print('✅ Usuario local sincronizado, emitiendo estado autenticado');
+          emit(AuthAuthenticated(user: refreshedUser));
         } else {
           // Si no hay usuario de Firebase Auth pero sí local, crear un usuario temporal
           // o simplemente emitir unauthenticated y esperar login
@@ -95,22 +104,36 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
+      final email = event.email.trim().toLowerCase();
       final credential = await _firebaseAuth.signInWithEmailAndPassword(
-        email: event.email,
+        email: email,
         password: event.password,
       );
       
       if (credential.user != null) {
-        print('✅ Usuario autenticado: ${credential.user!.email}');
+        final user = credential.user!;
+        print('✅ Usuario autenticado: ${user.email}');
+        
+        // Verificar que el email esté verificado
+        await user.reload();
+        final refreshedUser = _firebaseAuth.currentUser;
+        if (refreshedUser == null || !refreshedUser.emailVerified) {
+          await _firebaseAuth.signOut();
+          emit(AuthError(
+            message: 'Tu email está pendiente de verificación. Revisa tu correo y haz clic en el enlace para activar tu cuenta.',
+            code: 'email-not-verified',
+          ));
+          return;
+        }
         
         // Guardar en UserManager inmediatamente (datos básicos de Firebase Auth)
-        await UserManager.saveUser(UserModel.fromFirebaseUser(credential.user!));
+        await UserManager.saveUser(UserModel.fromFirebaseUser(refreshedUser));
         print('✅ Usuario guardado en UserManager');
         
         // Cargar datos enriquecidos desde Firestore si existe (actualiza UserManager)
-        await _loadUserFromFirestore(credential.user!);
+        await _loadUserFromFirestore(refreshedUser);
         
-        emit(AuthAuthenticated(user: credential.user!));
+        emit(AuthAuthenticated(user: refreshedUser));
       } else {
         emit(AuthError(
           message: 'Error al iniciar sesión',
@@ -166,12 +189,16 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         print('📤 Guardando en Firestore...');
         await _saveUserToFirestore(credential.user!, defaultDisplayName);
         
-        // Guardar datos localmente
-        print('💾 Guardando localmente...');
-        await _saveUserLocally(credential.user!, defaultDisplayName);
+        await credential.user!.sendEmailVerification();
         
-        print('🎉 Registro completado exitosamente');
-        emit(AuthAuthenticated(user: credential.user!));
+        // Cerrar sesión: el usuario debe verificar el email antes de poder iniciar
+        await _firebaseAuth.signOut();
+        
+        print('🎉 Registro completado. Usuario debe verificar email.');
+        emit(AuthError(
+          message: 'Revisa tu correo y haz clic en el enlace para verificar tu cuenta. Luego podrás iniciar sesión.',
+          code: 'email-verification-required',
+        ));
       } else {
         print('❌ Error: Usuario no creado');
         emit(AuthError(
@@ -549,7 +576,8 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
   String _getAuthErrorMessage(firebase_auth.FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
-        return 'No existe una cuenta con este email';
+      case 'invalid-credential':
+        return 'Email o contraseña incorrectos. Si no tienes cuenta, regístrate.';
       case 'wrong-password':
         return 'Contraseña incorrecta';
       case 'email-already-in-use':

@@ -180,7 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _buildInfoRow('Desarrollado por', 'DevLokos Enterprise'),
           const SizedBox(height: 12),
-          _buildInfoRow('Copyright', '© 2025 DevLokos'),
+          _buildInfoRow('Copyright', '© 2026 DevLokos'),
         ],
       ),
     );

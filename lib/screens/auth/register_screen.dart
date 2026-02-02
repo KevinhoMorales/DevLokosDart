@@ -31,7 +31,13 @@ class _RegisterScreenState extends State<RegisterScreen>
   void initState() {
     super.initState();
     _setupAnimations();
+    _nameController.addListener(_onFormChanged);
+    _emailController.addListener(_onFormChanged);
+    _passwordController.addListener(_onFormChanged);
+    _confirmPasswordController.addListener(_onFormChanged);
   }
+
+  void _onFormChanged() => setState(() {});
 
   void _setupAnimations() {
     _animationController = AnimationController(
@@ -60,12 +66,29 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   void dispose() {
+    _nameController.removeListener(_onFormChanged);
+    _emailController.removeListener(_onFormChanged);
+    _passwordController.removeListener(_onFormChanged);
+    _confirmPasswordController.removeListener(_onFormChanged);
     _animationController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  bool get _isFormValid {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirm = _confirmPasswordController.text;
+    return name.length >= 2 &&
+        email.isNotEmpty &&
+        RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email) &&
+        password.length >= 6 &&
+        confirm == password &&
+        _acceptTerms;
   }
 
   Future<void> _handleRegister() async {
@@ -177,16 +200,43 @@ class _RegisterScreenState extends State<RegisterScreen>
         if (state is AuthRegisterSuccess || state is AuthAuthenticated) {
           context.go('/home');
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: BrandColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          if (state.code == 'email-verification-required') {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: BrandColors.cardBackground,
+                title: const Text(
+                  'Verifica tu correo',
+                  style: TextStyle(color: BrandColors.primaryWhite),
+                ),
+                content: Text(
+                  'Te hemos enviado un correo de verificación. Haz clic en el enlace para activar tu cuenta. Luego podrás iniciar sesión.',
+                  style: const TextStyle(color: BrandColors.grayLight),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      context.go('/login');
+                    },
+                    child: Text('Ir a Iniciar sesión', style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
-            ),
-          );
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: BrandColors.error,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            );
+          }
         }
       },
       builder: (context, state) {
@@ -319,7 +369,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   )
                 else
                   GradientButton(
-                    onPressed: _handleRegister,
+                    onPressed: _isFormValid ? _handleRegister : null,
                     text: 'Crear Cuenta',
                     gradient: BrandColors.primaryGradient,
                     textColor: BrandColors.primaryWhite,

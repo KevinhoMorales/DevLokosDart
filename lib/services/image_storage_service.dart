@@ -10,7 +10,8 @@ class ImageStorageService {
   static final FirebaseStorage _storage = FirebaseStorage.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Sube una imagen a Firebase Storage y retorna la URL
+  /// Sube una imagen a Firebase Storage y retorna la URL.
+  /// Reemplaza la imagen anterior en el mismo path (no crea múltiples archivos).
   static Future<String> uploadProfileImage(File imageFile) async {
     try {
       final user = _auth.currentUser;
@@ -18,36 +19,39 @@ class ImageStorageService {
         throw Exception('Usuario no autenticado. Debe iniciar sesión para subir imágenes.');
       }
 
-      // Generar nombre único para la imagen (incluyendo UID del usuario)
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final extension = path.extension(imageFile.path);
-      final fileName = 'profile_${user.uid}_${timestamp}${extension}';
-      
-      // Referencia al archivo en Storage con estructura organizada por UID
-      final storagePath = EnvironmentConfig.getUserStoragePath(user.uid, 'photo');
-      final ref = _storage.ref().child('$storagePath/$fileName');
+      final extension = path.extension(imageFile.path).toLowerCase();
+      const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+      final ext = allowedExtensions.contains(extension) ? extension : '.jpg';
+      const fileName = 'profile'; // Nombre fijo: siempre reemplaza en el mismo path
 
-      // Configurar metadatos
+      final storagePath = EnvironmentConfig.getUserStoragePath(user.uid, 'photo');
+      final photoRef = _storage.ref().child(storagePath);
+      final ref = photoRef.child('$fileName$ext');
+
+      // Eliminar archivos existentes en la carpeta photo antes de subir
+      try {
+        final listResult = await photoRef.listAll();
+        for (final item in listResult.items) {
+          await item.delete();
+        }
+      } catch (_) {
+        // La carpeta puede no existir aún
+      }
+
       final metadata = SettableMetadata(
-        contentType: _getContentType(extension),
+        contentType: _getContentType(ext),
         customMetadata: {
           'uploadedBy': user.uid,
           'uploadedAt': DateTime.now().toIso8601String(),
         },
       );
 
-      print('📤 Subiendo imagen a: $storagePath');
-      print('📁 Ruta completa del archivo: $storagePath/$fileName');
-      print('👤 Usuario UID: ${user.uid}');
-
-      // Subir el archivo con metadatos
+      print('📤 Subiendo imagen a: $storagePath/$fileName$ext');
       final uploadTask = ref.putFile(imageFile, metadata);
       final snapshot = await uploadTask;
 
-      // Obtener la URL de descarga
       final downloadUrl = await snapshot.ref.getDownloadURL();
-      
-      print('✅ Imagen subida exitosamente: $downloadUrl');
+      print('✅ Imagen subida exitosamente (reemplazada): $downloadUrl');
       
       // Actualizar UserManager (que sincroniza con Firestore)
       await UserManager.updateUserPhotoURL(downloadUrl);

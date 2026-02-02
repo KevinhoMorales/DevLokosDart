@@ -87,9 +87,20 @@ class _SplashScreenState extends State<SplashScreen>
       final hasLocalUser = await UserManager.hasUser();
       
       if (hasLocalUser) {
-        // Si hay usuario local, verificar si existe en Firestore y sincronizar
+        // Si hay usuario local, verificar Firebase Auth y que el email esté verificado
         final localUser = await UserManager.getUser();
         if (localUser != null) {
+          var firebaseUser = FirebaseAuth.instance.currentUser;
+          if (firebaseUser != null) {
+            await firebaseUser.reload();
+            firebaseUser = FirebaseAuth.instance.currentUser;
+            if (firebaseUser == null || !firebaseUser.emailVerified) {
+              await FirebaseAuth.instance.signOut();
+              await UserManager.deleteUser();
+              context.go('/home');
+              return;
+            }
+          }
           final existsInFirestore = await _checkUserExistsInFirestore(localUser.uid);
           
           if (existsInFirestore) {
@@ -107,11 +118,20 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       // 2. Si no hay usuario local, verificar Firebase Auth
-      final firebaseUser = FirebaseAuth.instance.currentUser;
+      var firebaseUser = FirebaseAuth.instance.currentUser;
       
       if (firebaseUser != null) {
+        // Verificar que el email esté verificado
+        await firebaseUser.reload();
+        firebaseUser = FirebaseAuth.instance.currentUser;
+        if (firebaseUser == null || !firebaseUser.emailVerified) {
+          await FirebaseAuth.instance.signOut();
+          context.go('/home');
+          return;
+        }
+        
         // Hay usuario en Firebase Auth, verificar en Firestore
-        final existsInFirestore = await _checkUserExistsInFirestore(firebaseUser.uid);
+        final existsInFirestore = await _checkUserExistsInFirestore(firebaseUser!.uid);
         
         if (existsInFirestore) {
           // Obtener datos completos desde Firestore (nombre, foto, etc.)
