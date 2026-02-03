@@ -90,11 +90,11 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(),
-                  _buildServices(),
-                  _buildProcess(),
-                  _buildPortfolio(),
+                  _buildCompactHeader(),
+                  _buildProcessChips(),
                   _buildContactForm(),
+                  _buildServices(),
+                  _buildPortfolio(),
                 ],
               ),
             ),
@@ -104,9 +104,10 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(24),
+  /// Header compacto: propuesta de valor en mínimo espacio
+  Widget _buildCompactHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -114,16 +115,18 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
             'Servicios empresariales',
             style: TextStyle(
               color: BrandColors.primaryOrange,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
+              letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'Desarrollo de software personalizado y servicios de consultoría para empresas',
+          const SizedBox(height: 6),
+          Text(
+            'Software a medida y consultoría para empresas.',
             style: TextStyle(
-              color: BrandColors.primaryWhite,
-              fontSize: 16,
+              color: BrandColors.grayMedium,
+              fontSize: 15,
+              height: 1.3,
             ),
           ),
         ],
@@ -141,15 +144,25 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Text(
-                  'Nuestros servicios',
-                  style: TextStyle(
-                    color: BrandColors.primaryWhite,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 1,
+                      width: 24,
+                      color: BrandColors.primaryOrange.withOpacity(0.4),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Nuestros servicios',
+                      style: TextStyle(
+                        color: BrandColors.grayMedium,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               ListView.builder(
@@ -242,83 +255,73 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
-  Widget _buildProcess() {
-    return Container(
-      padding: const EdgeInsets.all(24),
+  /// Proceso en grid 2x2: chips compactos (icono + título). Secundario visualmente.
+  Widget _buildProcessChips() {
+    const steps = [
+      (Icons.search_rounded, 'Descubrimiento'),
+      (Icons.palette_rounded, 'Diseño'),
+      (Icons.code_rounded, 'Desarrollo'),
+      (Icons.rocket_launch_rounded, 'Entrega'),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Nuestro proceso',
             style: TextStyle(
-              color: BrandColors.primaryWhite,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              color: BrandColors.grayMedium,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 16),
-          _buildProcessStep('1', 'Descubrimiento', 'Análisis de requisitos y planificación'),
-          _buildProcessStep('2', 'Desarrollo', 'Desarrollo ágil e iterativo'),
-          _buildProcessStep('3', 'Entrega', 'Entrega y soporte continuo'),
+          const SizedBox(height: 10),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 2.8,
+            children: steps.map((s) => _buildProcessChip(s.$1, s.$2)).toList(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildProcessStep(String number, String title, String description) {
+  Widget _buildProcessChip(IconData icon, String label) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: BrandColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
+        color: BrandColors.cardBackground.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.2),
+          color: BrandColors.primaryOrange.withOpacity(0.15),
           width: 1,
         ),
       ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: BrandColors.primaryOrange,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: const TextStyle(
-                  color: BrandColors.primaryWhite,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+          Icon(
+            icon,
+            color: BrandColors.primaryOrange,
+            size: 20,
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: BrandColors.primaryWhite,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    color: BrandColors.grayMedium,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: BrandColors.primaryWhite,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -336,15 +339,25 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: Text(
-                  'Proyectos destacados',
-                  style: TextStyle(
-                    color: BrandColors.primaryWhite,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 1,
+                      width: 24,
+                      color: BrandColors.primaryOrange.withOpacity(0.4),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Proyectos destacados',
+                      style: TextStyle(
+                        color: BrandColors.grayMedium,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(
@@ -478,38 +491,70 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
+  /// Formulario de contacto: foco principal de la pantalla
   Widget _buildContactForm() {
     return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(20),
+        color: BrandColors.blackLight,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.2),
-          width: 1,
+          color: BrandColors.primaryOrange.withOpacity(0.35),
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: BrandColors.primaryOrange.withOpacity(0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Contáctanos',
-            style: TextStyle(
-              color: BrandColors.primaryOrange,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: BrandColors.primaryOrange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.mail_outline_rounded,
+                  color: BrandColors.primaryOrange,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Inicia un proyecto',
+                      style: TextStyle(
+                        color: BrandColors.primaryWhite,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Te respondemos en menos de 24 h',
+                      style: TextStyle(
+                        color: BrandColors.grayMedium,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Completa el formulario y nos pondremos en contacto contigo lo antes posible.',
-            style: TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Form(
             key: _formKey,
             child: Column(
@@ -528,7 +573,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _emailController,
                   decoration: _inputDecoration(
@@ -547,7 +592,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _phoneController,
                   decoration: _inputDecoration(
@@ -557,7 +602,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   style: const TextStyle(color: BrandColors.primaryWhite),
                   keyboardType: TextInputType.phone,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _companyController,
                   decoration: _inputDecoration(
@@ -566,7 +611,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   value: _selectedProjectType,
                   hint: const Text(
@@ -591,7 +636,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                     });
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _messageController,
                   decoration: _inputDecoration(
@@ -599,7 +644,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                     hint: 'Cuéntanos sobre tu proyecto, necesidades o preguntas...',
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
-                  maxLines: 5,
+                  maxLines: 4,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor escribe tu mensaje';
@@ -607,7 +652,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 BlocBuilder<EnterpriseBloc, EnterpriseState>(
                   builder: (context, state) {
                     final isSubmitting = state is ContactFormSubmitting;

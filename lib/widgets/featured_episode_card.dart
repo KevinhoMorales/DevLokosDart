@@ -113,20 +113,6 @@ class FeaturedEpisodeCard extends StatelessWidget {
                     Row(
                       children: [
                         const Icon(
-                          Icons.access_time,
-                          size: 12,
-                          color: BrandColors.grayMedium,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          episode.duration,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BrandColors.grayMedium,
-                            fontSize: 10,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Icon(
                           Icons.category,
                           size: 12,
                           color: BrandColors.grayMedium,

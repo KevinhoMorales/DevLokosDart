@@ -177,10 +177,6 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
                 _buildEpisodeDescription(),
                 const SizedBox(height: 20),
                 _buildShareButton(),
-                if ((_currentEpisode ?? widget.episode) != null) ...[
-                  const SizedBox(height: 20),
-                  _buildDatabaseEpisodeInfo(),
-                ],
               ],
             ),
           ),
@@ -352,52 +348,24 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
               letterSpacing: 0.2,
             ),
           ),
-          if (publishedAt != null || (_currentEpisode?.duration ?? widget.episode?.duration) != null) ...[
+          if (publishedAt != null) ...[
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 20,
-              runSpacing: 10,
+            Row(
               children: [
-                if (publishedAt != null)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        color: BrandColors.primaryOrange.withOpacity(0.9),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDate(publishedAt),
-                        style: TextStyle(
-                          color: BrandColors.grayLight.withOpacity(0.9),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                Icon(
+                  Icons.calendar_today_rounded,
+                  color: BrandColors.primaryOrange.withOpacity(0.9),
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatDate(publishedAt),
+                  style: TextStyle(
+                    color: BrandColors.grayLight.withOpacity(0.9),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
-                if ((_currentEpisode?.duration ?? widget.episode?.duration) != null)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.schedule_rounded,
-                        color: BrandColors.primaryOrange.withOpacity(0.9),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        (_currentEpisode?.duration ?? widget.episode?.duration)!,
-                        style: TextStyle(
-                          color: BrandColors.grayLight.withOpacity(0.9),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
+                ),
               ],
             ),
           ],
@@ -511,118 +479,54 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
     );
   }
 
-  void _shareEpisode() {
+  void _shareEpisode() async {
     final episodeTitle = _getVideoTitle();
     final appBarTitle = _getAppBarTitle();
-    
-    // Extraer información del título para crear un mensaje más atractivo
+    final videoId = _currentEpisode?.youtubeVideoId ??
+        _currentYouTubeVideo?.videoId ??
+        widget.episode?.youtubeVideoId ??
+        widget.youtubeVideo?.videoId ??
+        '';
+
     String guest = '';
     if (episodeTitle.contains('||')) {
       final parts = episodeTitle.split('||');
       if (parts.length > 1) {
         guest = parts[1].trim();
       }
-    } else {
-      guest = episodeTitle;
     }
-    
-    // Crear mensaje más atractivo
-    final shareText = '''
-🎧 Descubre el episodio "$appBarTitle", en donde aprenderás con $guest
+    if (guest.isEmpty) guest = episodeTitle;
 
-📱 Descarga la aplicación DevLokos y accede a cientos de episodios:
-${EnvironmentConfig.onelinkUrl}
-''';
+    final youtubeUrl = videoId.isNotEmpty
+        ? 'https://www.youtube.com/watch?v=$videoId'
+        : '';
 
-    Share.share(shareText);
-  }
-
-  Widget _buildDatabaseEpisodeInfo() {
-    final episode = _currentEpisode ?? widget.episode!;
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.15),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+    final buffer = StringBuffer();
+    buffer.writeln('🎧 Descubre el episodio "$appBarTitle"${guest.isNotEmpty ? ' con $guest' : ''}');
+    buffer.writeln();
+    buffer.writeln('📱 Descarga DevLokos y accede a más episodios:');
+    buffer.writeln(EnvironmentConfig.onelinkUrl);
+    if (youtubeUrl.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('▶️ Ver en YouTube:');
+      buffer.write(youtubeUrl);
+    }
+    var shareText = buffer.toString().trim();
+    if (shareText.isEmpty) {
+      shareText = '🎧 Episodio de DevLokos\n\n📱 Descarga la app: ${EnvironmentConfig.onelinkUrl}';
+    }
+    try {
+      await Share.share(shareText);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo compartir el episodio'),
+            backgroundColor: BrandColors.error,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: BrandColors.primaryOrange,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Información del episodio',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: BrandColors.primaryWhite,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _buildInfoRow('ID', episode.id),
-          _buildInfoRow('YouTube ID', episode.youtubeVideoId),
-          _buildInfoRow('Destacado', episode.isFeatured ? 'Sí' : 'No'),
-          _buildInfoRow('Categoría', episode.category),
-          _buildInfoRow('Publicado', _formatDate(episode.publishedDate)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                color: BrandColors.grayMedium.withOpacity(0.95),
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: BrandColors.grayLight.withOpacity(0.95),
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   String _formatDate(DateTime date) {

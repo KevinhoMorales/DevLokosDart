@@ -99,19 +99,6 @@ class EpisodeCard extends StatelessWidget {
                     Row(
                       children: [
                         const Icon(
-                          Icons.access_time,
-                          size: 14,
-                          color: BrandColors.grayMedium,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          episode.duration,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BrandColors.grayMedium,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        const Icon(
                           Icons.category,
                           size: 14,
                           color: BrandColors.grayMedium,

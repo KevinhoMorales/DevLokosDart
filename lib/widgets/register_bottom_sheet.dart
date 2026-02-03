@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../bloc/auth/auth_bloc_exports.dart';
+import '../constants/app_constants.dart';
 import '../utils/brand_colors.dart';
 import '../utils/login_helper.dart';
 import '../widgets/custom_text_field.dart';
@@ -497,9 +498,9 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
   }
 
   void _openTermsAndConditions() async {
-    const url = 'https://kevinhomorales.super.site/play-store/devlokos';
     try {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      await launchUrl(Uri.parse(AppConstants.termsAndConditionsUrl),
+          mode: LaunchMode.externalApplication);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -517,9 +518,9 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
   }
 
   void _openPrivacyPolicy() async {
-    const url = 'https://kevinhomorales.super.site/play-store/devlokos';
     try {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      await launchUrl(Uri.parse(AppConstants.privacyPolicyUrl),
+          mode: LaunchMode.externalApplication);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

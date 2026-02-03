@@ -10,11 +10,11 @@ class AppConstants {
   static const String appBuildNumber = '1';
   static const String appVersionWithBuild = '1.1.0+1';
 
-  // Legal URLs
+  // Legal URLs (mismos enlaces que login/registro)
   static const String termsAndConditionsUrl =
-      'https://devlokos.com/terminos-condiciones';
+      'https://kevinhomorales.super.site/play-store/devlokos';
   static const String privacyPolicyUrl =
-      'https://devlokos.com/politica-privacidad';
+      'https://kevinhomorales.super.site/play-store/devlokos';
   
   // Firebase Collections
   static const String episodesCollection = 'episodes';
