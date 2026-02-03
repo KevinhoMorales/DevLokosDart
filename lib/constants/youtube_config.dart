@@ -15,7 +15,10 @@ class YouTubeConfig {
 
   /// Playlist de tutoriales. Si no está configurada, usa la principal.
   static String get tutorialsPlaylistId => _remoteConfig.youtubeTutorialsPlaylistId;
-  
+
+  /// ID del canal para búsqueda API (Remote Config o derivado del playlist).
+  static String get channelId => _remoteConfig.youtubeChannelId;
+
   // URLs base de la API
   static const String baseUrl = 'https://www.googleapis.com/youtube/v3';
   

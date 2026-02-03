@@ -25,16 +25,37 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
+  bool _isLoadingMore = false;
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
-    // Cargar episodios después de que el widget esté montado
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadEpisodes();
     });
+  }
+
+  void _onScroll() {
+    if (_isLoadingMore) return;
+    final pos = _scrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      final state = context.read<EpisodeBloc>().state;
+      if (state is EpisodeLoaded) {
+        if (state.searchQuery.isNotEmpty && state.hasMoreSearchResults) {
+          _isLoadingMore = true;
+          context.read<EpisodeBloc>().add(
+            LoadMoreSearchResults(query: state.searchQuery),
+          );
+        } else if (state.searchQuery.isEmpty) {
+          _isLoadingMore = true;
+          context.read<EpisodeBloc>().add(const LoadMoreEpisodes());
+        }
+      }
+    }
   }
 
   void _setupAnimations() {
@@ -86,6 +107,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _animationController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -93,7 +116,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBlocSimple, AuthState>(
+    return BlocListener<EpisodeBloc, EpisodeState>(
+      listener: (context, state) {
+        if (state is EpisodeLoaded) _isLoadingMore = false;
+      },
+      child: BlocListener<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           // Forzar actualización de la UI cuando el usuario se autentique
@@ -148,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ),
-    );
+    ));
   }
 
   Future<bool> _showExitDialog() async {
@@ -282,8 +309,9 @@ class _HomeScreenState extends State<HomeScreen>
           }
 
           return SingleChildScrollView(
+            controller: _scrollController,
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (searchQuery.isEmpty) ...[

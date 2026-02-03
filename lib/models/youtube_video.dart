@@ -4,6 +4,7 @@ class YouTubeVideo {
   final String description;
   final String thumbnailUrl;
   final String channelTitle;
+  final String? channelId;
   final DateTime publishedAt;
   final int position;
 
@@ -13,25 +14,88 @@ class YouTubeVideo {
     required this.description,
     required this.thumbnailUrl,
     required this.channelTitle,
+    this.channelId,
     required this.publishedAt,
     required this.position,
   });
 
   factory YouTubeVideo.fromJson(Map<String, dynamic> json) {
+    // Soportar formato API (con snippet) y formato caché (plano)
     final snippet = json['snippet'] as Map<String, dynamic>? ?? {};
-    
-    // Debug: Log del snippet completo para entender qué datos llegan (solo para títulos problemáticos)
-    // print('🔍 Snippet completo: $snippet');
-    
-    // Obtener thumbnail URL con fallbacks
+    final fromCache = snippet.isEmpty && json['videoId'] != null;
+
+    String thumbnailUrl = '';
+    if (fromCache) {
+      thumbnailUrl = json['thumbnailUrl'] as String? ?? '';
+    } else {
+      final thumbnails = snippet['thumbnails'] as Map<String, dynamic>?;
+      if (thumbnails != null) {
+        final medium = thumbnails['medium'] as Map<String, dynamic>?;
+        final high = thumbnails['high'] as Map<String, dynamic>?;
+        final defaultThumb = thumbnails['default'] as Map<String, dynamic>?;
+        if (medium?['url'] != null) {
+          thumbnailUrl = medium!['url'] as String;
+        } else if (high?['url'] != null) {
+          thumbnailUrl = high!['url'] as String;
+        } else if (defaultThumb?['url'] != null) {
+          thumbnailUrl = defaultThumb!['url'] as String;
+        }
+      }
+    }
+
+    String videoId = fromCache
+        ? (json['videoId'] as String? ?? '')
+        : ((snippet['resourceId'] as Map<String, dynamic>?)?['videoId'] as String? ?? '');
+
+    String title = fromCache
+        ? (json['title'] as String? ?? '')
+        : (snippet['title'] as String? ?? '');
+    if (title.isEmpty || title.trim().isEmpty) title = 'Sin título';
+
+    final channelTitle = fromCache
+        ? (json['channelTitle'] as String? ?? 'Canal desconocido')
+        : (snippet['channelTitle'] as String? ?? 'Canal desconocido');
+
+    final position = fromCache
+        ? (json['position'] as int? ?? 0)
+        : (snippet['position'] as int? ?? 0);
+
+    final publishedAt = (fromCache ? json['publishedAt'] : snippet['publishedAt']) != null
+        ? DateTime.parse((fromCache ? json['publishedAt'] : snippet['publishedAt']) as String)
+        : DateTime.now();
+
+    final channelId = fromCache
+        ? (json['channelId'] as String?)
+        : (snippet['channelId'] as String?);
+
+    final description = fromCache
+        ? (json['description'] as String? ?? 'Sin descripción')
+        : (snippet['description'] as String? ?? 'Sin descripción');
+
+    return YouTubeVideo(
+      videoId: videoId,
+      title: title,
+      description: description,
+      thumbnailUrl: thumbnailUrl,
+      channelTitle: channelTitle,
+      channelId: channelId,
+      publishedAt: publishedAt,
+      position: position,
+    );
+  }
+
+  /// Crea un YouTubeVideo desde la respuesta de search.list (estructura distinta)
+  factory YouTubeVideo.fromSearchResult(Map<String, dynamic> json) {
+    final id = json['id'] as Map<String, dynamic>? ?? {};
+    final videoId = id['videoId'] as String? ?? '';
+    final snippet = json['snippet'] as Map<String, dynamic>? ?? {};
+
     String thumbnailUrl = '';
     final thumbnails = snippet['thumbnails'] as Map<String, dynamic>?;
     if (thumbnails != null) {
-      // Intentar diferentes tamaños de thumbnail
       final medium = thumbnails['medium'] as Map<String, dynamic>?;
       final high = thumbnails['high'] as Map<String, dynamic>?;
       final defaultThumb = thumbnails['default'] as Map<String, dynamic>?;
-      
       if (medium?['url'] != null) {
         thumbnailUrl = medium!['url'] as String;
       } else if (high?['url'] != null) {
@@ -40,35 +104,23 @@ class YouTubeVideo {
         thumbnailUrl = defaultThumb!['url'] as String;
       }
     }
-    
-    // Obtener videoId con verificación
-    String videoId = '';
-    final resourceId = snippet['resourceId'] as Map<String, dynamic>?;
-    if (resourceId != null) {
-      videoId = resourceId['videoId'] as String? ?? '';
-    }
-    
-    // Obtener título con mejor manejo
+
     String title = snippet['title'] as String? ?? '';
-    final channelTitle = snippet['channelTitle'] as String? ?? 'Canal desconocido';
-    final position = snippet['position'] as int? ?? 0;
-    final publishedAt = snippet['publishedAt'] != null 
+    if (title.isEmpty || title.trim().isEmpty) title = 'Sin título';
+
+    final publishedAt = snippet['publishedAt'] != null
         ? DateTime.parse(snippet['publishedAt'] as String)
         : DateTime.now();
-    
-    // Solo usar "Sin título" si el título está realmente vacío
-    if (title.isEmpty || title.trim().isEmpty) {
-      title = 'Sin título';
-    }
-    
+
     return YouTubeVideo(
       videoId: videoId,
       title: title,
       description: snippet['description'] as String? ?? 'Sin descripción',
       thumbnailUrl: thumbnailUrl,
-      channelTitle: channelTitle,
+      channelTitle: snippet['channelTitle'] as String? ?? 'Canal desconocido',
+      channelId: snippet['channelId'] as String?,
       publishedAt: publishedAt,
-      position: position,
+      position: 0,
     );
   }
 
@@ -79,6 +131,7 @@ class YouTubeVideo {
       'description': description,
       'thumbnailUrl': thumbnailUrl,
       'channelTitle': channelTitle,
+      if (channelId != null) 'channelId': channelId,
       'publishedAt': publishedAt.toIso8601String(),
       'position': position,
     };
@@ -123,6 +176,37 @@ class YouTubeVideo {
   @override
   String toString() {
     return 'YouTubeVideo{videoId: $videoId, title: $title, channelTitle: $channelTitle, publishedAt: $publishedAt}';
+  }
+}
+
+/// Respuesta de la API search.list de YouTube
+class YouTubeSearchResponse {
+  final List<YouTubeVideo> videos;
+  final String? nextPageToken;
+  final int totalResults;
+
+  const YouTubeSearchResponse({
+    required this.videos,
+    this.nextPageToken,
+    required this.totalResults,
+  });
+
+  bool get hasMoreResults => nextPageToken != null;
+
+  factory YouTubeSearchResponse.fromJson(Map<String, dynamic> json) {
+    final items = json['items'] as List<dynamic>? ?? [];
+    final videos = <YouTubeVideo>[];
+    for (final item in items) {
+      final map = item as Map<String, dynamic>;
+      if ((map['id'] as Map<String, dynamic>?)?['kind'] == 'youtube#video') {
+        videos.add(YouTubeVideo.fromSearchResult(map));
+      }
+    }
+    return YouTubeSearchResponse(
+      videos: videos,
+      nextPageToken: json['nextPageToken'] as String?,
+      totalResults: (json['pageInfo'] as Map<String, dynamic>?)?['totalResults'] as int? ?? 0,
+    );
   }
 }
 

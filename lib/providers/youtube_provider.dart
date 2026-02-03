@@ -15,12 +15,106 @@ class YouTubeProvider extends ChangeNotifier {
   String? _errorMessage;
   String? _nextPageToken;
   bool _hasMoreVideos = false;
+  String? _channelId;
 
   List<YouTubeVideo> get videos => _videos;
+  /// ID del canal para búsqueda API (Remote Config o del primer video del playlist)
+  String? get channelId => _channelId ?? (YouTubeConfig.channelId.isNotEmpty ? YouTubeConfig.channelId : null);
   List<YouTubeVideo> get featuredVideos => _featuredVideos;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasMoreVideos => _hasMoreVideos;
+
+  /// Carga inicial rápida: solo los primeros [initialCount] videos (por defecto 20).
+  /// Pensado para mostrar contenido rápido en el launch.
+  Future<void> loadVideosInitial({bool refresh = false, int initialCount = 20}) async {
+    try {
+      if (refresh) {
+        _videos.clear();
+        _featuredVideos.clear();
+        _nextPageToken = null;
+        _hasMoreVideos = false;
+      }
+
+      // Si hay caché y no es refresh, usar caché para carga instantánea
+      if (!refresh) {
+        final cacheResult = await CacheService.loadVideosFromCache();
+        if (cacheResult != null && cacheResult.videos.isNotEmpty) {
+          final videosWithEmptyTitles = cacheResult.videos.where((v) =>
+              v.title.isEmpty || v.title.trim().isEmpty).length;
+          if (videosWithEmptyTitles == 0) {
+            _videos = cacheResult.videos;
+            _featuredVideos = cacheResult.featuredVideos;
+            _nextPageToken = cacheResult.nextPageToken;
+            _hasMoreVideos = cacheResult.hasMoreVideos;
+            _updateChannelIdFromVideos(cacheResult.videos);
+            notifyListeners();
+            return;
+          }
+        }
+      }
+
+      _setLoading(true);
+      _clearError();
+      final response = await _youtubeService.getPlaylistVideos(
+        maxResults: initialCount,
+        pageToken: refresh ? null : _nextPageToken,
+      );
+
+      _videos = response.videos;
+      _nextPageToken = response.nextPageToken;
+      _hasMoreVideos = response.hasMoreVideos;
+      _updateChannelIdFromVideos(response.videos);
+      _updateFeaturedVideos();
+    } catch (e) {
+      _setError('Error al cargar videos: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  void _updateChannelIdFromVideos(List<YouTubeVideo> videos) {
+    if (_channelId != null || YouTubeConfig.channelId.isNotEmpty || videos.isEmpty) return;
+    for (final v in videos) {
+      if (v.channelId != null && v.channelId!.trim().isNotEmpty) {
+        _channelId = v.channelId;
+        print('📺 Canal ID obtenido del playlist: $_channelId');
+        return;
+      }
+    }
+  }
+
+  /// Carga los videos restantes del playlist en segundo plano.
+  /// Se ejecuta después de loadVideosInitial para completar la lista sin bloquear la UI.
+  Future<void> loadRemainingVideosInBackground({int batchSize = 50}) async {
+    while (_hasMoreVideos && _nextPageToken != null) {
+      try {
+        final response = await _youtubeService.getPlaylistVideos(
+          maxResults: batchSize,
+          pageToken: _nextPageToken,
+        );
+        final existingIds = _videos.map((v) => v.videoId).toSet();
+        final newVideos = response.videos
+            .where((v) => !existingIds.contains(v.videoId))
+            .toList();
+        _videos.addAll(newVideos);
+      _nextPageToken = response.nextPageToken;
+      _hasMoreVideos = response.hasMoreVideos;
+      _updateChannelIdFromVideos(response.videos);
+      _updateFeaturedVideos();
+        await CacheService.saveVideosToCache(
+          videos: _videos,
+          featuredVideos: _featuredVideos,
+          nextPageToken: _nextPageToken,
+          hasMoreVideos: _hasMoreVideos,
+        );
+        notifyListeners();
+      } catch (e) {
+        print('⚠️ Error cargando más videos en background: $e');
+        break;
+      }
+    }
+  }
 
   /// Carga los videos desde YouTube usando la API oficial
   /// [initialLoad] si es true, carga solo una cantidad pequeña para mostrar rápido
@@ -57,6 +151,7 @@ class YouTubeProvider extends ChangeNotifier {
             await CacheService.clearCache();
             // Continuar con la carga desde API en lugar de usar el caché
           } else {
+            _updateChannelIdFromVideos(cacheResult.videos);
             print('✅ Cache: ${_videos.length} videos cargados desde caché');
             print('⭐ Cache: ${_featuredVideos.length} videos destacados desde caché');
             
@@ -98,8 +193,7 @@ class YouTubeProvider extends ChangeNotifier {
 
       _nextPageToken = response.nextPageToken;
       _hasMoreVideos = response.hasMoreVideos;
-      
-      // Marcar algunos videos como destacados (ejemplo: los 3 más recientes)
+      _updateChannelIdFromVideos(response.videos);
       _updateFeaturedVideos();
       
       // Solo guardar en caché si no es carga inicial (para evitar guardar datos incompletos)
@@ -175,7 +269,37 @@ class YouTubeProvider extends ChangeNotifier {
     }
   }
 
-  /// Busca videos por título o descripción
+  /// Busca videos usando la API search.list de YouTube (limitado al canal).
+  /// Retorna resultados paginados. Filtra por [playlistVideoIds] si se pasa (solo episodios del playlist).
+  Future<YouTubeSearchResponse> searchViaYoutubeApi({
+    required String query,
+    String? pageToken,
+    Set<String>? playlistVideoIds,
+  }) async {
+    final cId = channelId;
+    if (cId == null || cId.isEmpty) {
+      throw Exception('No hay canal configurado para búsqueda');
+    }
+    final response = await _youtubeService.searchInChannel(
+      query: query,
+      channelId: cId,
+      maxResults: 50,
+      pageToken: pageToken,
+    );
+    if (playlistVideoIds != null && playlistVideoIds.isNotEmpty) {
+      final filtered = response.videos
+          .where((v) => playlistVideoIds.contains(v.videoId))
+          .toList();
+      return YouTubeSearchResponse(
+        videos: filtered,
+        nextPageToken: response.nextPageToken,
+        totalResults: filtered.length,
+      );
+    }
+    return response;
+  }
+
+  /// Busca videos por título o descripción (local)
   Future<List<YouTubeVideo>> searchVideos(String query) async {
     try {
       _setLoading(true);
@@ -204,12 +328,16 @@ class YouTubeProvider extends ChangeNotifier {
     }
   }
 
-  /// Limpia el caché y recarga los videos
+  /// Limpia el caché y resetea el estado. No carga videos (la carga la hace quien llama).
   Future<void> clearCacheAndReload() async {
     try {
-      print('🗑️ Limpiando caché y recargando videos...');
+      print('🗑️ Limpiando caché...');
       await CacheService.clearCache();
-      await loadVideos(refresh: true);
+      _videos = [];
+      _featuredVideos = [];
+      _nextPageToken = null;
+      _hasMoreVideos = false;
+      _clearError();
     } catch (e) {
       _setError('Error al limpiar caché: $e');
       print('❌ Error al limpiar caché: $e');

@@ -1,9 +1,32 @@
 import '../models/episode.dart';
 import '../providers/youtube_provider.dart';
 
+/// Resultado de búsqueda con soporte para paginación
+class EpisodeSearchResult {
+  final List<Episode> episodes;
+  final String? nextPageToken;
+
+  const EpisodeSearchResult({
+    required this.episodes,
+    this.nextPageToken,
+  });
+
+  bool get hasMore => nextPageToken != null && nextPageToken!.isNotEmpty;
+}
+
 /// Repositorio para manejar la lógica de datos de episodios
 /// Implementa el patrón Repository para separar la lógica de datos
 abstract class EpisodeRepository {
+  /// Obtiene los primeros episodios (carga inicial rápida ~20)
+  Future<List<Episode>> getInitialEpisodes({int limit = 20});
+
+  /// Carga los episodios restantes en segundo plano.
+  /// Retorna la lista completa cuando termina.
+  Future<List<Episode>> loadRemainingEpisodesInBackground();
+
+  /// Carga más episodios (paginación, siguiente página).
+  Future<List<Episode>> loadMoreEpisodes();
+
   /// Obtiene todos los episodios
   Future<List<Episode>> getAllEpisodes();
   
@@ -13,8 +36,15 @@ abstract class EpisodeRepository {
   /// Obtiene un episodio por ID
   Future<Episode?> getEpisodeById(String id);
   
-  /// Busca episodios por query
-  Future<List<Episode>> searchEpisodes(String query);
+  /// Busca episodios por query.
+  /// Usa la API de YouTube cuando hay canal configurado; si no, busca localmente.
+  /// [episodesToSearchIn] para búsqueda local o fallback.
+  /// [pageToken] para paginación en búsqueda API.
+  Future<EpisodeSearchResult> searchEpisodes(
+    String query, {
+    List<Episode>? episodesToSearchIn,
+    String? pageToken,
+  });
   
   /// Obtiene episodios por categoría
   Future<List<Episode>> getEpisodesByCategory(String category);
@@ -40,12 +70,48 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
   final YouTubeProvider _youtubeProvider = YouTubeProvider();
 
   @override
+  Future<List<Episode>> getInitialEpisodes({int limit = 20}) async {
+    try {
+      await _youtubeProvider.loadVideosInitial(initialCount: limit);
+      return _youtubeProvider.videos
+          .map((v) => _youtubeProvider.convertToEpisode(v))
+          .toList();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<Episode>> loadRemainingEpisodesInBackground() async {
+    await _youtubeProvider.loadRemainingVideosInBackground();
+    return _youtubeProvider.videos
+        .map((v) => _youtubeProvider.convertToEpisode(v))
+        .toList();
+  }
+
+  @override
+  Future<List<Episode>> loadMoreEpisodes() async {
+    if (!_youtubeProvider.hasMoreVideos) return [];
+    final beforeCount = _youtubeProvider.videos.length;
+    await _youtubeProvider.loadMoreVideos(batchSize: 20);
+    return _youtubeProvider.videos
+        .skip(beforeCount)
+        .map((v) => _youtubeProvider.convertToEpisode(v))
+        .toList();
+  }
+
+  @override
   Future<List<Episode>> getAllEpisodes() async {
     try {
       print('📡 Repository: Obteniendo todos los episodios...');
       
       // Cargar videos desde YouTube (con caché)
       await _youtubeProvider.loadVideos();
+      
+      // Asegurar que tenemos TODOS los episodios del playlist (para búsqueda, etc.)
+      if (_youtubeProvider.hasMoreVideos) {
+        await _youtubeProvider.loadRemainingVideosInBackground();
+      }
       
       // Convertir YouTubeVideo a Episode
       final episodes = _youtubeProvider.videos.map((video) => _youtubeProvider.convertToEpisode(video)).toList();
@@ -147,11 +213,39 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
   }
 
   @override
-  Future<List<Episode>> searchEpisodes(String query) async {
+  Future<EpisodeSearchResult> searchEpisodes(
+    String query, {
+    List<Episode>? episodesToSearchIn,
+    String? pageToken,
+  }) async {
     try {
-      if (query.isEmpty) return await getAllEpisodes();
-      
-      final episodes = await getAllEpisodes();
+      if (query.isEmpty) {
+        final all = episodesToSearchIn ?? await getAllEpisodes();
+        return EpisodeSearchResult(episodes: all);
+      }
+
+      // Usar API de YouTube si hay canal configurado (busca en todo el canal)
+      final cId = _youtubeProvider.channelId;
+      if (cId != null && cId.isNotEmpty) {
+        final response = await _youtubeProvider.searchViaYoutubeApi(
+          query: query,
+          pageToken: pageToken,
+        );
+        final episodes = response.videos
+            .map((v) => _youtubeProvider.convertToEpisode(v))
+            .toList();
+        print('🔍 API: ${episodes.length} episodios encontrados para "$query"');
+        return EpisodeSearchResult(
+          episodes: episodes,
+          nextPageToken: response.nextPageToken,
+        );
+      }
+
+      // Fallback: búsqueda local
+      const minForCachedSearch = 50;
+      final episodes = (episodesToSearchIn != null && episodesToSearchIn.length >= minForCachedSearch)
+          ? episodesToSearchIn
+          : await getAllEpisodes();
       final normalizedQuery = _normalizeText(query.trim());
       
       print('🔍 Repository: Buscando "$normalizedQuery" en ${episodes.length} episodios');
@@ -224,7 +318,7 @@ class EpisodeRepositoryImpl implements EpisodeRepository {
       }).toList();
       
       print('✅ Repository: ${searchResults.length} resultados encontrados para "$normalizedQuery"');
-      return searchResults;
+      return EpisodeSearchResult(episodes: searchResults);
     } catch (e) {
       print('❌ Repository: Error al buscar episodios - $e');
       rethrow;

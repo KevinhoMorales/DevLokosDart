@@ -25,13 +25,18 @@ class EpisodeLoaded extends EpisodeState {
   final List<Episode> featuredEpisodes;
   final List<Episode> filteredEpisodes;
   final String searchQuery;
+  final String? searchNextPageToken;
 
   const EpisodeLoaded({
     required this.episodes,
     required this.featuredEpisodes,
     required this.filteredEpisodes,
     this.searchQuery = '',
+    this.searchNextPageToken,
   });
+
+  bool get hasMoreSearchResults =>
+      searchNextPageToken != null && searchNextPageToken!.isNotEmpty;
 
   @override
   List<Object?> get props => [
@@ -39,6 +44,7 @@ class EpisodeLoaded extends EpisodeState {
         featuredEpisodes,
         filteredEpisodes,
         searchQuery,
+        searchNextPageToken,
       ];
 
   EpisodeLoaded copyWith({
@@ -46,12 +52,14 @@ class EpisodeLoaded extends EpisodeState {
     List<Episode>? featuredEpisodes,
     List<Episode>? filteredEpisodes,
     String? searchQuery,
+    String? searchNextPageToken,
   }) {
     return EpisodeLoaded(
       episodes: episodes ?? this.episodes,
       featuredEpisodes: featuredEpisodes ?? this.featuredEpisodes,
       filteredEpisodes: filteredEpisodes ?? this.filteredEpisodes,
       searchQuery: searchQuery ?? this.searchQuery,
+      searchNextPageToken: searchNextPageToken ?? this.searchNextPageToken,
     );
   }
 }

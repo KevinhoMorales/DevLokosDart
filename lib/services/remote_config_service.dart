@@ -21,6 +21,7 @@ class RemoteConfigService {
       'youtube_api_key': '', // Sin API key por defecto
       'youtube_playlist_id': 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ', // Playlist principal (podcast)
       'youtube_tutorials_playlist_id': '', // Playlist de tutoriales (vacío = usa la principal)
+      'youtube_channel_id': '', // Canal para búsqueda API (vacío = se obtiene del primer video del playlist)
       'web_3_form': '', // Access Key de Web3Forms para formulario de contacto
       'version_dart': '1.0.3', // Versión mínima requerida
     });
@@ -90,6 +91,9 @@ class RemoteConfigService {
 
   /// Access Key de Web3Forms para envío del formulario de contacto empresarial.
   String get web3FormAccessKey => _remoteConfig.getString('web_3_form');
+
+  /// ID del canal de YouTube para búsqueda API. Si está vacío, se obtiene del primer video del playlist.
+  String get youtubeChannelId => _remoteConfig.getString('youtube_channel_id').trim();
 
   /// Playlist de tutoriales. Si está vacío, se usa la playlist principal.
   String get youtubeTutorialsPlaylistId {

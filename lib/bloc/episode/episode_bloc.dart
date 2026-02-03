@@ -18,7 +18,9 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
     on<LoadEpisodes>(_onLoadEpisodes);
     on<RefreshEpisodes>(_onRefreshEpisodes);
     on<SearchEpisodes>(_onSearchEpisodes);
+    on<LoadMoreSearchResults>(_onLoadMoreSearchResults);
     on<ClearSearch>(_onClearSearch);
+    on<LoadMoreEpisodes>(_onLoadMoreEpisodes);
     on<SelectEpisode>(_onSelectEpisode);
     on<FilterByCategory>(_onFilterByCategory);
     on<FilterByTag>(_onFilterByTag);
@@ -57,12 +59,11 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
     }
   }
 
-  /// Refresca los episodios
+  /// Refresca los episodios: carga inicial rápida (~20). El resto se carga con LoadMoreEpisodes.
   Future<void> _onRefreshEpisodes(
     RefreshEpisodes event,
     Emitter<EpisodeState> emit,
   ) async {
-    // Mantener episodios en caché si hay error
     List<Episode> cachedEpisodes = [];
     if (state is EpisodeLoaded) {
       cachedEpisodes = (state as EpisodeLoaded).episodes;
@@ -70,8 +71,9 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
 
     try {
       emit(const EpisodeLoading());
-      final episodes = await _repository.getAllEpisodes();
-      final featuredEpisodes = episodes.where((episode) => episode.isFeatured).toList();
+      const initialCount = 20;
+      final episodes = await _repository.getInitialEpisodes(limit: initialCount);
+      final featuredEpisodes = episodes.where((e) => e.isFeatured).toList();
 
       emit(EpisodeLoaded(
         episodes: episodes,
@@ -110,17 +112,72 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
         episodes: currentState.episodes,
       ));
 
-      final searchResults = await _repository.searchEpisodes(event.query);
+      final result = await _repository.searchEpisodes(
+        event.query,
+        episodesToSearchIn: currentState.episodes,
+      );
 
       emit(currentState.copyWith(
-        filteredEpisodes: searchResults,
+        filteredEpisodes: result.episodes,
         searchQuery: event.query,
+        searchNextPageToken: result.nextPageToken,
       ));
     } catch (e) {
       emit(EpisodeError(
         message: 'Error al buscar episodios: $e',
         cachedEpisodes: currentState.episodes,
       ));
+    }
+  }
+
+  /// Carga más resultados de búsqueda (paginación API)
+  Future<void> _onLoadMoreSearchResults(
+    LoadMoreSearchResults event,
+    Emitter<EpisodeState> emit,
+  ) async {
+    final current = state;
+    if (current is! EpisodeLoaded ||
+        current.searchQuery.isEmpty ||
+        !current.hasMoreSearchResults) return;
+
+    try {
+      final result = await _repository.searchEpisodes(
+        event.query,
+        pageToken: current.searchNextPageToken,
+      );
+      if (result.episodes.isEmpty) return;
+
+      final combined = [...current.filteredEpisodes, ...result.episodes];
+      emit(current.copyWith(
+        filteredEpisodes: combined,
+        searchNextPageToken: result.nextPageToken,
+      ));
+    } catch (e) {
+      if (!isClosed) print('⚠️ Error cargando más resultados: $e');
+    }
+  }
+
+  /// Carga más episodios (paginación en lista)
+  Future<void> _onLoadMoreEpisodes(
+    LoadMoreEpisodes event,
+    Emitter<EpisodeState> emit,
+  ) async {
+    final current = state;
+    if (current is! EpisodeLoaded || current.searchQuery.isNotEmpty) return;
+
+    try {
+      final more = await _repository.loadMoreEpisodes();
+      if (more.isEmpty) return;
+
+      final combined = [...current.episodes, ...more];
+      final featured = current.featuredEpisodes;
+      emit(current.copyWith(
+        episodes: combined,
+        featuredEpisodes: featured,
+        filteredEpisodes: combined,
+      ));
+    } catch (e) {
+      if (!isClosed) print('⚠️ Error cargando más episodios: $e');
     }
   }
 
@@ -243,7 +300,7 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
     }
   }
 
-  /// Limpia el caché y recarga los episodios
+  /// Limpia el caché y recarga los episodios (carga inicial + background)
   Future<void> _onClearCacheAndReload(
     ClearCacheAndReload event,
     Emitter<EpisodeState> emit,
@@ -251,14 +308,13 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
     try {
       print('🗑️ BLoC: Limpiando caché y recargando episodios...');
       emit(const EpisodeLoading());
-      
       await _repository.clearCacheAndReload();
-      
-      final episodes = await _repository.getAllEpisodes();
-      final featuredEpisodes = episodes.where((episode) => episode.isFeatured).toList();
 
-      print('✅ BLoC: Caché limpiado y ${episodes.length} episodios recargados');
-      print('⭐ BLoC: ${featuredEpisodes.length} episodios destacados');
+      const initialCount = 20;
+      final episodes = await _repository.getInitialEpisodes(limit: initialCount);
+      final featuredEpisodes = episodes.where((e) => e.isFeatured).toList();
+
+      print('✅ BLoC: Caché limpiado, ${episodes.length} episodios iniciales cargados');
 
       emit(EpisodeLoaded(
         episodes: episodes,
@@ -266,11 +322,29 @@ class EpisodeBloc extends Bloc<EpisodeEvent, EpisodeState> {
         filteredEpisodes: episodes,
         searchQuery: '',
       ));
+
+      _repository.loadRemainingEpisodesInBackground().then((fullEpisodes) {
+        if (isClosed) return;
+        final current = state;
+        if (current is EpisodeLoaded &&
+            current.searchQuery.isEmpty &&
+            fullEpisodes.isNotEmpty &&
+            fullEpisodes.length > episodes.length) {
+          final featured = fullEpisodes.where((e) => e.isFeatured).toList();
+          emit(EpisodeLoaded(
+            episodes: fullEpisodes,
+            featuredEpisodes: featured,
+            filteredEpisodes: fullEpisodes,
+            searchQuery: '',
+          ));
+          print('✅ BLoC: ${fullEpisodes.length} episodios totales cargados');
+        }
+      }).catchError((e) {
+        if (!isClosed) print('⚠️ Error cargando episodios en background: $e');
+      });
     } catch (e) {
       print('❌ BLoC: Error al limpiar caché - $e');
-      emit(EpisodeError(
-        message: 'Error al limpiar caché: $e',
-      ));
+      emit(EpisodeError(message: 'Error al limpiar caché: $e'));
     }
   }
 }

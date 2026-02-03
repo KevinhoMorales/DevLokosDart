@@ -106,7 +106,57 @@ class YouTubeService {
     }
   }
 
-  /// Busca videos en la playlist por título
+  /// Busca videos usando la API search.list de YouTube (limitado al canal).
+  /// Requiere [channelId] (del canal DevLokos). Retorna resultados paginados.
+  Future<YouTubeSearchResponse> searchInChannel({
+    required String query,
+    required String channelId,
+    int maxResults = 50,
+    String? pageToken,
+  }) async {
+    try {
+      if (!YouTubeConfig.hasApiKey) {
+        throw YouTubeServiceException(
+          'API Key de YouTube no configurada.',
+        );
+      }
+
+      final queryParams = <String, String>{
+        'part': 'snippet',
+        'type': 'video',
+        'q': query,
+        'channelId': channelId,
+        'maxResults': maxResults.toString(),
+        'key': YouTubeConfig.apiKey,
+      };
+      if (pageToken != null && pageToken.isNotEmpty) {
+        queryParams['pageToken'] = pageToken;
+      }
+
+      final uri = Uri.parse('$_baseUrl/search').replace(
+        queryParameters: queryParams,
+      );
+
+      final response = await http.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return YouTubeSearchResponse.fromJson(jsonData);
+      } else {
+        final errorData = json.decode(response.body);
+        throw YouTubeServiceException(
+          'Error en búsqueda: ${errorData['error']?['message'] ?? 'Error desconocido'}',
+        );
+      }
+    } on http.ClientException {
+      throw YouTubeServiceException('Error de conexión. Verifica tu internet.');
+    } catch (e) {
+      if (e is YouTubeServiceException) rethrow;
+      throw YouTubeServiceException('Error en búsqueda: $e');
+    }
+  }
+
+  /// Busca videos en la playlist por título (local)
   Future<List<YouTubeVideo>> searchVideosInPlaylist(String query, List<YouTubeVideo> allVideos) async {
     try {
       // Buscar en todos los videos cargados en lugar de hacer una nueva petición

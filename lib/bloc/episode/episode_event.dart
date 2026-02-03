@@ -28,6 +28,16 @@ class SearchEpisodes extends EpisodeEvent {
   List<Object?> get props => [query];
 }
 
+/// Evento para cargar más resultados de búsqueda (paginación)
+class LoadMoreSearchResults extends EpisodeEvent {
+  final String query;
+
+  const LoadMoreSearchResults({required this.query});
+
+  @override
+  List<Object?> get props => [query];
+}
+
 /// Evento para limpiar la búsqueda
 class ClearSearch extends EpisodeEvent {
   const ClearSearch();
@@ -91,6 +101,11 @@ class LoadRelatedEpisodes extends EpisodeEvent {
 /// Evento para limpiar caché y recargar episodios
 class ClearCacheAndReload extends EpisodeEvent {
   const ClearCacheAndReload();
+}
+
+/// Evento para cargar más episodios (paginación en lista)
+class LoadMoreEpisodes extends EpisodeEvent {
+  const LoadMoreEpisodes();
 }
 
 
