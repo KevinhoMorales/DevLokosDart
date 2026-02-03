@@ -12,10 +12,12 @@ class YouTubeService {
     'Accept': 'application/json',
   };
 
-  /// Obtiene todos los videos de la playlist de DevLokos
+  /// Obtiene los videos de una playlist de YouTube
+  /// [playlistId] opcional: si no se pasa, usa la playlist principal
   Future<YouTubePlaylistResponse> getPlaylistVideos({
     int maxResults = 50,
     String? pageToken,
+    String? playlistId,
   }) async {
     try {
       // Validar configuración
@@ -35,6 +37,7 @@ class YouTubeService {
       final url = YouTubeConfig.buildPlaylistUrl(
         maxResults: maxResults,
         pageToken: pageToken,
+        playlistId: playlistId,
       );
 
       final response = await http.get(

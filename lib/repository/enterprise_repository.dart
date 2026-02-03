@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/enterprise.dart';
+import '../services/web3forms_service.dart';
+import '../services/remote_config_service.dart';
 
 abstract class EnterpriseRepository {
   Future<List<Service>> getServices();
@@ -10,9 +12,10 @@ abstract class EnterpriseRepository {
 
 class EnterpriseRepositoryImpl implements EnterpriseRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Web3FormsService _web3Forms = Web3FormsService();
+  final RemoteConfigService _remoteConfig = RemoteConfigService();
   static const String _servicesCollection = 'services';
   static const String _portfolioCollection = 'portfolio';
-  static const String _contactCollection = 'contact_submissions';
 
   @override
   Future<List<Service>> getServices() async {
@@ -66,17 +69,11 @@ class EnterpriseRepositoryImpl implements EnterpriseRepository {
 
   @override
   Future<void> submitContactForm(ContactSubmission submission) async {
-    try {
-      await _firestore
-          .collection(_contactCollection)
-          .doc(submission.id)
-          .set(submission.toFirestore());
-
-      print('✅ Formulario de contacto enviado exitosamente');
-    } catch (e) {
-      print('❌ Error al enviar formulario de contacto: $e');
-      rethrow;
-    }
+    final accessKey = _remoteConfig.web3FormAccessKey;
+    await _web3Forms.submitContactForm(
+      accessKey: accessKey,
+      submission: submission,
+    );
   }
 }
 

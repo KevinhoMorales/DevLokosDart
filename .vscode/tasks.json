@@ -1,0 +1,62 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Prepare iOS for SweetPad",
+      "type": "shell",
+      "command": "flutter pub get && (test -d ios/Pods && test -f ios/Podfile.lock && echo 'Pods OK' || (cd ios && pod install))",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {}
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Flutter: Run iOS",
+      "type": "shell",
+      "command": "flutter run",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {}
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "detail": "Compila y ejecuta en simulador iOS (recomendado para Flutter)"
+    },
+    {
+      "label": "sweetpad: launch",
+      "type": "sweetpad",
+      "action": "launch",
+      "dependsOn": "Prepare iOS for SweetPad",
+      "problemMatcher": [
+        "$sweetpad-watch",
+        "$sweetpad-xcodebuild-default",
+        "$sweetpad-xcbeautify-errors",
+        "$sweetpad-xcbeautify-warnings"
+      ],
+      "scheme": "Runner",
+      "configuration": "Debug",
+      "isBackground": true,
+      "detail": "Xcode build + lanzar (requiere Flutter: Run iOS primero)",
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      }
+    }
+  ]
+}

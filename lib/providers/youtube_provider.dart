@@ -3,11 +3,13 @@ import '../models/youtube_video.dart';
 import '../models/episode.dart';
 import '../services/youtube_service.dart';
 import '../services/cache_service.dart';
+import '../constants/youtube_config.dart';
 
 class YouTubeProvider extends ChangeNotifier {
   final YouTubeService _youtubeService = YouTubeService();
   
   List<YouTubeVideo> _videos = [];
+  List<YouTubeVideo> _tutorialVideos = [];
   List<YouTubeVideo> _featuredVideos = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -279,12 +281,16 @@ class YouTubeProvider extends ChangeNotifier {
     return _videos.map((video) => convertToEpisode(video)).toList();
   }
 
-  /// Obtiene un video por ID
+  /// Obtiene un video por ID (busca en playlist principal y en tutoriales)
   YouTubeVideo? getVideoById(String videoId) {
     try {
       return _videos.firstWhere((video) => video.videoId == videoId);
-    } catch (e) {
-      return null;
+    } catch (_) {
+      try {
+        return _tutorialVideos.firstWhere((video) => video.videoId == videoId);
+      } catch (_) {
+        return null;
+      }
     }
   }
 
@@ -295,6 +301,32 @@ class YouTubeProvider extends ChangeNotifier {
     } catch (e) {
       _setError('Error al validar configuración: $e');
       return false;
+    }
+  }
+
+  /// Carga videos de la playlist de tutoriales.
+  /// Si youtube_tutorials_playlist_id no está configurado, usa la playlist principal.
+  /// Los videos quedan en _tutorialVideos para reproducción.
+  Future<List<YouTubeVideo>> loadTutorialsVideos({bool refresh = false}) async {
+    try {
+      _setLoading(true);
+      _clearError();
+
+      final playlistId = YouTubeConfig.tutorialsPlaylistId;
+
+      final response = await _youtubeService.getPlaylistVideos(
+        maxResults: 100,
+        playlistId: playlistId,
+      );
+
+      _tutorialVideos = response.videos;
+      print('✅ ${response.videos.length} videos de tutoriales cargados');
+      _setLoading(false);
+      return response.videos;
+    } catch (e) {
+      _setError('Error al cargar tutoriales: $e');
+      _setLoading(false);
+      rethrow;
     }
   }
 

@@ -21,17 +21,18 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _companyController = TextEditingController();
   final _messageController = TextEditingController();
   String? _selectedProjectType;
 
   final List<String> _projectTypes = [
-    'Custom Software Development',
-    'Consulting',
-    'Mobile App Development',
-    'Web Development',
-    'DevOps & Infrastructure',
-    'Other',
+    'Desarrollo de software a medida',
+    'Consultoría',
+    'Desarrollo de aplicaciones móviles',
+    'Desarrollo web',
+    'DevOps e infraestructura',
+    'Otro',
   ];
 
   @override
@@ -47,6 +48,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _companyController.dispose();
     _messageController.dispose();
     super.dispose();
@@ -109,7 +111,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'SERVICIOS EMPRESARIALES',
+            'Servicios empresariales',
             style: TextStyle(
               color: BrandColors.primaryOrange,
               fontSize: 24,
@@ -142,7 +144,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Text(
-                  'NUESTROS SERVICIOS',
+                  'Nuestros servicios',
                   style: TextStyle(
                     color: BrandColors.primaryWhite,
                     fontSize: 18,
@@ -247,7 +249,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'NUESTRO PROCESO',
+            'Nuestro proceso',
             style: TextStyle(
               color: BrandColors.primaryWhite,
               fontSize: 18,
@@ -255,9 +257,9 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
             ),
           ),
           const SizedBox(height: 16),
-          _buildProcessStep('1', 'Discovery', 'Análisis de requisitos y planificación'),
-          _buildProcessStep('2', 'Development', 'Desarrollo ágil y iterativo'),
-          _buildProcessStep('3', 'Delivery', 'Entrega y soporte continuo'),
+          _buildProcessStep('1', 'Descubrimiento', 'Análisis de requisitos y planificación'),
+          _buildProcessStep('2', 'Desarrollo', 'Desarrollo ágil e iterativo'),
+          _buildProcessStep('3', 'Entrega', 'Entrega y soporte continuo'),
         ],
       ),
     );
@@ -334,10 +336,10 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+                const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Text(
-                  'PORTFOLIO',
+                  'Proyectos destacados',
                   style: TextStyle(
                     color: BrandColors.primaryWhite,
                     fontSize: 18,
@@ -440,33 +442,83 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
+  InputDecoration _inputDecoration({
+    required String label,
+    required String hint,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: BrandColors.grayMedium),
+      hintStyle: const TextStyle(color: BrandColors.grayMedium),
+      filled: true,
+      fillColor: BrandColors.cardBackground,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: BrandColors.primaryOrange.withOpacity(0.3),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: BrandColors.primaryOrange,
+          width: 2,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: BrandColors.error),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    );
+  }
+
   Widget _buildContactForm() {
     return Container(
+      margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: BrandColors.blackLight.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'INICIA UN PROYECTO',
+            'Contáctanos',
             style: TextStyle(
-              color: BrandColors.primaryWhite,
-              fontSize: 18,
+              color: BrandColors.primaryOrange,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
+          Text(
+            'Completa el formulario y nos pondremos en contacto contigo lo antes posible.',
+            style: TextStyle(
+              color: BrandColors.grayMedium,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 24),
           Form(
             key: _formKey,
             child: Column(
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre',
-                    hintText: 'Tu nombre',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: BrandColors.cardBackground,
+                  decoration: _inputDecoration(
+                    label: 'Nombre completo',
+                    hint: 'Tu nombre y apellido',
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
                   validator: (value) {
@@ -479,45 +531,51 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'tu@email.com',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: BrandColors.cardBackground,
+                  decoration: _inputDecoration(
+                    label: 'Correo electrónico',
+                    hint: 'tu@email.com',
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu email';
+                      return 'Por favor ingresa tu correo';
                     }
                     if (!value.contains('@')) {
-                      return 'Por favor ingresa un email válido';
+                      return 'Por favor ingresa un correo válido';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
+                  controller: _phoneController,
+                  decoration: _inputDecoration(
+                    label: 'Teléfono (opcional)',
+                    hint: '+52 55 1234 5678',
+                  ),
+                  style: const TextStyle(color: BrandColors.primaryWhite),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
                   controller: _companyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Empresa (opcional)',
-                    hintText: 'Nombre de tu empresa',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: BrandColors.cardBackground,
+                  decoration: _inputDecoration(
+                    label: 'Empresa (opcional)',
+                    hint: 'Nombre de tu empresa',
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   value: _selectedProjectType,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de proyecto',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: BrandColors.cardBackground,
+                  hint: const Text(
+                    'Selecciona una opción',
+                    style: TextStyle(color: BrandColors.grayMedium),
+                  ),
+                  decoration: _inputDecoration(
+                    label: 'Tipo de proyecto',
+                    hint: 'Selecciona una opción',
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
                   dropdownColor: BrandColors.cardBackground,
@@ -536,18 +594,15 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _messageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Mensaje',
-                    hintText: 'Cuéntanos sobre tu proyecto...',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: BrandColors.cardBackground,
+                  decoration: _inputDecoration(
+                    label: 'Mensaje',
+                    hint: 'Cuéntanos sobre tu proyecto, necesidades o preguntas...',
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
                   maxLines: 5,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa un mensaje';
+                      return 'Por favor escribe tu mensaje';
                     }
                     return null;
                   },
@@ -560,7 +615,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                       width: double.infinity,
                       child: GradientButton(
                         onPressed: isSubmitting ? null : _submitForm,
-                        text: isSubmitting ? 'ENVIANDO...' : 'ENVIAR',
+                        text: isSubmitting ? 'Enviando...' : 'Enviar mensaje',
                       ),
                     );
                   },
@@ -579,6 +634,9 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
         company: _companyController.text.trim().isEmpty
             ? null
             : _companyController.text.trim(),
@@ -594,6 +652,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
   void _clearForm() {
     _nameController.clear();
     _emailController.clear();
+    _phoneController.clear();
     _companyController.clear();
     _messageController.clear();
     setState(() {

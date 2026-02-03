@@ -106,17 +106,19 @@ class ContactSubmission {
   final String id;
   final String name;
   final String email;
+  final String? phone;
   final String? company;
   final String message;
-  final String? projectType; // Custom Software, Consulting, etc.
+  final String? projectType;
   final DateTime submittedAt;
   final bool isProcessed;
-  final String? notes; // Admin notes
+  final String? notes;
 
   ContactSubmission({
     required this.id,
     required this.name,
     required this.email,
+    this.phone,
     this.company,
     required this.message,
     this.projectType,
@@ -130,6 +132,7 @@ class ContactSubmission {
       id: id,
       name: data['name'] ?? '',
       email: data['email'] ?? '',
+      phone: data['phone'],
       company: data['company'],
       message: data['message'] ?? '',
       projectType: data['projectType'],
@@ -143,6 +146,7 @@ class ContactSubmission {
     return {
       'name': name,
       'email': email,
+      'phone': phone,
       'company': company,
       'message': message,
       'projectType': projectType,

@@ -32,6 +32,13 @@ class _CustomAppBarState extends State<CustomAppBar> {
   void initState() {
     super.initState();
     _loadUser();
+    // Si AuthBloc ya emitió Authenticated antes de montar, cargar usuario
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = context.read<AuthBlocSimple>().state;
+      if (authState is AuthAuthenticated && _currentUser == null) {
+        _loadUser();
+      }
+    });
   }
 
   Future<void> _loadUser() async {
@@ -100,7 +107,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
               onPressed: () {
                 // Si hay usuario autenticado, ir a perfil, sino mostrar login bottom sheet
                 if (_currentUser != null) {
-                  context.go('/profile');
+                  context.push('/profile');
                 } else {
                   LoginHelper.showLoginBottomSheet(context);
                 }

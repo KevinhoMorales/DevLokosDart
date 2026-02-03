@@ -33,7 +33,7 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
         filteredTutorials: tutorials,
       ));
     } catch (e) {
-      emit(TutorialError(message: 'Error al cargar tutoriales: $e'));
+      emit(TutorialError(message: _toUserFriendlyMessage(e)));
     }
   }
 
@@ -55,7 +55,7 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
       ));
     } catch (e) {
       emit(TutorialError(
-        message: 'Error al refrescar tutoriales: $e',
+        message: _toUserFriendlyMessage(e),
         cachedTutorials: cachedTutorials.isNotEmpty ? cachedTutorials : null,
       ));
     }
@@ -84,7 +84,7 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
         searchQuery: event.query,
       ));
     } catch (e) {
-      emit(TutorialError(message: 'Error al buscar tutoriales: $e'));
+      emit(TutorialError(message: _toUserFriendlyMessage(e)));
     }
   }
 
@@ -103,7 +103,7 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
         selectedCategory: event.category,
       ));
     } catch (e) {
-      emit(TutorialError(message: 'Error al filtrar por categoría: $e'));
+      emit(TutorialError(message: _toUserFriendlyMessage(e)));
     }
   }
 
@@ -122,7 +122,7 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
         selectedTechStack: event.techStack,
       ));
     } catch (e) {
-      emit(TutorialError(message: 'Error al filtrar por tech stack: $e'));
+      emit(TutorialError(message: _toUserFriendlyMessage(e)));
     }
   }
 
@@ -141,7 +141,7 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
         selectedLevel: event.level,
       ));
     } catch (e) {
-      emit(TutorialError(message: 'Error al filtrar por nivel: $e'));
+      emit(TutorialError(message: _toUserFriendlyMessage(e)));
     }
   }
 
@@ -167,6 +167,21 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
   ) async {
     // Tutorial selection logic can be handled here if needed
     // For now, we'll just keep the current state
+  }
+
+  /// Convierte excepciones técnicas en mensajes amigables para el usuario.
+  static String _toUserFriendlyMessage(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('network') || msg.contains('connection') || msg.contains('socket')) {
+      return 'Revisa tu conexión a internet e intenta de nuevo.';
+    }
+    if (msg.contains('firestore') || msg.contains('index') || msg.contains('failed-precondition')) {
+      return 'Los tutoriales no están disponibles en este momento. Intenta más tarde.';
+    }
+    if (msg.contains('permission') || msg.contains('unavailable')) {
+      return 'No se pudo acceder a los tutoriales. Intenta de nuevo.';
+    }
+    return 'No pudimos cargar los tutoriales. Intenta de nuevo en unos momentos.';
   }
 }
 

@@ -12,6 +12,9 @@ class YouTubeConfig {
   // ID de la playlist de DevLokos obtenido desde Firebase Remote Config
   // ⚠️ IMPORTANTE: Configurar en Firebase Remote Config como 'youtube_playlist_id'
   static String get devLokosPlaylistId => _remoteConfig.youtubePlaylistId;
+
+  /// Playlist de tutoriales. Si no está configurada, usa la principal.
+  static String get tutorialsPlaylistId => _remoteConfig.youtubeTutorialsPlaylistId;
   
   // URLs base de la API
   static const String baseUrl = 'https://www.googleapis.com/youtube/v3';
@@ -39,17 +42,19 @@ class YouTubeConfig {
   static String buildPlaylistUrl({
     int maxResults = 50,
     String? pageToken,
+    String? playlistId,
   }) {
     if (!hasApiKey) {
       throw YouTubeServiceException('API Key de YouTube no configurada');
     }
-    
-    String url = '$baseUrl/playlistItems?part=snippet&maxResults=$maxResults&playlistId=$devLokosPlaylistId&key=$apiKey';
-    
+
+    final effectivePlaylistId = playlistId ?? devLokosPlaylistId;
+    String url = '$baseUrl/playlistItems?part=snippet&maxResults=$maxResults&playlistId=$effectivePlaylistId&key=$apiKey';
+
     if (pageToken != null) {
       url += '&pageToken=$pageToken';
     }
-    
+
     return url;
   }
 }

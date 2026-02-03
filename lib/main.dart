@@ -3,15 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'bloc/episode/episode_bloc_exports.dart';
 import 'bloc/auth/auth_bloc_exports.dart';
 import 'bloc/tutorial/tutorial_bloc_exports.dart';
 import 'bloc/academy/academy_bloc_exports.dart';
 import 'bloc/enterprise/enterprise_bloc_exports.dart';
 import 'repository/episode_repository.dart';
-import 'repository/tutorial_repository.dart';
 import 'repository/academy_repository.dart';
 import 'repository/enterprise_repository.dart';
+import 'repository/tutorial_repository.dart';
 import 'providers/youtube_provider.dart';
 import 'models/episode.dart';
 import 'models/youtube_video.dart';
@@ -23,6 +24,7 @@ import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'screens/settings/about_screen.dart';
 import 'screens/youtube/youtube_screen.dart';
 import 'screens/admin/admin_modules_screen.dart';
 import 'screens/admin/courses_list_screen.dart';
@@ -34,31 +36,39 @@ import 'widgets/version_check_wrapper.dart';
 import 'utils/brand_colors.dart';
 import 'firebase_options.dart';
 import 'services/remote_config_service.dart';
+import 'services/push_notification_service.dart'
+    show PushNotificationService, firebaseMessagingBackgroundHandler;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Registrar handler de mensajes en background (debe ser antes de runApp)
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // Validar configuración del ambiente
   EnvironmentConfig.validateEnvironment();
-  
+
   // Ejemplo: Verificar rutas para un usuario de prueba
   EnvironmentConfig.verifyUserPaths('test_user_123');
-  
+
   // Inicializar Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   // Inicializar Firebase Remote Config
   print('🔄 Inicializando Firebase Remote Config...');
   final remoteConfig = RemoteConfigService();
   await remoteConfig.initialize();
-  
+
   // Verificar configuración
   print('🔍 Verificando configuración de Remote Config...');
   final isConfigured = remoteConfig.isRemoteConfigConfigured;
   print('✅ Remote Config configurado: $isConfigured');
-  
+
+  // Inicializar push notifications
+  await PushNotificationService().initialize();
+
   runApp(const DevLokosApp());
 }
 
@@ -83,7 +93,9 @@ class DevLokosApp extends StatelessWidget {
           ),
           BlocProvider<TutorialBloc>(
             create: (context) => TutorialBloc(
-              repository: TutorialRepositoryImpl(),
+              repository: TutorialRepositoryYouTube(
+                youtubeProvider: context.read<YouTubeProvider>(),
+              ),
             )..add(const LoadTutorials()),
           ),
           BlocProvider<AcademyBloc>(
@@ -189,6 +201,15 @@ final GoRouter _router = GoRouter(
       path: '/settings',
       pageBuilder: (context, state) => _buildPageWithTransition(
         child: const SettingsScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/settings/about',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const AboutScreen(),
         state: state,
         transitionType: 'horizontal',
         maintainState: true,

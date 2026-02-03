@@ -23,15 +23,6 @@ class AdminModulesScreen extends StatelessWidget {
             padding: const EdgeInsets.all(24.0),
             children: [
               // Header
-              const Text(
-                'Módulos de Administración',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: BrandColors.primaryWhite,
-                ),
-              ),
-              const SizedBox(height: 8),
               Text(
                 'Gestiona el contenido de la plataforma',
                 style: TextStyle(

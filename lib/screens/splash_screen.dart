@@ -87,11 +87,11 @@ class _SplashScreenState extends State<SplashScreen>
       final hasLocalUser = await UserManager.hasUser();
       
       if (hasLocalUser) {
-        // Si hay usuario local, verificar Firebase Auth y que el email esté verificado
+        // Usuario guardado localmente: mantener sesión, sincronizar datos
         final localUser = await UserManager.getUser();
         if (localUser != null) {
           var firebaseUser = FirebaseAuth.instance.currentUser;
-          if (firebaseUser != null) {
+          if (firebaseUser != null && firebaseUser.uid == localUser.uid) {
             await firebaseUser.reload();
             firebaseUser = FirebaseAuth.instance.currentUser;
             if (firebaseUser == null || !firebaseUser.emailVerified) {
@@ -101,19 +101,10 @@ class _SplashScreenState extends State<SplashScreen>
               return;
             }
           }
-          final existsInFirestore = await _checkUserExistsInFirestore(localUser.uid);
-          
-          if (existsInFirestore) {
-            // Usuario existe en Firestore: sincronizar y sobrescribir si hay cambios
-            await UserManager.syncUserOnAppStart();
-            context.go('/home');
-            return;
-          } else {
-            // Usuario no existe en Firestore, limpiar local y ir a home (sin login)
-            await UserManager.deleteUser();
-            context.go('/home');
-            return;
-          }
+          // Sincronizar datos desde Firestore (si falla, mantener datos locales)
+          await UserManager.syncUserOnAppStart();
+          context.go('/home');
+          return;
         }
       }
 

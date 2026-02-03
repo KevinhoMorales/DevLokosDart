@@ -4,9 +4,17 @@ class AppConstants {
   static const String youtubeBaseUrl = 'https://www.youtube.com/playlist?list=';
   static const String youtubeApiKey = 'YOUR_YOUTUBE_API_KEY'; // Necesitarás configurar esto
   
-  // App Info
+  // App Info (debe coincidir con pubspec.yaml version)
   static const String appName = 'DevLokos';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.1.0';
+  static const String appBuildNumber = '1';
+  static const String appVersionWithBuild = '1.1.0+1';
+
+  // Legal URLs
+  static const String termsAndConditionsUrl =
+      'https://devlokos.com/terminos-condiciones';
+  static const String privacyPolicyUrl =
+      'https://devlokos.com/politica-privacidad';
   
   // Firebase Collections
   static const String episodesCollection = 'episodes';

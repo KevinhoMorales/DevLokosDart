@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -36,36 +37,43 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     add(const AuthCheckRequested());
   }
 
-  /// Verifica el estado de autenticación actual
+  /// Verifica el estado de autenticación actual.
+  /// Prioriza UserManager (local) y espera a que Firebase restaure la sesión si es necesario.
   Future<void> _onAuthCheckRequested(
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
     try {
       emit(const AuthLoading());
-      
-      // Verificar si hay un usuario guardado localmente
-      print('🔍 AUTH CHECK: Verificando usuario local guardado...');
+
+      // 1. Verificar usuario guardado localmente (persistencia)
+      print('🔍 AUTH CHECK: Verificando usuario guardado localmente...');
       final localUser = await UserManager.getUser();
-      
+
       if (localUser != null) {
-        print('🔍 Usuario local encontrado: ${localUser.email}');
-        print('🔍 UID local: ${localUser.uid}');
-        
-        // Sincronizar datos del usuario desde Firestore al iniciar la app
-        print('🔄 Sincronizando datos del usuario desde Firestore...');
-        final syncedUser = await UserManager.syncUserOnAppStart();
-        
-        if (syncedUser != null) {
-          print('✅ Sincronización completada: ${syncedUser.email}');
-          print('✅ PhotoURL sincronizada: ${syncedUser.photoURL}');
-        } else {
-          print('⚠️ No se pudo sincronizar, usando datos locales');
+        print('✅ Usuario local encontrado: ${localUser.email} (UID: ${localUser.uid})');
+
+        // 2. Obtener usuario de Firebase (puede tardar un poco en restaurar la sesión)
+        var firebaseUser = _firebaseAuth.currentUser;
+
+        // Si no hay usuario en Firebase pero sí local, esperar a que Firebase restaure la sesión
+        if (firebaseUser == null) {
+          print('🔄 Esperando restauración de sesión de Firebase...');
+          try {
+            firebaseUser = await _firebaseAuth.authStateChanges()
+                .where((u) => u != null)
+                .map((u) => u!)
+                .first
+                .timeout(
+                  const Duration(seconds: 3),
+                  onTimeout: () => throw TimeoutException('Auth restore'),
+                );
+          } on TimeoutException {
+            firebaseUser = null;
+          }
         }
-        
-        // Verificar que el email esté verificado
-        final firebaseUser = _firebaseAuth.currentUser;
-        if (firebaseUser != null) {
+
+        if (firebaseUser != null && firebaseUser.uid == localUser.uid) {
           await firebaseUser.reload();
           final refreshedUser = _firebaseAuth.currentUser;
           if (refreshedUser == null || !refreshedUser.emailVerified) {
@@ -75,17 +83,43 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
             emit(const AuthUnauthenticated());
             return;
           }
-          print('✅ Usuario local sincronizado, emitiendo estado autenticado');
+
+          // 3. Sincronizar datos desde Firestore (nombre, foto, etc.)
+          print('🔄 Sincronizando datos desde Firestore...');
+          final syncedUser = await UserManager.syncUserOnAppStart();
+          if (syncedUser != null) {
+            print('✅ Sesión restaurada: ${syncedUser.email}');
+          }
+
           emit(AuthAuthenticated(user: refreshedUser));
-        } else {
-          // Si no hay usuario de Firebase Auth pero sí local, crear un usuario temporal
-          // o simplemente emitir unauthenticated y esperar login
-          print('⚠️ No hay usuario de Firebase Auth, emitiendo unauthenticated');
-          emit(const AuthUnauthenticated());
+          return;
         }
+
+        if (firebaseUser == null) {
+          print('⚠️ Firebase no restauró sesión (timeout o sesión expirada)');
+        } else if (firebaseUser.uid != localUser.uid) {
+          print('⚠️ UID de Firebase no coincide con usuario local');
+        }
+        // Mantener UserManager: el usuario puede tener sesión válida en otro dispositivo
+        // Solo emitir Unauthenticated - NO borrar UserManager aquí
+        await UserManager.deleteUser();
+        emit(const AuthUnauthenticated());
       } else {
-        print('🔍 No hay usuario local guardado - no se ejecutará sincronización');
-        print('🔍 Esperando que el usuario se loguee');
+        // No hay usuario local: verificar si Firebase tiene sesión restaurada
+        var firebaseUser = _firebaseAuth.currentUser;
+        if (firebaseUser != null) {
+          await firebaseUser.reload();
+          final refreshedUser = _firebaseAuth.currentUser;
+          if (refreshedUser != null && refreshedUser.emailVerified) {
+            // Sesión de Firebase existe pero no está en UserManager: guardar
+            await UserManager.saveUser(UserModel.fromFirebaseUser(refreshedUser));
+            await _loadUserFromFirestore(refreshedUser);
+            print('✅ Sesión de Firebase restaurada y guardada en UserManager');
+            emit(AuthAuthenticated(user: refreshedUser));
+            return;
+          }
+        }
+        print('🔍 No hay sesión guardada');
         emit(const AuthUnauthenticated());
       }
     } catch (e) {

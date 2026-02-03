@@ -1,3 +1,4 @@
 {
-    "sweetpad.build.xcodeWorkspacePath": "ios/Runner.xcworkspace"
+    "sweetpad.build.xcodeWorkspacePath": "ios/Runner.xcworkspace",
+    "sweetpad.workspacePath": "ios/Runner.xcworkspace"
 }

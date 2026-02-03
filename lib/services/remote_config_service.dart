@@ -19,7 +19,9 @@ class RemoteConfigService {
     // Configurar valores por defecto
     await _remoteConfig.setDefaults({
       'youtube_api_key': '', // Sin API key por defecto
-      'youtube_playlist_id': 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ', // Fallback temporal
+      'youtube_playlist_id': 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ', // Playlist principal (podcast)
+      'youtube_tutorials_playlist_id': '', // Playlist de tutoriales (vacío = usa la principal)
+      'web_3_form': '', // Access Key de Web3Forms para formulario de contacto
       'version_dart': '1.0.3', // Versión mínima requerida
     });
 
@@ -85,6 +87,19 @@ class RemoteConfigService {
     print('✅ Playlist ID obtenido desde Firebase Remote Config');
     return playlistId;
   }
+
+  /// Access Key de Web3Forms para envío del formulario de contacto empresarial.
+  String get web3FormAccessKey => _remoteConfig.getString('web_3_form');
+
+  /// Playlist de tutoriales. Si está vacío, se usa la playlist principal.
+  String get youtubeTutorialsPlaylistId {
+    final id = _remoteConfig.getString('youtube_tutorials_playlist_id');
+    return id.isEmpty ? youtubePlaylistId : id;
+  }
+
+  /// True si se configuró una playlist específica para tutoriales (no usa la principal).
+  bool get isTutorialsPlaylistConfigured =>
+      _remoteConfig.getString('youtube_tutorials_playlist_id').trim().isNotEmpty;
 
   /// Forzar actualización de configuración remota
   Future<void> forceRefresh() async {

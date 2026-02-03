@@ -53,20 +53,22 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     SubmitContactForm event,
     Emitter<EnterpriseState> emit,
   ) async {
+    final previousState = state;
     try {
       emit(const ContactFormSubmitting());
       await _repository.submitContactForm(event.submission);
       emit(const ContactFormSubmitted());
-      
-      // Reload services and portfolio after submission
-      final services = await _repository.getServices();
-      final portfolio = await _repository.getPortfolioProjects();
-      emit(EnterpriseLoaded(
-        services: services,
-        portfolioProjects: portfolio,
-      ));
+
+      // Restaurar el estado anterior sin recargar (los datos no cambiaron)
+      if (previousState is EnterpriseLoaded) {
+        emit(EnterpriseLoaded(
+          services: previousState.services,
+          portfolioProjects: previousState.portfolioProjects,
+        ));
+      }
     } catch (e) {
-      emit(ContactFormError(message: 'Error al enviar formulario: $e'));
+      final message = e.toString().replaceFirst('Exception: ', '');
+      emit(ContactFormError(message: message));
     }
   }
 

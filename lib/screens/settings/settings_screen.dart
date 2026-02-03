@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
+import '../../constants/app_constants.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../services/push_notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,24 +18,78 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = '';
+  bool _notificationsEnabled = false;
+  bool _isLoadingNotifications = true;
 
   @override
   void initState() {
     super.initState();
     _getAppVersion();
+    _checkNotificationStatus();
   }
 
   Future<void> _getAppVersion() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
+      final fromPackage = '${packageInfo.version}+${packageInfo.buildNumber}';
+      // Usar la versión de package_info; si no coincide con la constante, priorizar la constante
+      // (evita mostrar versión antigua por build cache)
       setState(() {
-        // Mostrar versión con build number: 1.0.1+101
-        _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+        _appVersion = fromPackage == AppConstants.appVersionWithBuild
+            ? fromPackage
+            : AppConstants.appVersionWithBuild;
       });
-    } catch (e) {
-      setState(() {
-        _appVersion = '1.0.1+101'; // Fallback con la versión actual del pubspec.yaml
-      });
+    } catch (_) {
+      setState(() => _appVersion = AppConstants.appVersionWithBuild);
+    }
+  }
+
+  Future<void> _checkNotificationStatus() async {
+    try {
+      final enabled = await PushNotificationService().areNotificationsEnabled();
+      if (mounted) {
+        setState(() {
+          _notificationsEnabled = enabled;
+          _isLoadingNotifications = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingNotifications = false);
+      }
+    }
+  }
+
+  Future<void> _onNotificationsChanged(bool value) async {
+    if (value) {
+      final granted = await PushNotificationService().requestNotificationPermission();
+      if (mounted) setState(() => _notificationsEnabled = granted);
+    } else {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: BrandColors.blackLight,
+            title: const Text(
+              'Desactivar notificaciones',
+              style: TextStyle(color: BrandColors.primaryWhite),
+            ),
+            content: const Text(
+              'Para desactivar las notificaciones, ve a la configuración de tu dispositivo.',
+              style: TextStyle(color: BrandColors.grayMedium),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text(
+                  'Entendido',
+                  style: TextStyle(color: BrandColors.primaryOrange),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -42,10 +98,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return BlocListener<AuthBlocSimple, AuthState>(
       listener: (context, state) {
         if (state is AuthUnauthenticated) {
-          // Navegar a la pantalla de home cuando se elimine la cuenta
           context.go('/home');
         } else if (state is AuthError) {
-          // Mostrar error si hay algún problema
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
@@ -59,15 +113,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       },
       child: PopScope(
-        canPop: false,
-        onPopInvoked: (didPop) {
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
           if (!didPop) {
-            context.go('/profile');
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/profile');
+            }
           }
         },
         child: Scaffold(
-          appBar: CustomAppBar(
-            title: 'Acerca de DevLokos',
+          appBar: const CustomAppBar(
+            title: 'Ajustes',
             showBackButton: true,
           ),
           body: Container(
@@ -81,18 +139,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Acerca de DevLokos
+                    _buildNotificationsSection(),
+                    const SizedBox(height: 24),
+                    _buildInfoSection(),
+                    const SizedBox(height: 24),
                     _buildAboutSection(),
+                    const SizedBox(height: 16),
+                    _buildTermsSection(),
+                    const SizedBox(height: 16),
+                    _buildPrivacySection(),
                     const SizedBox(height: 32),
-                    
-                    // Información de la aplicación
-                    _buildAppInfoSection(),
-                    const SizedBox(height: 32),
-                    
-                    // Acciones destructivas
-                    _buildDestructiveActionsSection(),
+                    _buildLogoutButton(),
+                    const SizedBox(height: 16),
+                    _buildDeleteButton(),
                   ],
                 ),
               ),
@@ -103,9 +163,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildAboutSection() {
+  Widget _buildNotificationsSection() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: BrandColors.blackLight.withOpacity(0.8),
         borderRadius: BorderRadius.circular(16),
@@ -114,188 +174,317 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         boxShadow: BrandColors.blackShadow,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: BrandColors.primaryOrange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.notifications_outlined,
+              color: BrandColors.primaryOrange,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Notificaciones',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: BrandColors.primaryWhite,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _notificationsEnabled ? 'Activadas' : 'Desactivadas',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: BrandColors.grayMedium,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          if (_isLoadingNotifications)
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
+                strokeWidth: 2,
+              ),
+            )
+          else
+            Switch.adaptive(
+              value: _notificationsEnabled,
+              onChanged: _onNotificationsChanged,
+              activeTrackColor: BrandColors.primaryOrange.withOpacity(0.5),
+              activeThumbColor: BrandColors.primaryOrange,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: BrandColors.blackLight.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withOpacity(0.2),
+        ),
+        boxShadow: BrandColors.blackShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: BrandColors.primaryOrange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.info_outline,
+              color: BrandColors.primaryOrange,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Versión',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: BrandColors.primaryWhite,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _appVersion,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: BrandColors.grayMedium,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutSection() {
+    return GestureDetector(
+      onTap: () => context.push('/settings/about'),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: BrandColors.blackLight.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: BrandColors.primaryOrange.withOpacity(0.2),
+          ),
+          boxShadow: BrandColors.blackShadow,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
             children: [
               Container(
-                width: 100,
-                height: 100,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: BrandColors.primaryOrange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(50),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
-                  child: Image.asset(
-                    'assets/images/devlokos_podcast_host.png',
-                    height: 100,
-                    width: 100,
-                    fit: BoxFit.cover,
-                  ),
+                child: const Icon(
+                  Icons.menu_book_outlined,
+                  color: BrandColors.primaryOrange,
+                  size: 24,
                 ),
               ),
               const SizedBox(width: 16),
-  
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Acerca de DevLokos',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: BrandColors.primaryWhite,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Conoce nuestra historia',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BrandColors.grayMedium,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: BrandColors.grayMedium,
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'DevLokos nació una noche con la simple idea de crear un podcast para hablar de desarrollo y tecnología. Sin planearlo mucho, grabamos el primer episodio entre amigos… y desde entonces, el resto es historia. Hoy contamos con más de 150 episodios junto a grandes expertos, una comunidad activa y nuevas iniciativas como DevLokos Tutorials, DevLokos Academy y DevLokos Enterprise, donde ayudamos a las personas a aprender, crear y crecer en el mundo del software. Lo que comenzó como un podcast, hoy es una marca reconocida que impulsa el aprendizaje y la innovación tecnológica en toda Latinoamérica.',
-            style: TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 14,
-              height: 1.5,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildAppInfoSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.2),
-        ),
-        boxShadow: BrandColors.blackShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Información',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: BrandColors.primaryWhite,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildInfoRow('Versión', _appVersion),
-          const SizedBox(height: 12),
-          _buildInfoRow('Desarrollado por', 'DevLokos Enterprise'),
-          const SizedBox(height: 12),
-          _buildInfoRow('Copyright', '© 2026 DevLokos'),
-        ],
-      ),
+  Widget _buildTermsSection() {
+    return _buildLegalLinkSection(
+      title: 'Términos y condiciones',
+      subtitle: 'Consulta los términos de uso',
+      icon: Icons.description_outlined,
+      url: AppConstants.termsAndConditionsUrl,
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: BrandColors.grayMedium,
-            fontSize: 14,
-          ),
-        ),
-        if (value == 'DevLokos Enterprise')
-          GestureDetector(
-            onTap: () async {
-              try {
-                final uri = Uri.parse('https://linktr.ee/devlokos');
-                print('🔗 Intentando abrir URL: $uri');
-                
-                if (await canLaunchUrl(uri)) {
-                  print('✅ URL puede ser abierta');
-                  await launchUrl(
-                    uri, 
-                    mode: LaunchMode.externalApplication,
-                  );
-                  print('✅ URL abierta exitosamente');
-                } else {
-                  print('❌ No se puede abrir la URL');
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('No se puede abrir el enlace'),
-                        backgroundColor: BrandColors.error,
-                      ),
-                    );
-                  }
-                }
-              } catch (e) {
-                print('❌ Error al abrir URL: $e');
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al abrir enlace: $e'),
-                      backgroundColor: BrandColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: BrandColors.primaryOrange,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                decoration: TextDecoration.underline,
-                decorationColor: BrandColors.primaryOrange,
-                decorationThickness: 1.5,
-              ),
-            ),
-          )
-        else
-          Text(
-            value,
-            style: const TextStyle(
-              color: BrandColors.primaryWhite,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-      ],
+  Widget _buildPrivacySection() {
+    return _buildLegalLinkSection(
+      title: 'Política de privacidad',
+      subtitle: 'Cómo protegemos tus datos',
+      icon: Icons.privacy_tip_outlined,
+      url: AppConstants.privacyPolicyUrl,
     );
   }
 
-  Widget _buildDestructiveActionsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Botón para eliminar cuenta
-        _buildDestructiveButton(
-          title: 'ELIMINAR CUENTA',
-          onTap: _showDeleteAccountDialog,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDestructiveButton({
+  Widget _buildLegalLinkSection({
     required String title,
-    required VoidCallback onTap,
+    required String subtitle,
+    required IconData icon,
+    required String url,
   }) {
+    return GestureDetector(
+      onTap: () => _openUrl(url),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: BrandColors.blackLight.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: BrandColors.primaryOrange.withOpacity(0.2),
+          ),
+          boxShadow: BrandColors.blackShadow,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BrandColors.primaryOrange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: BrandColors.primaryOrange,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: BrandColors.primaryWhite,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BrandColors.grayMedium,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: BrandColors.grayMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se puede abrir el enlace'),
+            backgroundColor: BrandColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir: $e'),
+            backgroundColor: BrandColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildLogoutButton() {
     return Container(
       width: double.infinity,
       height: 50,
       decoration: BoxDecoration(
-        color: Colors.red,
+        color: BrandColors.primaryOrange.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BrandColors.primaryOrange),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap,
+          onTap: _showLogoutDialog,
           borderRadius: BorderRadius.circular(12),
           child: Center(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: BrandColors.primaryWhite,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.logout, color: BrandColors.primaryOrange, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  'Cerrar sesión',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: BrandColors.primaryOrange,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
             ),
           ),
         ),
@@ -303,42 +492,108 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _showDeleteAccountDialog() async {
-    final shouldDelete = await showDialog<bool>(
+  Widget _buildDeleteButton() {
+    return Container(
+      width: double.infinity,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.5)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _showDeleteAccountDialog,
+          borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.delete_outline, color: Colors.red, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  'Eliminar cuenta',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLogoutDialog() async {
+    final shouldLogout = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: BrandColors.blackLight,
         title: const Text(
-          'Eliminar Cuenta',
+          'Cerrar sesión',
           style: TextStyle(color: BrandColors.primaryWhite),
         ),
         content: const Text(
-          'Esta acción es irreversible. Se eliminarán todos tus datos, incluyendo:\n\n'
-          '• Tu perfil y configuración\n'
-          '• Tus imágenes de perfil\n'
-          '• Todos los datos asociados a tu cuenta\n\n'
-          'Para confirmar, necesitas ingresar tu contraseña actual.',
+          '¿Estás seguro de que quieres cerrar sesión?',
           style: TextStyle(color: BrandColors.grayMedium),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: const Text(
               'Cancelar',
               style: TextStyle(color: BrandColors.grayMedium),
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(ctx).pop(true),
             child: const Text(
-              'Continuar',
-              style: TextStyle(color: BrandColors.primaryOrange),
+              'Cerrar sesión',
+              style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.w600),
             ),
           ),
         ],
       ),
     );
+    if (shouldLogout == true && mounted) {
+      context.read<AuthBlocSimple>().add(const AuthLogoutRequested());
+    }
+  }
 
+  Future<void> _showDeleteAccountDialog() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BrandColors.blackLight,
+        title: const Text(
+          'Eliminar cuenta',
+          style: TextStyle(color: BrandColors.primaryWhite),
+        ),
+        content: const Text(
+          'Esta acción es irreversible. Se eliminarán todos tus datos, incluyendo tu perfil, imágenes y datos asociados. Para confirmar, necesitas ingresar tu contraseña.',
+          style: TextStyle(color: BrandColors.grayMedium),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: BrandColors.grayMedium),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Continuar',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
     if (shouldDelete == true && mounted) {
       _showPasswordDialog();
     }
@@ -346,13 +601,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPasswordDialog() {
     final passwordController = TextEditingController();
-    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: BrandColors.blackLight,
         title: const Text(
-          'Confirmar Contraseña',
+          'Confirmar contraseña',
           style: TextStyle(color: BrandColors.primaryWhite),
         ),
         content: Column(
@@ -367,14 +621,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: passwordController,
               obscureText: true,
               style: const TextStyle(color: BrandColors.primaryWhite),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Contraseña',
-                labelStyle: TextStyle(color: BrandColors.grayMedium),
+                labelStyle: const TextStyle(color: BrandColors.grayMedium),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: BrandColors.grayMedium),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: BrandColors.grayMedium),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: BrandColors.primaryOrange),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: BrandColors.primaryOrange),
                 ),
               ),
             ),
@@ -382,7 +638,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text(
               'Cancelar',
               style: TextStyle(color: BrandColors.grayMedium),
@@ -390,18 +646,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              if (passwordController.text.isNotEmpty) {
+              Navigator.of(ctx).pop();
+              if (passwordController.text.isNotEmpty && mounted) {
                 context.read<AuthBlocSimple>().add(
-                  AuthDeleteAccountWithReauthRequested(
-                    password: passwordController.text,
-                  ),
-                );
+                      AuthDeleteAccountWithReauthRequested(
+                        password: passwordController.text,
+                      ),
+                    );
               }
             },
             child: const Text(
-              'Eliminar Cuenta',
-              style: TextStyle(color: Colors.red),
+              'Eliminar cuenta',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
             ),
           ),
         ],

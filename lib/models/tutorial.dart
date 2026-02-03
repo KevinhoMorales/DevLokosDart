@@ -1,20 +1,18 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/youtube_video.dart';
 
+/// Tutorial derivado de videos de YouTube (playlist de tutoriales).
+/// Ya no usa Firestore; los datos vienen de la API de YouTube.
 class Tutorial {
   final String id;
-  final String videoId; // YouTube video ID
+  final String videoId;
   final String title;
   final String description;
   final String thumbnailUrl;
-  final String category; // Backend, Frontend, Mobile, DevOps, AI, Databases
-  final List<String> techStack; // SwiftUI, Firebase, Java, etc.
-  final String level; // Beginner, Intermediate, Advanced
-  final String? relatedCourseId; // Optional link to Academy course
-  final int duration; // Duration in seconds
+  final String category;
+  final List<String> techStack;
+  final String level;
+  final int duration;
   final DateTime publishedAt;
-  final DateTime createdAt;
-  final bool isPublished;
-  final int? viewCount;
 
   Tutorial({
     required this.id,
@@ -25,63 +23,69 @@ class Tutorial {
     required this.category,
     required this.techStack,
     required this.level,
-    this.relatedCourseId,
     required this.duration,
     required this.publishedAt,
-    required this.createdAt,
-    this.isPublished = true,
-    this.viewCount,
   });
 
-  factory Tutorial.fromFirestore(Map<String, dynamic> data, String id) {
+  /// Crea un Tutorial desde un YouTubeVideo.
+  /// Deriva categoría, nivel y tech stack del título/descripción.
+  factory Tutorial.fromYouTubeVideo(YouTubeVideo video) {
     return Tutorial(
-      id: id,
-      videoId: data['videoId'] ?? '',
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      thumbnailUrl: data['thumbnailUrl'] ?? '',
-      category: data['category'] ?? '',
-      techStack: List<String>.from(data['techStack'] ?? []),
-      level: data['level'] ?? 'Beginner',
-      relatedCourseId: data['relatedCourseId'],
-      duration: data['duration'] ?? 0,
-      publishedAt: (data['publishedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isPublished: data['isPublished'] ?? true,
-      viewCount: data['viewCount'],
+      id: video.videoId,
+      videoId: video.videoId,
+      title: video.title,
+      description: video.description,
+      thumbnailUrl: video.thumbnailUrl,
+      category: _extractCategory(video.title, video.description),
+      techStack: _extractTechStack(video.title, video.description),
+      level: _extractLevel(video.title, video.description),
+      duration: 0,
+      publishedAt: video.publishedAt,
     );
   }
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'videoId': videoId,
-      'title': title,
-      'description': description,
-      'thumbnailUrl': thumbnailUrl,
-      'category': category,
-      'techStack': techStack,
-      'level': level,
-      'relatedCourseId': relatedCourseId,
-      'duration': duration,
-      'publishedAt': Timestamp.fromDate(publishedAt),
-      'createdAt': Timestamp.fromDate(createdAt),
-      'isPublished': isPublished,
-      'viewCount': viewCount,
-    };
+  static String _extractCategory(String title, String description) {
+    final text = '${title.toLowerCase()} ${description.toLowerCase()}';
+    if (text.contains('backend') || text.contains('api') || text.contains('server')) return 'Backend';
+    if (text.contains('frontend') || text.contains('react') || text.contains('vue') || text.contains('angular')) return 'Frontend';
+    if (text.contains('mobile') || text.contains('flutter') || text.contains('react native') || text.contains('android') || text.contains('ios')) return 'Mobile';
+    if (text.contains('devops') || text.contains('docker') || text.contains('kubernetes') || text.contains('ci/cd')) return 'DevOps';
+    if (text.contains('ai') || text.contains('machine learning') || text.contains('inteligencia artificial')) return 'AI';
+    if (text.contains('database') || text.contains('sql') || text.contains('firebase') || text.contains('supabase')) return 'Databases';
+    return 'General';
+  }
+
+  static List<String> _extractTechStack(String title, String description) {
+    final text = '${title.toLowerCase()} ${description.toLowerCase()}';
+    final keywords = [
+      'flutter', 'dart', 'javascript', 'typescript', 'react', 'vue', 'angular',
+      'python', 'java', 'kotlin', 'swift', 'android', 'ios', 'firebase',
+      'node', 'next', 'tailwind', 'supabase', 'postgresql', 'mongodb',
+      'docker', 'kubernetes', 'git', 'github', 'figma',
+    ];
+    final found = <String>{};
+    for (final kw in keywords) {
+      if (text.contains(kw)) found.add(kw[0].toUpperCase() + kw.substring(1));
+    }
+    return found.take(5).toList();
+  }
+
+  static String _extractLevel(String title, String description) {
+    final text = '${title.toLowerCase()} ${description.toLowerCase()}';
+    if (text.contains('avanzado') || text.contains('advanced') || text.contains('expert')) return 'Advanced';
+    if (text.contains('intermedio') || text.contains('intermediate') || text.contains('medio')) return 'Intermediate';
+    if (text.contains('principiante') || text.contains('beginner') || text.contains('básico') || text.contains('basico') || text.contains('intro')) return 'Beginner';
+    return 'Beginner';
   }
 
   String get formattedDuration {
+    if (duration <= 0) return '--';
     final hours = duration ~/ 3600;
     final minutes = (duration % 3600) ~/ 60;
     final seconds = duration % 60;
-    
-    if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    } else if (minutes > 0) {
-      return '${minutes}m ${seconds}s';
-    } else {
-      return '${seconds}s';
-    }
+    if (hours > 0) return '${hours}h ${minutes}m';
+    if (minutes > 0) return '${minutes}m ${seconds}s';
+    return '${seconds}s';
   }
 
   Tutorial copyWith({
@@ -93,12 +97,8 @@ class Tutorial {
     String? category,
     List<String>? techStack,
     String? level,
-    String? relatedCourseId,
     int? duration,
     DateTime? publishedAt,
-    DateTime? createdAt,
-    bool? isPublished,
-    int? viewCount,
   }) {
     return Tutorial(
       id: id ?? this.id,
@@ -109,13 +109,8 @@ class Tutorial {
       category: category ?? this.category,
       techStack: techStack ?? this.techStack,
       level: level ?? this.level,
-      relatedCourseId: relatedCourseId ?? this.relatedCourseId,
       duration: duration ?? this.duration,
       publishedAt: publishedAt ?? this.publishedAt,
-      createdAt: createdAt ?? this.createdAt,
-      isPublished: isPublished ?? this.isPublished,
-      viewCount: viewCount ?? this.viewCount,
     );
   }
 }
-

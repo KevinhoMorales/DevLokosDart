@@ -78,6 +78,8 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   }
 
   void _loadEpisodeFromId() {
+    final youtubeProvider = context.read<YouTubeProvider>();
+
     // Buscar el episodio en el bloc
     final episodeBloc = context.read<EpisodeBloc>();
     if (episodeBloc.state is EpisodeLoaded) {
@@ -91,16 +93,10 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
       }
     }
 
-    // Buscar el video de YouTube correspondiente
-    final youtubeProvider = context.read<YouTubeProvider>();
-    if (_currentEpisode?.youtubeVideoId != null) {
-      try {
-        _currentYouTubeVideo = youtubeProvider.videos.firstWhere(
-          (video) => video.videoId == _currentEpisode!.youtubeVideoId,
-        );
-      } catch (e) {
-        _currentYouTubeVideo = null;
-      }
+    // Buscar el video de YouTube (episodios o tutoriales)
+    final videoId = _currentEpisode?.youtubeVideoId ?? widget.episodeId;
+    if (videoId != null) {
+      _currentYouTubeVideo = youtubeProvider.getVideoById(videoId);
     }
   }
 

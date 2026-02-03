@@ -117,8 +117,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       },
       child: PopScope(
-        canPop: false,
-        onPopInvoked: (didPop) {
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
           if (!didPop) {
             _navigateToHome();
           }
@@ -134,15 +134,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8B4513), // Color marrón oscuro
+                    color: const Color(0xFF8B4513),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(
-                    Icons.info,
+                    Icons.settings,
                     color: BrandColors.primaryOrange,
                     size: 20,
                   ),
                 ),
+                tooltip: 'Ajustes',
               ),
             ],
           ),
@@ -379,15 +380,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-
-          // Actions
-          _buildActionButton(
-            title: 'Cerrar Sesión',
-            icon: Icons.logout,
-            onTap: () => _showLogoutDialog(),
-            isDestructive: true,
-          ),
         ],
       ),
     );
@@ -560,51 +552,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _showLogoutDialog() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: BrandColors.blackLight,
-        title: const Text(
-          'Cerrar Sesión',
-          style: TextStyle(color: BrandColors.primaryWhite),
-        ),
-        content: const Text(
-          '¿Estás seguro de que quieres cerrar sesión?',
-          style: TextStyle(color: BrandColors.grayMedium),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'Cancelar',
-              style: TextStyle(color: BrandColors.grayMedium),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              'Cerrar Sesión',
-              style: TextStyle(color: BrandColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true && mounted) {
-      // Usar AuthBloc para cerrar sesión
-      context.read<AuthBlocSimple>().add(const AuthLogoutRequested());
+  void _navigateToHome() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/home');
     }
   }
 
-  void _navigateToHome() {
-    // Navegar a la home con los tabs
-    context.go('/home');
-  }
-
   void _openSettings() {
-    context.go('/settings');
+    context.push('/settings');
   }
 
   /// Opens the email app with the collaboration email
