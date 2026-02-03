@@ -18,106 +18,89 @@ class EpisodeCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: BrandColors.blackLight.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(16),
+          color: BrandColors.blackLight.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: BrandColors.primaryOrange.withOpacity(0.2),
+            color: BrandColors.primaryOrange.withOpacity(0.12),
+            width: 1,
           ),
-          boxShadow: BrandColors.blackShadow,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Thumbnail
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: episode.thumbnailUrl,
-                    fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: BrandColors.primaryOrange.withOpacity(0.1),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              BrandColors.primaryOrange,
-                            ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 64,
+                height: 64,
+                child: CachedNetworkImage(
+                  imageUrl: episode.thumbnailUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: BrandColors.grayDark,
+                    child: const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            BrandColors.primaryOrange,
                           ),
+                          strokeWidth: 2,
                         ),
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        color: BrandColors.primaryOrange.withOpacity(0.1),
-                        child: const Icon(
-                          Icons.play_circle_outline,
-                          color: BrandColors.primaryOrange,
-                          size: 32,
-                        ),
-                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: BrandColors.grayDark,
+                    child: const Icon(
+                      Icons.play_circle_outline,
+                      color: BrandColors.primaryOrange,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
-
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      episode.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: BrandColors.primaryWhite,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    episode.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: BrandColors.primaryWhite,
+                      fontSize: 14,
+                      height: 1.25,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      episode.description,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: BrandColors.grayMedium,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.category,
-                          size: 14,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        episode.category,
+                        style: TextStyle(
                           color: BrandColors.grayMedium,
+                          fontSize: 11,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          episode.category,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BrandColors.grayMedium,
-                          ),
-                        ),
-                        const Spacer(),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.play_circle_outline,
+              color: BrandColors.primaryOrange.withOpacity(0.8),
+              size: 28,
+            ),
+          ],
         ),
       ),
     );

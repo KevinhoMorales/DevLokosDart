@@ -26,7 +26,6 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _fadeAnimation;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String _searchQuery = '';
   bool _isLoadingMore = false;
 
   @override
@@ -199,14 +198,11 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(24.0),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: SearchBarWidget(
         controller: _searchController,
         onChanged: (value) {
-          setState(() {
-            _searchQuery = value;
-          });
           // Disparar búsqueda con BLoC
           if (value.isNotEmpty) {
             context.read<EpisodeBloc>().add(SearchEpisodes(query: value));
@@ -310,17 +306,17 @@ class _HomeScreenState extends State<HomeScreen>
 
           return SingleChildScrollView(
             controller: _scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (searchQuery.isEmpty) ...[
-                    _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
-                    const SizedBox(height: 32),
-                  ],
-                  _buildEpisodesSection(episodes),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (searchQuery.isEmpty) ...[
+                  _buildDiscoverSection(featuredEpisodes.cast<Episode>()),
+                  const SizedBox(height: 20),
                 ],
-              ),
+                _buildEpisodesSection(episodes, searchQuery),
+              ],
+            ),
           );
         }
 
@@ -334,36 +330,34 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildFeaturedSection(List<Episode> featuredEpisodes) {
+  /// Sección "Descubre": horizontal scroll compacto, hero visual
+  Widget _buildDiscoverSection(List<Episode> featuredEpisodes) {
     if (featuredEpisodes.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'EPISODIOS DESTACADOS',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: BrandColors.primaryWhite,
-            fontSize: 16,
+          'Descubre',
+          style: TextStyle(
+            color: BrandColors.primaryOrange,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         SizedBox(
-          height: 200,
-          child: ListView.builder(
+          height: 155,
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: featuredEpisodes.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final episode = featuredEpisodes[index];
-              return Padding(
-                padding: EdgeInsets.only(
-                  right: index < featuredEpisodes.length - 1 ? 16 : 0,
-                ),
-                child: FeaturedEpisodeCard(
-                  episode: episode,
-                  onTap: () => _navigateToEpisodeDetail(episode),
-                ),
+              return FeaturedEpisodeCard(
+                episode: episode,
+                onTap: () => _navigateToEpisodeDetail(episode),
               );
             },
           ),
@@ -372,31 +366,40 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildEpisodesSection(List<Episode> episodes) {
+  /// Listado de episodios: densidad media, jerarquía secundaria
+  Widget _buildEpisodesSection(List<Episode> episodes, String searchQuery) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _searchQuery.isEmpty ? 'TODOS LOS EPISODIOS' : 'RESULTADO DE BÚSQUEDA',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: BrandColors.primaryWhite,
-            fontSize: 16,
-          ),
+        Row(
+          children: [
+            Container(
+              height: 1,
+              width: 20,
+              color: BrandColors.primaryOrange.withOpacity(0.4),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              searchQuery.isEmpty ? 'Episodios' : 'Búsqueda',
+              style: TextStyle(
+                color: BrandColors.grayMedium,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        ListView.builder(
+        const SizedBox(height: 12),
+        ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: episodes.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final episode = episodes[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: EpisodeCard(
-                episode: episode,
-                onTap: () => _navigateToEpisodeDetail(episode),
-              ),
+            return EpisodeCard(
+              episode: episode,
+              onTap: () => _navigateToEpisodeDetail(episode),
             );
           },
         ),

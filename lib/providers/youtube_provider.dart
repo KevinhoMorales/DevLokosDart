@@ -299,6 +299,51 @@ class YouTubeProvider extends ChangeNotifier {
     return response;
   }
 
+  /// Busca en todo el playlist. Coincidencia parcial en título completo y descripción.
+  /// "joe" encuentra "Joel"; busca en cada parte del título separada por "||".
+  Future<List<YouTubeVideo>> searchInPlaylistWithFullFetch(String query) async {
+    final q = _normalizeForSearch(query);
+    if (q.isEmpty) return [];
+    final results = <YouTubeVideo>[];
+    final seenIds = <String>{};
+
+    bool matchesVideo(YouTubeVideo v) {
+      final titleNorm = _normalizeForSearch(v.title);
+      final descNorm = _normalizeForSearch(v.description);
+      if (titleNorm.contains(q) || descNorm.contains(q)) return true;
+      // Buscar en cada parte del título: "DevLokos S2 Ep065 || Descripción || Joel Gómez"
+      for (final part in v.title.split('||')) {
+        if (_normalizeForSearch(part.trim()).contains(q)) return true;
+      }
+      return false;
+    }
+
+    // Paginar desde el inicio del playlist para cubrir TODOS los episodios
+    String? token;
+    var totalFetched = 0;
+    const maxVideos = 500;
+
+    do {
+      final response = await _youtubeService.getPlaylistVideos(
+        maxResults: 50,
+        pageToken: token,
+      );
+      for (final v in response.videos) {
+        totalFetched++;
+        if (totalFetched > maxVideos) break;
+        if (seenIds.contains(v.videoId)) continue;
+        if (matchesVideo(v)) {
+          seenIds.add(v.videoId);
+          results.add(v);
+        }
+      }
+      token = response.nextPageToken;
+    } while (token != null && token.isNotEmpty && totalFetched < maxVideos);
+
+    return results;
+  }
+
+
   /// Busca videos por título o descripción (local)
   Future<List<YouTubeVideo>> searchVideos(String query) async {
     try {
@@ -530,4 +575,16 @@ class YouTubeProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+}
+
+String _normalizeForSearch(String text) {
+  return text
+      .toLowerCase()
+      .trim()
+      .replaceAll('á', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ú', 'u')
+      .replaceAll('ñ', 'n');
 }

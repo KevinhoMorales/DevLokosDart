@@ -4,12 +4,14 @@ import '../utils/brand_colors.dart';
 class SearchBarWidget extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onSubmitted;
   final String hintText;
 
   const SearchBarWidget({
     super.key,
     required this.controller,
     required this.onChanged,
+    this.onSubmitted,
     this.hintText = 'Buscar episodios...',
   });
 
@@ -55,6 +57,8 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
       child: TextField(
         controller: widget.controller,
         onChanged: widget.onChanged,
+        onSubmitted: widget.onSubmitted,
+        textInputAction: TextInputAction.search,
         style: const TextStyle(
           color: BrandColors.primaryWhite,
           fontSize: 15,

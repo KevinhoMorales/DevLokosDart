@@ -24,6 +24,9 @@ class _PodcastScreenState extends State<PodcastScreen>
   late Animation<double> _fadeAnimation;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isSearching = false;
+  List<YouTubeVideo>? _apiSearchResults;
+  String? _searchError;
   String _selectedSeason = 'Temporada 2';
   List<YouTubeVideo>? _discoverVideos; // Cache para videos de descubrimiento
   List<YouTubeVideo>? _allVideosSorted; // Cache para todos los videos ordenados por fecha
@@ -307,10 +310,53 @@ class _PodcastScreenState extends State<PodcastScreen>
         onChanged: (value) {
           setState(() {
             _searchQuery = value.trim();
+            if (value.trim().isEmpty) {
+              _apiSearchResults = null;
+              _searchError = null;
+            }
           });
+        },
+        onSubmitted: (value) {
+          final query = value.trim();
+          if (query.isNotEmpty) _performApiSearch(query);
         },
       ),
     );
+  }
+
+  Future<void> _performApiSearch(String query) async {
+    if (query.isEmpty) return;
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+      _apiSearchResults = null;
+    });
+    try {
+      final youtubeProvider = context.read<YouTubeProvider>();
+      final apiIds = <String>{};
+      final results = <YouTubeVideo>[];
+
+      // Buscar solo en el playlist de DevLokos (coincidencia parcial: "joe" encuentra "Joel")
+      final playlistResults = await youtubeProvider.searchInPlaylistWithFullFetch(query);
+      for (final v in playlistResults) {
+        if (apiIds.add(v.videoId)) results.add(v);
+      }
+
+      if (mounted) {
+        setState(() {
+          _apiSearchResults = results;
+          _isSearching = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _searchError = 'Error al buscar. Intenta de nuevo.';
+          _isSearching = false;
+          _apiSearchResults = null;
+        });
+      }
+    }
   }
 
   Widget _buildInitialLoading() {
@@ -438,8 +484,8 @@ class _PodcastScreenState extends State<PodcastScreen>
           final episodes = state is EpisodeLoaded ? state.filteredEpisodes : (state as EpisodeSearching).episodes;
           final featuredEpisodes = state is EpisodeLoaded ? state.featuredEpisodes : [];
 
-          // Si hay una búsqueda activa, usar búsqueda directa
-          if (_searchQuery.isNotEmpty) {
+          // Solo mostrar resultados de búsqueda cuando el usuario presionó Enter
+          if (_apiSearchResults != null || _isSearching) {
             return _buildSearchResultsContent();
           }
 
@@ -572,160 +618,165 @@ class _PodcastScreenState extends State<PodcastScreen>
   }
 
   Widget _buildSearchResultsContent() {
-    return Consumer<YouTubeProvider>(
-      builder: (context, youtubeProvider, child) {
-        // Realizar búsqueda directamente en los videos de YouTube
-        final searchResults = _performDirectSearch(_searchQuery, youtubeProvider.videos);
-        
-        if (searchResults.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.search_off,
-                    color: BrandColors.grayMedium,
-                    size: 64,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No se encontraron episodios',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: BrandColors.primaryWhite,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Intenta con otros términos de búsqueda',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: BrandColors.grayMedium,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Sugerencias:',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: BrandColors.primaryOrange,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '• Busca por nombre del invitado\n• Busca por tema del episodio\n• Busca por número de episodio',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: BrandColors.grayMedium,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-        
-        // Mostrar resultados como una lista simple
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    if (_isSearching) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: BrandColors.primaryOrange,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Resultados (${searchResults.length})',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: BrandColors.primaryWhite,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
             ),
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).padding.bottom + 100.0, // Aumentar padding significativamente
-                ),
-                itemCount: searchResults.length,
-                itemBuilder: (context, index) {
-                  final video = searchResults[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                    child: YouTubeVideoCard(
-                      video: video,
-                      onTap: () => _onVideoTap(video),
-                      thumbnailHeight: 200,
-                    ),
-                  );
-                },
+            const SizedBox(height: 16),
+            Text(
+              'Buscando en el canal...',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: BrandColors.grayMedium,
               ),
             ),
           ],
-        );
-      },
+        ),
+      );
+    }
+
+    if (_searchError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, color: BrandColors.grayMedium, size: 64),
+              const SizedBox(height: 16),
+              Text(
+                _searchError!,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: BrandColors.grayMedium,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: () => _performApiSearch(_searchQuery),
+                icon: const Icon(Icons.refresh, color: BrandColors.primaryOrange),
+                label: const Text('Reintentar', style: TextStyle(color: BrandColors.primaryOrange)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_apiSearchResults == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.search, color: BrandColors.primaryOrange.withOpacity(0.8), size: 56),
+              const SizedBox(height: 16),
+              Text(
+                'Presiona Enter para buscar',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: BrandColors.primaryWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Busca por invitado, tema o número de episodio',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: BrandColors.grayMedium,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final searchResults = _apiSearchResults!;
+    if (searchResults.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.search_off, color: BrandColors.grayMedium, size: 64),
+              const SizedBox(height: 16),
+              Text(
+                'No se encontraron episodios',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: BrandColors.primaryWhite,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Intenta con otros términos de búsqueda',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: BrandColors.grayMedium,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: BrandColors.primaryOrange,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Resultados (${searchResults.length})',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: BrandColors.primaryWhite,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom + 100.0,
+            ),
+            itemCount: searchResults.length,
+            itemBuilder: (context, index) {
+              final video = searchResults[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+                child: YouTubeVideoCard(
+                  video: video,
+                  onTap: () => _onVideoTap(video),
+                  thumbnailHeight: 200,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
-
-  /// Realiza búsqueda directa en los videos de YouTube
-  List<YouTubeVideo> _performDirectSearch(String query, List<YouTubeVideo> videos) {
-    if (query.isEmpty) return [];
-    
-    final lowercaseQuery = query.toLowerCase().trim();
-    print('🔍 Búsqueda directa: "$lowercaseQuery" en ${videos.length} videos');
-    
-    final searchResults = videos.where((video) {
-      // Filtrar videos con títulos vacíos o "Sin título"
-      if (video.title.isEmpty || video.title.toLowerCase() == 'sin título') {
-        return false;
-      }
-      
-      final titleLower = video.title.toLowerCase();
-      final descriptionLower = video.description.toLowerCase();
-      
-      // Búsqueda en el título completo
-      if (titleLower.contains(lowercaseQuery)) {
-        print('✅ Encontrado en título: ${video.title}');
-        return true;
-      }
-      
-      // Búsqueda en las partes del título separadas por ||
-      // Formato: "DevLokos S1 Ep019 || Descripción del episodio || Invitado"
-      final titleParts = titleLower.split('||');
-      for (final part in titleParts) {
-        final cleanPart = part.trim();
-        if (cleanPart.contains(lowercaseQuery)) {
-          print('✅ Encontrado en parte del título: $cleanPart');
-          return true;
-        }
-      }
-      
-      // Búsqueda en la descripción
-      if (descriptionLower.contains(lowercaseQuery)) {
-        print('✅ Encontrado en descripción: ${video.title}');
-        return true;
-      }
-      
-      return false;
-    }).toList();
-    
-    print('✅ Búsqueda directa: ${searchResults.length} resultados encontrados');
-    return searchResults;
-  }
-
 
   Widget _buildEpisodesSection(List<Episode> episodes) {
     return Consumer<YouTubeProvider>(

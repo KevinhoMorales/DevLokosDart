@@ -18,117 +18,94 @@ class FeaturedEpisodeCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 280,
+        width: 180,
         decoration: BoxDecoration(
-          color: BrandColors.blackLight.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(16),
+          color: BrandColors.blackLight,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: BrandColors.primaryOrange.withOpacity(0.3),
+            color: BrandColors.primaryOrange.withOpacity(0.2),
+            width: 1,
           ),
-          boxShadow: BrandColors.blackShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min, // Add this to prevent overflow
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Thumbnail
-            Container(
-              height: 120,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: CachedNetworkImage(
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CachedNetworkImage(
                       imageUrl: episode.thumbnailUrl,
-                      width: double.infinity,
-                      height: double.infinity,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        color: BrandColors.primaryOrange.withOpacity(0.1),
+                        color: BrandColors.grayDark,
                         child: const Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
                               BrandColors.primaryOrange,
                             ),
+                            strokeWidth: 2,
                           ),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: BrandColors.primaryOrange.withOpacity(0.1),
+                        color: BrandColors.grayDark,
                         child: const Icon(
                           Icons.play_circle_outline,
                           color: BrandColors.primaryOrange,
-                          size: 48,
+                          size: 32,
                         ),
                       ),
                     ),
-                  ),
-                  // Play button overlay
-                  const Positioned.fill(
-                    child: Center(
-                      child: Icon(
-                        Icons.play_circle_outline,
-                        color: BrandColors.primaryOrange,
-                        size: 48,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Content
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      episode.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: BrandColors.primaryWhite,
-                        fontSize: 13,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.category,
-                          size: 12,
-                          color: BrandColors.grayMedium,
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          episode.category,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: BrandColors.grayMedium,
-                            fontSize: 10,
-                          ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: BrandColors.primaryOrange,
+                          size: 28,
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    episode.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: BrandColors.primaryWhite,
+                      fontSize: 12,
+                      height: 1.25,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    episode.category,
+                    style: TextStyle(
+                      color: BrandColors.grayMedium,
+                      fontSize: 10,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ],
