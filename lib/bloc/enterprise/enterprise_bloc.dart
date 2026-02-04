@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/enterprise.dart';
 import '../../repository/enterprise_repository.dart';
+import '../../services/analytics_service.dart';
 import 'enterprise_event.dart';
 import 'enterprise_state.dart';
 
@@ -55,8 +56,13 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
   ) async {
     final previousState = state;
     try {
+      AnalyticsService.logEnterpriseContactStarted();
       emit(const ContactFormSubmitting());
       await _repository.submitContactForm(event.submission);
+      AnalyticsService.logEnterpriseContactSubmitted(
+        hasCompany: event.submission.company != null &&
+            event.submission.company!.trim().isNotEmpty,
+      );
       emit(const ContactFormSubmitted());
 
       // Restaurar el estado anterior sin recargar (los datos no cambiaron)

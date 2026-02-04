@@ -7,14 +7,31 @@ abstract class TutorialEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadTutorials extends TutorialEvent {
-  const LoadTutorials();
+/// Carga las playlists del canal.
+class LoadPlaylists extends TutorialEvent {
+  const LoadPlaylists();
 }
 
+/// Selecciona una playlist y carga sus videos.
+class SelectPlaylist extends TutorialEvent {
+  final String playlistId;
+  final String playlistTitle;
+
+  const SelectPlaylist({
+    required this.playlistId,
+    required this.playlistTitle,
+  });
+
+  @override
+  List<Object?> get props => [playlistId, playlistTitle];
+}
+
+/// Refresca los videos de la playlist actual.
 class RefreshTutorials extends TutorialEvent {
   const RefreshTutorials();
 }
 
+/// Búsqueda local por título (solo en la playlist activa).
 class SearchTutorials extends TutorialEvent {
   final String query;
 
@@ -24,44 +41,7 @@ class SearchTutorials extends TutorialEvent {
   List<Object?> get props => [query];
 }
 
-class FilterTutorialsByCategory extends TutorialEvent {
-  final String category;
-
-  const FilterTutorialsByCategory(this.category);
-
-  @override
-  List<Object?> get props => [category];
+/// Limpia la búsqueda.
+class ClearSearch extends TutorialEvent {
+  const ClearSearch();
 }
-
-class FilterTutorialsByTechStack extends TutorialEvent {
-  final String techStack;
-
-  const FilterTutorialsByTechStack(this.techStack);
-
-  @override
-  List<Object?> get props => [techStack];
-}
-
-class FilterTutorialsByLevel extends TutorialEvent {
-  final String level;
-
-  const FilterTutorialsByLevel(this.level);
-
-  @override
-  List<Object?> get props => [level];
-}
-
-class ClearTutorialFilters extends TutorialEvent {
-  const ClearTutorialFilters();
-}
-
-class SelectTutorial extends TutorialEvent {
-  final String tutorialId;
-
-  const SelectTutorial(this.tutorialId);
-
-  @override
-  List<Object?> get props => [tutorialId];
-}
-
-

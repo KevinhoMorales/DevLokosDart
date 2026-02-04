@@ -379,7 +379,7 @@ class _PodcastScreenState extends State<PodcastScreen>
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(57),
                 child: Image.asset(
-                  'assets/icons/devlokos_icon.png',
+                  'assets/icons/devlokos_icon.webp',
                   width: 114,
                   height: 114,
                   fit: BoxFit.contain,

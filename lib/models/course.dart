@@ -45,7 +45,17 @@ class Course {
 
   factory Course.fromFirestore(Map<String, dynamic> data, String id) {
     final modulesData = data['modules'] as List<dynamic>? ?? [];
-    final modules = modulesData.map((m) => Module.fromFirestore(m as Map<String, dynamic>, m['id'] ?? '')).toList();
+    final modules = <Module>[];
+    for (var i = 0; i < modulesData.length; i++) {
+      final m = modulesData[i];
+      if (m is! Map<String, dynamic>) continue;
+      final moduleId = m['id']?.toString() ?? 'm$i';
+      try {
+        modules.add(Module.fromFirestore(m, moduleId));
+      } catch (_) {
+        // Ignorar módulos mal formados
+      }
+    }
 
     return Course(
       id: id,
@@ -166,7 +176,17 @@ class Module {
 
   factory Module.fromFirestore(Map<String, dynamic> data, String id) {
     final lessonsData = data['lessons'] as List<dynamic>? ?? [];
-    final lessons = lessonsData.map((l) => Lesson.fromFirestore(l as Map<String, dynamic>, l['id'] ?? '')).toList();
+    final lessons = <Lesson>[];
+    for (var i = 0; i < lessonsData.length; i++) {
+      final l = lessonsData[i];
+      if (l is! Map<String, dynamic>) continue;
+      final lessonId = l['id']?.toString() ?? 'l$i';
+      try {
+        lessons.add(Lesson.fromFirestore(l, lessonId));
+      } catch (_) {
+        // Ignorar lecciones mal formadas
+      }
+    }
 
     return Module(
       id: id,

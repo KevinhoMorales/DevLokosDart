@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/brand_colors.dart';
+import '../services/analytics_service.dart';
 import '../screens/podcast/podcast_screen.dart';
 import '../screens/academy/academy_screen.dart';
 import '../screens/tutorials/tutorials_screen.dart';
@@ -15,11 +16,24 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.logPodcastHomeViewed();
+  }
+
   final List<Widget> _screens = [
     const PodcastScreen(),
     const TutorialsScreen(),
     const AcademyScreen(),
     const EnterpriseScreen(),
+  ];
+
+  static const List<String> _tabNames = [
+    'podcast',
+    'tutorials',
+    'academy',
+    'enterprise',
   ];
 
   final List<BottomNavigationBarItem> _navItems = [
@@ -49,6 +63,29 @@ class _MainNavigationState extends State<MainNavigation> {
     setState(() {
       _selectedIndex = index;
     });
+    AnalyticsService.logTabSelected(
+      tabName: _tabNames[index],
+      index: index,
+    );
+    AnalyticsService.setPreferredModule(_tabNames[index]);
+    _logModuleViewed(index);
+  }
+
+  void _logModuleViewed(int index) {
+    switch (index) {
+      case 0:
+        AnalyticsService.logPodcastHomeViewed();
+        break;
+      case 1:
+        AnalyticsService.logTutorialsHomeViewed();
+        break;
+      case 2:
+        AnalyticsService.logAcademyHomeViewed();
+        break;
+      case 3:
+        AnalyticsService.logEnterpriseViewed();
+        break;
+    }
   }
 
   @override

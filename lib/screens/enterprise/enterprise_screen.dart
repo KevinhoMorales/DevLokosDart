@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../bloc/enterprise/enterprise_bloc_exports.dart';
-import '../../repository/enterprise_repository.dart';
 import '../../models/enterprise.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -493,24 +491,8 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
 
   /// Formulario de contacto: foco principal de la pantalla
   Widget _buildContactForm() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.35),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: BrandColors.primaryOrange.withOpacity(0.12),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

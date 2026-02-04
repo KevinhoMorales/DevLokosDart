@@ -2,7 +2,7 @@ name: devlokos_podcast
 description: "DevLokos App - Lista de episodios con scraping de YouTube"
 publish_to: 'none'
 
-version: 1.1.0+1
+version: 1.1.2+112
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -21,12 +21,10 @@ dependencies:
   
   # YouTube & Media
   youtube_player_flutter: ^9.1.3
-  pod_player: ^0.2.2
   cached_network_image: ^3.3.1
   
-  # HTTP & Scraping
+  # HTTP
   http: ^1.1.2
-  html: ^0.15.4
   
   # Firebase - using latest versions to fix PigeonUserDetails error
   firebase_core: ^3.6.0
@@ -35,6 +33,7 @@ dependencies:
   firebase_remote_config: ^5.0.5
   firebase_storage: ^12.3.2
   firebase_messaging: ^15.2.0
+  firebase_analytics: ^11.3.3
   flutter_local_notifications: ^18.0.1
   
   # Utils
@@ -45,12 +44,10 @@ dependencies:
   share_plus: ^10.0.0
   image_picker: ^1.0.7
   path_provider: ^2.1.2
-  flutter_lints: ^3.0.2
 
 dependency_overrides:
-  # Fix wakelock_plus iOS build error (messages.g.h, WakelockPlusPlugin.h not found)
-  # v1.3.x has known issues with CocoaPods/iOS - use 1.2.11
-  wakelock_plus: 1.2.11
+  # Fix wakelock_plus iOS build (messages.g.h not found en 1.2.x)
+  wakelock_plus: 1.3.3
 
 dev_dependencies:
   flutter_test:

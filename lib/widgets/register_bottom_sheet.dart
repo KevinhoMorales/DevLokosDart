@@ -219,7 +219,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
             child: ClipRRect(
               borderRadius: BorderRadius.circular(15),
               child: Image.asset(
-                'assets/icons/devlokos_icon.png',
+                'assets/icons/devlokos_icon.webp',
                 width: 100,
                 height: 70,
                 fit: BoxFit.contain,

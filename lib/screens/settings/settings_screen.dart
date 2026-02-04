@@ -18,6 +18,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = '';
+  String _appBuild = '';
   bool _notificationsEnabled = false;
   bool _isLoadingNotifications = true;
 
@@ -31,16 +32,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _getAppVersion() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      final fromPackage = '${packageInfo.version}+${packageInfo.buildNumber}';
-      // Usar la versión de package_info; si no coincide con la constante, priorizar la constante
-      // (evita mostrar versión antigua por build cache)
-      setState(() {
-        _appVersion = fromPackage == AppConstants.appVersionWithBuild
-            ? fromPackage
-            : AppConstants.appVersionWithBuild;
-      });
+      if (mounted) {
+        setState(() {
+          _appVersion = packageInfo.version;
+          _appBuild = packageInfo.version; // Igual a versión (X.Y.Z = build para UI)
+        });
+      }
     } catch (_) {
-      setState(() => _appVersion = AppConstants.appVersionWithBuild);
+      if (mounted) {
+        setState(() {
+          _appVersion = AppConstants.appVersion;
+          _appBuild = AppConstants.appVersion;
+        });
+      }
     }
   }
 
@@ -275,6 +279,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: BrandColors.grayMedium,
                       ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'Build',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: BrandColors.primaryWhite,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _appBuild,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: BrandColors.grayMedium,
+                      ),
+                ),
               ],
             ),
           ),
@@ -458,34 +477,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildLogoutButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 50,
-      decoration: BoxDecoration(
-        color: BrandColors.primaryOrange.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BrandColors.primaryOrange),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _showLogoutDialog,
-          borderRadius: BorderRadius.circular(12),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.logout, color: BrandColors.primaryOrange, size: 22),
-                const SizedBox(width: 12),
-                Text(
-                  'Cerrar sesión',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: BrandColors.primaryOrange,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ],
-            ),
+      child: ElevatedButton(
+        onPressed: _showLogoutDialog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: BrandColors.primaryOrange,
+          foregroundColor: BrandColors.primaryWhite,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Text(
+          'CERRAR SESIÓN',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -493,34 +501,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDeleteButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 50,
-      decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.withOpacity(0.5)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _showDeleteAccountDialog,
-          borderRadius: BorderRadius.circular(12),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.delete_outline, color: Colors.red, size: 22),
-                const SizedBox(width: 12),
-                Text(
-                  'Eliminar cuenta',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ],
-            ),
+      child: OutlinedButton(
+        onPressed: _showDeleteAccountDialog,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: BrandColors.error,
+          side: const BorderSide(color: BrandColors.error),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: const Text(
+          'ELIMINAR CUENTA',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

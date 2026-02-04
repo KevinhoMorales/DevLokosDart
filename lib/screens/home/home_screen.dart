@@ -11,7 +11,7 @@ import '../../utils/brand_colors.dart';
 import '../../widgets/episode_card.dart';
 import '../../widgets/featured_episode_card.dart';
 import '../../widgets/search_bar_widget.dart';
-import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_app_bar.dart' show AppBarIconAction, CustomAppBar;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -143,13 +143,10 @@ class _HomeScreenState extends State<HomeScreen>
         child: Scaffold(
           appBar: CustomAppBar(
             title: '',
-            actions: [
-              IconButton(
-                onPressed: _clearCacheAndReload,
-                icon: const Icon(
-                  Icons.refresh,
-                  color: BrandColors.primaryOrange,
-                ),
+            iconActions: [
+              AppBarIconAction(
+                icon: Icons.refresh_rounded,
+                onTap: (_) => _clearCacheAndReload(),
                 tooltip: 'Limpiar caché y recargar',
               ),
             ],

@@ -56,7 +56,7 @@ class AboutScreen extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Image.asset(
-          'assets/images/devlokos_podcast_host.png',
+          'assets/images/devlokos_podcast_host.webp',
           height: 200,
           width: double.infinity,
           fit: BoxFit.cover,

@@ -43,14 +43,22 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getPublishedCourses() async {
     try {
-      final snapshot = await _coursesCollection
-          .where('isPublished', isEqualTo: true)
-          .orderBy('publishedAt', descending: true)
-          .get();
+      // Obtener todos y filtrar/ordenar en memoria para evitar depender del
+      // índice compuesto (isPublished + publishedAt) que puede no existir
+      final snapshot = await _coursesCollection.get();
 
-      return snapshot.docs
+      final courses = snapshot.docs
           .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+          .where((c) => c.isPublished)
           .toList();
+
+      courses.sort((a, b) {
+        final aAt = a.publishedAt ?? a.createdAt;
+        final bAt = b.publishedAt ?? b.createdAt;
+        return bAt.compareTo(aAt); // Más recientes primero
+      });
+
+      return courses;
     } catch (e) {
       print('❌ Error al obtener cursos publicados: $e');
       rethrow;
@@ -60,14 +68,15 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getUpcomingCourses() async {
     try {
-      final snapshot = await _coursesCollection
-          .where('isPublished', isEqualTo: false)
-          .orderBy('createdAt', descending: true)
-          .get();
+      final snapshot = await _coursesCollection.get();
 
-      return snapshot.docs
+      final courses = snapshot.docs
           .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+          .where((c) => !c.isPublished)
           .toList();
+
+      courses.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return courses;
     } catch (e) {
       print('❌ Error al obtener cursos próximos: $e');
       rethrow;
@@ -77,15 +86,11 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getCoursesByLearningPath(String path) async {
     try {
-      final snapshot = await _coursesCollection
-          .where('isPublished', isEqualTo: true)
-          .where('learningPaths', arrayContains: path)
-          .orderBy('publishedAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+      final published = await getPublishedCourses();
+      final filtered = published
+          .where((c) => c.learningPaths.contains(path))
           .toList();
+      return filtered;
     } catch (e) {
       print('❌ Error al obtener cursos por learning path: $e');
       rethrow;
@@ -95,15 +100,11 @@ class AcademyRepositoryImpl implements AcademyRepository {
   @override
   Future<List<Course>> getCoursesByDifficulty(String difficulty) async {
     try {
-      final snapshot = await _coursesCollection
-          .where('isPublished', isEqualTo: true)
-          .where('difficulty', isEqualTo: difficulty)
-          .orderBy('publishedAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) => Course.fromFirestore(doc.data() as Map<String, dynamic>, doc.id))
+      final published = await getPublishedCourses();
+      final filtered = published
+          .where((c) => c.difficulty == difficulty)
           .toList();
+      return filtered;
     } catch (e) {
       print('❌ Error al obtener cursos por dificultad: $e');
       rethrow;

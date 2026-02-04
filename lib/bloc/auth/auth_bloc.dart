@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:devlokos_podcast/utils/user_manager.dart';
 import '../../services/cache_service.dart';
+import '../../services/analytics_service.dart';
+import '../../services/admin_service.dart';
 import '../../config/environment_config.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -137,6 +139,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     try {
+      AnalyticsService.logLoginStarted(method: 'email');
       emit(const AuthLoading());
       
       final email = event.email.trim().toLowerCase();
@@ -168,6 +171,10 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         // Cargar datos enriquecidos desde Firestore si existe (actualiza UserManager)
         await _loadUserFromFirestore(refreshedUser);
         
+        final isAdmin = await AdminService.isCurrentUserAdmin();
+        await AnalyticsService.setAdminStatus(isAdmin);
+        AnalyticsService.logLoginSuccess(method: 'email', isAdmin: isAdmin);
+        
         emit(AuthAuthenticated(user: refreshedUser));
       } else {
         emit(AuthError(
@@ -196,6 +203,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     try {
+      AnalyticsService.logRegisterStarted(method: 'email');
       emit(const AuthLoading());
       
       print('🔄 Iniciando registro de usuario...');
@@ -225,6 +233,8 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         await _saveUserToFirestore(credential.user!, defaultDisplayName);
         
         await credential.user!.sendEmailVerification();
+        AnalyticsService.logRegisterSuccess(method: 'email', isAdmin: false);
+        AnalyticsService.logEmailVerificationSent();
         
         // Cerrar sesión: el usuario debe verificar el email antes de poder iniciar
         await _firebaseAuth.signOut();
@@ -262,6 +272,8 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     try {
+      AnalyticsService.logLogout();
+      await AnalyticsService.setAdminStatus(false);
       emit(const AuthLoading());
       
       // 1. Cerrar sesión en Firebase Auth
@@ -457,6 +469,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     try {
+      AnalyticsService.logPasswordResetRequested();
       emit(const AuthLoading());
       
       await _firebaseAuth.sendPasswordResetEmail(email: event.email);

@@ -37,6 +37,18 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
     
+    // Colección events (dev): dev/dev/events - lectura pública, escritura auth
+    match /dev/dev/events/{eventId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Colección events (prod): prod/prod/events
+    match /prod/prod/events/{eventId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // Reglas para otras colecciones (solo lectura para usuarios autenticados)
     match /dev_{document=**} {
       allow read: if request.auth != null;

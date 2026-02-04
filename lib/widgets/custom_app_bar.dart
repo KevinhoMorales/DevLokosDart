@@ -6,15 +6,30 @@ import '../utils/brand_colors.dart';
 import '../utils/user_manager.dart';
 import '../utils/login_helper.dart';
 
+/// Acción de icono con estilo consistente (cuadrado con esquinas redondeadas).
+class AppBarIconAction {
+  final IconData icon;
+  final void Function(BuildContext context) onTap;
+  final String? tooltip;
+
+  const AppBarIconAction({
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+  });
+}
+
 class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
+  final List<AppBarIconAction>? iconActions;
   final bool showBackButton;
 
   const CustomAppBar({
     super.key,
     required this.title,
     this.actions,
+    this.iconActions,
     this.showBackButton = false,
   });
 
@@ -69,23 +84,29 @@ class _CustomAppBarState extends State<CustomAppBar> {
       },
       child: AppBar(
         leading: widget.showBackButton
-            ? IconButton(
-                onPressed: () {
-                  // Usar pop para navegar hacia atrás en el historial
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    // Si no hay historial, ir a home como fallback
-                    context.go('/home');
-                  }
-                },
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: BrandColors.primaryWhite,
-                  size: 24,
+            ? Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: _buildAppBarIcon(
+                  icon: Icons.arrow_back_rounded,
+                  onTap: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                  tooltip: 'Volver',
+                  useAccentColor: false,
                 ),
               )
-            : null,
+            : Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: _buildAppBarIcon(
+                  icon: Icons.calendar_month_rounded,
+                  onTap: () => context.push('/events'),
+                  tooltip: 'Eventos',
+                ),
+              ),
         title: Text(
           widget.showBackButton ? widget.title : 
           widget.title == 'Mi Perfil' ? 'Mi Perfil' : 
@@ -101,33 +122,73 @@ class _CustomAppBarState extends State<CustomAppBar> {
         foregroundColor: BrandColors.primaryWhite,
         elevation: 0,
         actions: [
-          // Solo mostrar el icono de perfil si no es la pantalla de perfil
           if (!widget.showBackButton)
-            IconButton(
-              onPressed: () {
-                // Si hay usuario autenticado, ir a perfil, sino mostrar login bottom sheet
+            _buildAppBarIcon(
+              icon: Icons.person_rounded,
+              onTap: () {
                 if (_currentUser != null) {
                   context.push('/profile');
                 } else {
                   LoginHelper.showLoginBottomSheet(context);
                 }
               },
-              icon: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B4513), // Color marrón oscuro
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.person,
-                  color: BrandColors.primaryOrange,
-                  size: 20,
-                ),
-              ),
+              tooltip: 'Perfil',
             ),
+          if (widget.iconActions != null)
+            ...widget.iconActions!.map((ia) {
+              return Builder(
+                builder: (ctx) => _buildAppBarIcon(
+                  icon: ia.icon,
+                  onTap: () => ia.onTap(ctx),
+                  tooltip: ia.tooltip,
+                ),
+              );
+            }),
           if (widget.actions != null) ...widget.actions!,
         ],
+      ),
+    );
+  }
+
+  static const double _iconSize = 40;
+  static const double _innerIconSize = 22;
+
+  Widget _buildAppBarIcon({
+    required IconData icon,
+    required VoidCallback onTap,
+    String? tooltip,
+    bool useAccentColor = true,
+  }) {
+    final iconColor = useAccentColor
+        ? BrandColors.primaryOrange
+        : BrandColors.primaryWhite;
+    final bgColor = useAccentColor
+        ? BrandColors.primaryOrange.withValues(alpha: 0.2)
+        : BrandColors.grayDark.withValues(alpha: 0.5);
+
+    return IconButton(
+      onPressed: onTap,
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(44, 44),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: SizedBox(
+        width: _iconSize,
+        height: _iconSize,
+        child: Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: _innerIconSize,
+          ),
+        ),
       ),
     );
   }

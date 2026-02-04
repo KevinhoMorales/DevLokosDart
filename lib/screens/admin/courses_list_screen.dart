@@ -4,7 +4,6 @@ import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../models/course.dart';
 import '../../repository/course_admin_repository.dart';
-import 'course_form_screen.dart';
 
 class CoursesListScreen extends StatefulWidget {
   const CoursesListScreen({super.key});
@@ -43,21 +42,16 @@ class _CoursesListScreenState extends State<CoursesListScreen> {
     }
   }
 
+  void _onCreateCourse() {
+    context.push('/admin/courses/new').then((_) => _loadCourses());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Gestión de Cursos',
         showBackButton: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              context.push('/admin/courses/new').then((_) => _loadCourses());
-            },
-            tooltip: 'Nuevo Curso',
-          ),
-        ],
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -78,7 +72,7 @@ class _CoursesListScreenState extends State<CoursesListScreen> {
                       onRefresh: _loadCourses,
                       color: BrandColors.primaryOrange,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                         itemCount: _courses.length,
                         itemBuilder: (context, index) {
                           final course = _courses[index];
@@ -88,12 +82,18 @@ class _CoursesListScreenState extends State<CoursesListScreen> {
                     ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/admin/courses/new').then((_) => _loadCourses());
-        },
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _onCreateCourse,
         backgroundColor: BrandColors.primaryOrange,
-        child: const Icon(Icons.add, color: BrandColors.primaryWhite),
+        icon: const Icon(Icons.add, color: BrandColors.primaryWhite, size: 22),
+        label: const Text(
+          'Crear curso',
+          style: TextStyle(
+            color: BrandColors.primaryWhite,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
       ),
     );
   }
@@ -101,59 +101,41 @@ class _CoursesListScreenState extends State<CoursesListScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.fromLTRB(40, 40, 40, 100),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: BrandColors.primaryOrange.withOpacity(0.1),
+                color: BrandColors.primaryOrange.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.school_outlined,
-                size: 64,
+                size: 48,
                 color: BrandColors.primaryOrange,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             const Text(
               'No hay cursos',
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: BrandColors.primaryWhite,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              'Crea tu primer curso para comenzar',
+              'Usa el botón de abajo para crear tu primer curso',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 color: BrandColors.grayMedium,
               ),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () {
-                context.push('/admin/courses/new').then((_) => _loadCourses());
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('CREAR CURSO'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: BrandColors.primaryOrange,
-                foregroundColor: BrandColors.primaryWhite,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
             ),
           ],
         ),

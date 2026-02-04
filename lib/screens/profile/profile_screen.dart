@@ -9,12 +9,14 @@ import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/user_manager.dart';
 import '../../utils/login_helper.dart';
-import '../../widgets/custom_app_bar.dart';
+import '../../widgets/custom_app_bar.dart' show AppBarIconAction, CustomAppBar;
 import '../../services/image_storage_service.dart';
 import '../../services/admin_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool showBackButton;
+
+  const ProfileScreen({super.key, this.showBackButton = true});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -126,23 +128,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Scaffold(
           appBar: CustomAppBar(
             title: 'Mi Perfil',
-            showBackButton: true,
-            actions: [
-              IconButton(
-                onPressed: _openSettings,
-                icon: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B4513),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.settings,
-                    color: BrandColors.primaryOrange,
-                    size: 20,
-                  ),
-                ),
+            showBackButton: widget.showBackButton,
+            iconActions: [
+              AppBarIconAction(
+                icon: Icons.settings_rounded,
+                onTap: (_) => _openSettings(),
                 tooltip: 'Ajustes',
               ),
             ],
@@ -574,7 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     
     try {
       if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
+        await launchUrl(emailUri, mode: LaunchMode.externalApplication);
       } else {
         _showErrorSnackBar('No se pudo abrir la aplicación de correo');
       }

@@ -4,7 +4,7 @@
     {
       "label": "Prepare iOS for SweetPad",
       "type": "shell",
-      "command": "flutter pub get && (test -d ios/Pods && test -f ios/Podfile.lock && echo 'Pods OK' || (cd ios && pod install))",
+      "command": "flutter pub get && cd ios && pod install && cd ..",
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {}

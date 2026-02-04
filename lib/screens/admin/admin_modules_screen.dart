@@ -38,16 +38,17 @@ class AdminModulesScreen extends StatelessWidget {
                 icon: Icons.school,
                 title: 'Gestión de Cursos',
                 description: 'Crear, editar y eliminar cursos',
-                onTap: () {
-                  context.push('/admin/courses').then((_) {
-                    // Recargar si es necesario
-                  });
-                },
+                onTap: () => context.push('/admin/courses'),
               ),
               const SizedBox(height: 16),
 
-              // Más módulos pueden agregarse aquí en el futuro
-              // _buildModuleCard(...),
+              _buildModuleCard(
+                context: context,
+                icon: Icons.event,
+                title: 'Gestión de Eventos',
+                description: 'Crear, editar y eliminar eventos',
+                onTap: () => context.push('/admin/events'),
+              ),
             ],
           ),
         ),

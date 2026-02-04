@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../models/tutorial.dart';
 import '../../repository/tutorial_repository.dart';
 import 'tutorial_event.dart';
 import 'tutorial_state.dart';
@@ -11,26 +10,133 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
     required TutorialRepository repository,
   })  : _repository = repository,
         super(const TutorialInitial()) {
-    on<LoadTutorials>(_onLoadTutorials);
+    on<LoadPlaylists>(_onLoadPlaylists);
+    on<SelectPlaylist>(_onSelectPlaylist);
     on<RefreshTutorials>(_onRefreshTutorials);
     on<SearchTutorials>(_onSearchTutorials);
-    on<FilterTutorialsByCategory>(_onFilterByCategory);
-    on<FilterTutorialsByTechStack>(_onFilterByTechStack);
-    on<FilterTutorialsByLevel>(_onFilterByLevel);
-    on<ClearTutorialFilters>(_onClearFilters);
-    on<SelectTutorial>(_onSelectTutorial);
+    on<ClearSearch>(_onClearSearch);
   }
 
-  Future<void> _onLoadTutorials(
-    LoadTutorials event,
+  Future<void> _onLoadPlaylists(
+    LoadPlaylists event,
     Emitter<TutorialState> emit,
   ) async {
     try {
-      emit(const TutorialLoading());
-      final tutorials = await _repository.getAllTutorials();
+      // Cache-first: evita Loading si hay datos cacheados (perceived performance)
+      final playlists = await _repository.getPlaylists(refresh: false);
+      if (playlists.isEmpty) {
+        emit(const TutorialLoading());
+        final freshPlaylists = await _repository.getPlaylists(refresh: true);
+        if (freshPlaylists.isEmpty) {
+          emit(const TutorialError(message: 'No hay playlists disponibles.'));
+          return;
+        }
+        final first = freshPlaylists.first;
+        final tutorials = await _repository.getTutorialsByPlaylist(
+          first.id,
+          refresh: true,
+        );
+        emit(TutorialLoaded(
+          playlists: freshPlaylists,
+          selectedPlaylistId: first.id,
+          selectedPlaylistTitle: first.title,
+          tutorials: tutorials,
+          filteredTutorials: tutorials,
+        ));
+        return;
+      }
+
+      final first = playlists.first;
+      final tutorials = await _repository.getTutorialsByPlaylist(
+        first.id,
+        refresh: false,
+      );
+
       emit(TutorialLoaded(
+        playlists: playlists,
+        selectedPlaylistId: first.id,
+        selectedPlaylistTitle: first.title,
         tutorials: tutorials,
         filteredTutorials: tutorials,
+      ));
+
+      // Stale-while-revalidate: refrescar en background sin bloquear
+      _refreshInBackground(first.id, first.title, null, emit);
+    } catch (e) {
+      emit(TutorialError(message: _toUserFriendlyMessage(e)));
+    }
+  }
+
+  void _refreshInBackground(
+    String playlistId,
+    String playlistTitle,
+    String? searchQuery,
+    Emitter<TutorialState> emit,
+  ) {
+    Future.microtask(() async {
+      try {
+        final freshPlaylists = await _repository.getPlaylists(refresh: true);
+        if (freshPlaylists.isEmpty) return;
+        final freshTutorials = await _repository.getTutorialsByPlaylist(
+          playlistId,
+          refresh: true,
+        );
+        final filtered = searchQuery != null && searchQuery.isNotEmpty
+            ? await _repository.searchByTitle(searchQuery, freshTutorials)
+            : freshTutorials;
+        emit(TutorialLoaded(
+          playlists: freshPlaylists,
+          selectedPlaylistId: playlistId,
+          selectedPlaylistTitle: playlistTitle,
+          tutorials: freshTutorials,
+          filteredTutorials: filtered,
+          searchQuery: searchQuery ?? '',
+        ));
+      } catch (_) {
+        // Silently fail; cached data already shown
+      }
+    });
+  }
+
+  Future<void> _onSelectPlaylist(
+    SelectPlaylist event,
+    Emitter<TutorialState> emit,
+  ) async {
+    final prevState = state;
+    if (prevState is TutorialLoaded &&
+        prevState.selectedPlaylistId == event.playlistId) {
+      return;
+    }
+
+    final playlists = prevState is TutorialLoaded
+        ? prevState.playlists
+        : await _repository.getPlaylists(refresh: false);
+
+    if (playlists.isEmpty) {
+      emit(const TutorialError(message: 'No hay playlists disponibles.'));
+      return;
+    }
+
+    try {
+      var stillWaiting = true;
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (stillWaiting) {
+          emit(const TutorialLoading());
+        }
+      });
+      final tutorials = await _repository.getTutorialsByPlaylist(
+        event.playlistId,
+        refresh: false,
+      );
+      stillWaiting = false;
+
+      emit(TutorialLoaded(
+        playlists: playlists,
+        selectedPlaylistId: event.playlistId,
+        selectedPlaylistTitle: event.playlistTitle,
+        tutorials: tutorials,
+        filteredTutorials: tutorials,
+        searchQuery: '',
       ));
     } catch (e) {
       emit(TutorialError(message: _toUserFriendlyMessage(e)));
@@ -41,22 +147,42 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
     RefreshTutorials event,
     Emitter<TutorialState> emit,
   ) async {
-    List<Tutorial> cachedTutorials = [];
-    if (state is TutorialLoaded) {
-      cachedTutorials = (state as TutorialLoaded).tutorials;
-    }
+    if (state is! TutorialLoaded) return;
+
+    final current = state as TutorialLoaded;
+    final playlistId = current.selectedPlaylistId;
+    if (playlistId == null) return;
 
     try {
+      emit(current.copyWith(
+        tutorials: [],
+        filteredTutorials: [],
+      ));
       emit(const TutorialLoading());
-      final tutorials = await _repository.getAllTutorials();
+
+      final tutorials = await _repository.getTutorialsByPlaylist(
+        playlistId,
+        refresh: true,
+      );
+
       emit(TutorialLoaded(
+        playlists: current.playlists,
+        selectedPlaylistId: playlistId,
+        selectedPlaylistTitle: current.selectedPlaylistTitle,
         tutorials: tutorials,
-        filteredTutorials: tutorials,
+        filteredTutorials: current.searchQuery.isEmpty
+            ? tutorials
+            : tutorials
+                .where((t) => t.title
+                    .toLowerCase()
+                    .contains(current.searchQuery.toLowerCase()))
+                .toList(),
+        searchQuery: current.searchQuery,
       ));
     } catch (e) {
       emit(TutorialError(
         message: _toUserFriendlyMessage(e),
-        cachedTutorials: cachedTutorials.isNotEmpty ? cachedTutorials : null,
+        cachedTutorials: current.tutorials,
       ));
     }
   }
@@ -67,115 +193,50 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
   ) async {
     if (state is! TutorialLoaded) return;
 
-    final currentState = state as TutorialLoaded;
+    final current = state as TutorialLoaded;
 
     if (event.query.isEmpty) {
-      emit(currentState.copyWith(
-        filteredTutorials: currentState.tutorials,
+      emit(current.copyWith(
+        filteredTutorials: current.tutorials,
         searchQuery: '',
       ));
       return;
     }
 
-    try {
-      final results = await _repository.searchTutorials(event.query);
-      emit(currentState.copyWith(
-        filteredTutorials: results,
-        searchQuery: event.query,
-      ));
-    } catch (e) {
-      emit(TutorialError(message: _toUserFriendlyMessage(e)));
-    }
+    final filtered = await _repository.searchByTitle(
+      event.query,
+      current.tutorials,
+    );
+
+    emit(current.copyWith(
+      filteredTutorials: filtered,
+      searchQuery: event.query,
+    ));
   }
 
-  Future<void> _onFilterByCategory(
-    FilterTutorialsByCategory event,
+  Future<void> _onClearSearch(
+    ClearSearch event,
     Emitter<TutorialState> emit,
   ) async {
     if (state is! TutorialLoaded) return;
 
-    final currentState = state as TutorialLoaded;
-
-    try {
-      final filtered = await _repository.getTutorialsByCategory(event.category);
-      emit(currentState.copyWith(
-        filteredTutorials: filtered,
-        selectedCategory: event.category,
-      ));
-    } catch (e) {
-      emit(TutorialError(message: _toUserFriendlyMessage(e)));
-    }
-  }
-
-  Future<void> _onFilterByTechStack(
-    FilterTutorialsByTechStack event,
-    Emitter<TutorialState> emit,
-  ) async {
-    if (state is! TutorialLoaded) return;
-
-    final currentState = state as TutorialLoaded;
-
-    try {
-      final filtered = await _repository.getTutorialsByTechStack(event.techStack);
-      emit(currentState.copyWith(
-        filteredTutorials: filtered,
-        selectedTechStack: event.techStack,
-      ));
-    } catch (e) {
-      emit(TutorialError(message: _toUserFriendlyMessage(e)));
-    }
-  }
-
-  Future<void> _onFilterByLevel(
-    FilterTutorialsByLevel event,
-    Emitter<TutorialState> emit,
-  ) async {
-    if (state is! TutorialLoaded) return;
-
-    final currentState = state as TutorialLoaded;
-
-    try {
-      final filtered = await _repository.getTutorialsByLevel(event.level);
-      emit(currentState.copyWith(
-        filteredTutorials: filtered,
-        selectedLevel: event.level,
-      ));
-    } catch (e) {
-      emit(TutorialError(message: _toUserFriendlyMessage(e)));
-    }
-  }
-
-  Future<void> _onClearFilters(
-    ClearTutorialFilters event,
-    Emitter<TutorialState> emit,
-  ) async {
-    if (state is! TutorialLoaded) return;
-
-    final currentState = state as TutorialLoaded;
-    emit(currentState.copyWith(
-      filteredTutorials: currentState.tutorials,
-      selectedCategory: null,
-      selectedTechStack: null,
-      selectedLevel: null,
+    final current = state as TutorialLoaded;
+    emit(current.copyWith(
+      filteredTutorials: current.tutorials,
       searchQuery: '',
     ));
   }
 
-  Future<void> _onSelectTutorial(
-    SelectTutorial event,
-    Emitter<TutorialState> emit,
-  ) async {
-    // Tutorial selection logic can be handled here if needed
-    // For now, we'll just keep the current state
-  }
-
-  /// Convierte excepciones técnicas en mensajes amigables para el usuario.
   static String _toUserFriendlyMessage(Object e) {
     final msg = e.toString().toLowerCase();
-    if (msg.contains('network') || msg.contains('connection') || msg.contains('socket')) {
+    if (msg.contains('network') ||
+        msg.contains('connection') ||
+        msg.contains('socket')) {
       return 'Revisa tu conexión a internet e intenta de nuevo.';
     }
-    if (msg.contains('firestore') || msg.contains('index') || msg.contains('failed-precondition')) {
+    if (msg.contains('firestore') ||
+        msg.contains('index') ||
+        msg.contains('failed-precondition')) {
       return 'Los tutoriales no están disponibles en este momento. Intenta más tarde.';
     }
     if (msg.contains('permission') || msg.contains('unavailable')) {
@@ -184,5 +245,3 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
     return 'No pudimos cargar los tutoriales. Intenta de nuevo en unos momentos.';
   }
 }
-
-

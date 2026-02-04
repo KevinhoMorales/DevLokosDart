@@ -43,10 +43,6 @@ class CourseCard extends StatelessWidget {
                 children: [
                   // Title
                   _buildTitle(),
-                  const SizedBox(height: 8),
-                  
-                  // Description
-                  _buildDescription(),
                   const SizedBox(height: 12),
                   
                   // Meta info
@@ -64,19 +60,21 @@ class CourseCard extends StatelessWidget {
     );
   }
 
+  static const double _thumbnailHeight = 120;
+
   Widget _buildThumbnail() {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       child: SizedBox(
         width: double.infinity,
-        height: 200,
+        height: _thumbnailHeight,
         child: CachedNetworkImage(
           imageUrl: course.thumbnailUrl!,
           width: double.infinity,
-          height: 200,
+          height: _thumbnailHeight,
           fit: BoxFit.cover,
           placeholder: (context, url) => Container(
-            height: 200,
+            height: _thumbnailHeight,
             color: BrandColors.grayDark,
             child: const Center(
               child: CircularProgressIndicator(
@@ -85,7 +83,7 @@ class CourseCard extends StatelessWidget {
             ),
           ),
           errorWidget: (context, url, error) => Container(
-            height: 200,
+            height: _thumbnailHeight,
             color: BrandColors.grayDark,
             child: const Icon(
               Icons.school,
@@ -107,18 +105,6 @@ class CourseCard extends StatelessWidget {
         fontWeight: FontWeight.bold,
       ),
       maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  Widget _buildDescription() {
-    return Text(
-      course.description,
-      style: const TextStyle(
-        color: BrandColors.grayMedium,
-        fontSize: 14,
-      ),
-      maxLines: 3,
       overflow: TextOverflow.ellipsis,
     );
   }
@@ -146,44 +132,46 @@ class CourseCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        // Duration
-        Row(
-          children: [
-            const Icon(
-              Icons.access_time,
-              color: BrandColors.grayMedium,
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              course.formattedDuration,
-              style: const TextStyle(
+        if (course.duration > 0) ...[
+          const SizedBox(width: 12),
+          Row(
+            children: [
+              const Icon(
+                Icons.access_time,
                 color: BrandColors.grayMedium,
-                fontSize: 12,
+                size: 16,
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 4),
+              Text(
+                course.formattedDuration,
+                style: const TextStyle(
+                  color: BrandColors.grayMedium,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
         const Spacer(),
-        // Modules count
-        Row(
-          children: [
-            const Icon(
-              Icons.menu_book,
-              color: BrandColors.grayMedium,
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '${course.modules.length} módulos',
-              style: const TextStyle(
+        // Modules count (solo si hay módulos)
+        if (course.modules.isNotEmpty)
+          Row(
+            children: [
+              const Icon(
+                Icons.menu_book,
                 color: BrandColors.grayMedium,
-                fontSize: 12,
+                size: 16,
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 4),
+              Text(
+                '${course.modules.length} módulos',
+                style: const TextStyle(
+                  color: BrandColors.grayMedium,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
       ],
     );
   }

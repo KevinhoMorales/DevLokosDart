@@ -1,1 +1,6 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"devlokos","appId":"1:458512617441:android:c38d499d355577519c8ca0","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"devlokos","appId":"1:458512617441:ios:0ba9e4d01804938b9c8ca0","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"devlokos","configurations":{"android":"1:458512617441:android:c38d499d355577519c8ca0","ios":"1:458512617441:ios:0ba9e4d01804938b9c8ca0"}}}}}}
+{
+  "functions": {
+    "source": "functions",
+    "predeploy": []
+  },
+  "flutter": {"platforms":{"android":{"default":{"projectId":"devlokos","appId":"1:458512617441:android:c38d499d355577519c8ca0","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"devlokos","appId":"1:458512617441:ios:0ba9e4d01804938b9c8ca0","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"devlokos","configurations":{"android":"1:458512617441:android:c38d499d355577519c8ca0","ios":"1:458512617441:ios:0ba9e4d01804938b9c8ca0"}}}}}}

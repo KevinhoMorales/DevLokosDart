@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../bloc/academy/academy_bloc_exports.dart';
+import '../../constants/learning_paths.dart';
 import '../../repository/academy_repository.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -21,13 +22,6 @@ class _AcademyScreenState extends State<AcademyScreen>
   final TextEditingController _searchController = TextEditingController();
   String? _selectedLearningPath;
   String? _selectedDifficulty;
-  bool _showUpcoming = false;
-
-  final List<String> _learningPaths = [
-    'Mobile',
-    'Backend',
-    'DevOps',
-  ];
 
   final List<String> _difficulties = [
     'Beginner',
@@ -51,7 +45,9 @@ class _AcademyScreenState extends State<AcademyScreen>
     final paths = await repository.getAllLearningPaths();
     if (mounted) {
       setState(() {
-        _availableLearningPaths = paths.isNotEmpty ? paths : _learningPaths;
+        _availableLearningPaths = paths.isNotEmpty
+            ? paths
+            : LearningPaths.allPaths;
       });
     }
   }
@@ -72,14 +68,23 @@ class _AcademyScreenState extends State<AcademyScreen>
           color: BrandColors.primaryBlack,
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              _buildSearchBar(),
-              _buildFilters(),
-              Expanded(
-                child: _buildContent(),
-              ),
-            ],
+          child: BlocBuilder<AcademyBloc, AcademyState>(
+            buildWhen: (prev, curr) =>
+                prev.runtimeType != curr.runtimeType ||
+                (curr is AcademyLoaded && prev is AcademyLoaded &&
+                    curr.courses.length != prev.courses.length),
+            builder: (context, state) {
+              final hasContent = state is AcademyLoaded && state.courses.isNotEmpty;
+              return Column(
+                children: [
+                  if (hasContent) ...[
+                    _buildSearchBar(),
+                    _buildFilters(),
+                  ],
+                  Expanded(child: _buildContent()),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -133,29 +138,6 @@ class _AcademyScreenState extends State<AcademyScreen>
                     );
               },
             ),
-            const SizedBox(width: 8),
-            FilterChip(
-              label: Text(_showUpcoming ? 'Próximos' : 'Activos'),
-              selected: _showUpcoming,
-              onSelected: (selected) {
-                setState(() {
-                  _showUpcoming = selected;
-                });
-                if (selected) {
-                  context.read<AcademyBloc>().add(const LoadUpcomingCourses());
-                } else {
-                  context.read<AcademyBloc>().add(const LoadCourses());
-                }
-              },
-              backgroundColor: BrandColors.cardBackground,
-              selectedColor: BrandColors.primaryOrange.withOpacity(0.2),
-              labelStyle: TextStyle(
-                color: _showUpcoming ? BrandColors.primaryOrange : BrandColors.primaryWhite,
-              ),
-              side: BorderSide(
-                color: _showUpcoming ? BrandColors.primaryOrange : BrandColors.grayMedium,
-              ),
-            ),
             if (_selectedLearningPath != null || _selectedDifficulty != null) ...[
               const SizedBox(width: 8),
               ActionChip(
@@ -164,7 +146,6 @@ class _AcademyScreenState extends State<AcademyScreen>
                   setState(() {
                     _selectedLearningPath = null;
                     _selectedDifficulty = null;
-                    _showUpcoming = false;
                   });
                   context.read<AcademyBloc>().add(const ClearFilters());
                 },
@@ -241,7 +222,12 @@ class _AcademyScreenState extends State<AcademyScreen>
         if (state is AcademyError) {
           // Si hay cursos en caché, mostrarlos en lugar del error
           if (state.cachedCourses != null && state.cachedCourses!.isNotEmpty) {
-            return ListView.builder(
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<AcademyBloc>().add(const RefreshCourses());
+              },
+              color: BrandColors.primaryOrange,
+              child: ListView.builder(
               padding: EdgeInsets.only(
                 left: 16,
                 right: 16,
@@ -255,41 +241,46 @@ class _AcademyScreenState extends State<AcademyScreen>
                   onTap: () => _onCourseTap(course),
                 );
               },
+            ),
             );
           }
-          
-          // Mostrar empty state amigable en lugar del error técnico
-          return _buildEmptyState(
-            icon: Icons.school_outlined,
-            title: 'Aún no hay cursos disponibles',
-            message: 'Estamos preparando contenido increíble para ti. ¡Vuelve pronto!',
-            showRetry: true,
+
+          return _buildRefreshableContent(
+            child: _buildEmptyStateTutorialsStyle(
+              icon: Icons.school_outlined,
+              title: 'Academia próximamente',
+              subtitle: 'Estamos preparando cursos para ti. Cuando agreguemos contenido, verás los cursos aquí.',
+              showRetry: false,
+            ),
           );
         }
 
         if (state is AcademyLoaded) {
-          final courses = _showUpcoming ? state.upcomingCourses : state.filteredCourses;
+          final courses = state.filteredCourses;
 
           if (courses.isEmpty) {
-            return _buildEmptyState(
-              icon: _showUpcoming ? Icons.schedule_outlined : Icons.search_off,
-              title: _showUpcoming 
-                  ? 'No hay cursos próximos' 
-                  : 'No se encontraron cursos',
-              message: _showUpcoming
-                  ? 'Mantente al tanto de los próximos lanzamientos'
-                  : 'Intenta con otros filtros o términos de búsqueda',
-              showRetry: false,
+            return _buildRefreshableContent(
+              child: _buildEmptyStateTutorialsStyle(
+                icon: Icons.search_off,
+                title: 'No se encontraron cursos',
+                subtitle: 'Intenta con otros filtros o términos de búsqueda',
+                showRetry: false,
+              ),
             );
           }
 
-          return ListView.builder(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              bottom: MediaQuery.of(context).padding.bottom + 100,
-            ),
-            itemCount: courses.length,
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<AcademyBloc>().add(const RefreshCourses());
+            },
+            color: BrandColors.primaryOrange,
+            child: ListView.builder(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    bottom: MediaQuery.of(context).padding.bottom + 100,
+                  ),
+                  itemCount: courses.length,
             itemBuilder: (context, index) {
               final course = courses[index];
               return CourseCard(
@@ -297,99 +288,103 @@ class _AcademyScreenState extends State<AcademyScreen>
                 onTap: () => _onCourseTap(course),
               );
             },
+          ),
           );
         }
 
-        // Estado inicial - mostrar empty state
-        return _buildEmptyState(
-          icon: Icons.school_outlined,
-          title: 'Explora nuestros cursos',
-          message: 'Descubre contenido educativo de calidad',
-          showRetry: false,
+        // Estado inicial - mostrar empty state (igual que Tutoriales)
+        return _buildRefreshableContent(
+          child: _buildEmptyStateTutorialsStyle(
+            icon: Icons.playlist_add_outlined,
+            title: 'Academia próximamente',
+            subtitle: 'Estamos preparando cursos para ti. Cuando agreguemos contenido, verás los cursos aquí.',
+            showRetry: false,
+          ),
         );
       },
     );
   }
 
-  Widget _buildEmptyState({
+  Widget _buildRefreshableContent({required Widget child}) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<AcademyBloc>().add(const RefreshCourses());
+      },
+      color: BrandColors.primaryOrange,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - 200,
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  /// Empty state con estilo de Eventos (icono circular, tipografía consistente)
+  Widget _buildEmptyStateTutorialsStyle({
     required IconData icon,
     required String title,
-    required String message,
-    required bool showRetry,
+    required String subtitle,
+    bool showRetry = false,
+    VoidCallback? onRetry,
+    Widget? action,
   }) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icono con fondo decorativo
             Container(
-              width: 120,
-              height: 120,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: BrandColors.primaryOrange.withOpacity(0.1),
+                color: BrandColors.primaryOrange.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                size: 64,
+                size: 48,
                 color: BrandColors.primaryOrange,
               ),
             ),
-            const SizedBox(height: 32),
-            
-            // Título
+            const SizedBox(height: 24),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 24,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: BrandColors.primaryWhite,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
-            
-            // Mensaje
+            const SizedBox(height: 8),
             Text(
-              message,
-              style: const TextStyle(
-                fontSize: 16,
+              subtitle,
+              style: TextStyle(
+                fontSize: 15,
                 color: BrandColors.grayMedium,
-                height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            
-            // Botón de reintentar (si aplica)
-            if (showRetry)
-              ElevatedButton.icon(
-                onPressed: () {
-                  context.read<AcademyBloc>().add(const RefreshCourses());
-                },
-                icon: const Icon(Icons.refresh, size: 20),
+            if (action != null) ...[
+              const SizedBox(height: 24),
+              action,
+            ],
+            if (showRetry && onRetry != null) ...[
+              const SizedBox(height: 24),
+              TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 18, color: BrandColors.primaryOrange),
                 label: const Text(
-                  'REINTENTAR',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: BrandColors.primaryOrange,
-                  foregroundColor: BrandColors.primaryWhite,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 0,
+                  'Reintentar',
+                  style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.w600),
                 ),
               ),
+            ],
           ],
         ),
       ),
@@ -397,14 +392,6 @@ class _AcademyScreenState extends State<AcademyScreen>
   }
 
   void _onCourseTap(Course course) {
-    // Navigate to course detail screen
-    // For now, we'll just show a placeholder
-    // TODO: Create course detail screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Curso: ${course.title}'),
-        backgroundColor: BrandColors.primaryOrange,
-      ),
-    );
+    context.push('/course/${course.id}', extra: {'course': course});
   }
 }

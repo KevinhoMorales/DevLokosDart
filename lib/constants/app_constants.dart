@@ -4,11 +4,16 @@ class AppConstants {
   static const String youtubeBaseUrl = 'https://www.youtube.com/playlist?list=';
   static const String youtubeApiKey = 'YOUR_YOUTUBE_API_KEY'; // Necesitarás configurar esto
   
-  // App Info (debe coincidir con pubspec.yaml version)
+  // App Info (debe coincidir con pubspec.yaml - solo fallback si PackageInfo falla)
   static const String appName = 'DevLokos';
-  static const String appVersion = '1.1.0';
-  static const String appBuildNumber = '1';
-  static const String appVersionWithBuild = '1.1.0+1';
+  static const String appVersion = '1.1.2';
+  static const String appBuildNumber = '112';
+  static const String appVersionWithBuild = '1.1.2+112';
+
+  // Academia - WhatsApp para inscripción
+  static const String academyWhatsAppNumber = '593939598029';
+  static const String academyWhatsAppMessage =
+      'Hola, me gustaría inscribirme en la Academia DevLokos. ¿Cuáles son los pasos?';
 
   // Legal URLs (mismos enlaces que login/registro)
   static const String termsAndConditionsUrl =

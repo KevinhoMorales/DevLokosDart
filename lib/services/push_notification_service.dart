@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
 import '../firebase_options.dart';
+import '../config/environment_config.dart';
 import '../utils/brand_colors.dart';
 
 /// Handler de mensajes en segundo plano. Debe ser función de nivel superior.
@@ -32,6 +33,23 @@ class PushNotificationService {
 
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
+
+  /// Callback para navegar cuando se toca una notificación (inyectado por la app).
+  static void Function(String route)? _navigateToRoute;
+  static String? _pendingRoute;
+
+  /// Topic según entorno (all_users_prod | all_users_dev).
+  static const String _topicProd = 'all_users_prod';
+  static const String _topicDev = 'all_users_dev';
+
+  /// Registra el handler de navegación. Debe llamarse cuando GoRouter esté montado.
+  static void setNavigationHandler(void Function(String route) handler) {
+    _navigateToRoute = handler;
+    if (_pendingRoute != null) {
+      handler(_pendingRoute!);
+      _pendingRoute = null;
+    }
+  }
 
   /// Inicializa el servicio de push notifications.
   Future<void> initialize() async {
@@ -62,6 +80,10 @@ class PushNotificationService {
 
     // Obtener token FCM
     await _getToken();
+
+    // Suscribir al topic según entorno
+    final topic = EnvironmentConfig.isDevelopment() ? _topicDev : _topicProd;
+    await subscribeToTopic(topic);
 
     // Escuchar actualizaciones del token
     _messaging.onTokenRefresh.listen((token) {
@@ -117,9 +139,10 @@ class PushNotificationService {
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
-    // Mostrar notificación local cuando la app está en primer plano
     final notification = message.notification;
     final android = message.notification?.android;
+    final data = message.data;
+    final route = (data['route'] as String?) ?? _buildRouteFromData(data);
 
     if (notification != null) {
       _localNotifications.show(
@@ -136,23 +159,39 @@ class PushNotificationService {
           ),
           iOS: const DarwinNotificationDetails(),
         ),
-        payload: message.data.toString(),
+        payload: route,
       );
     }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    if (response.payload != null) {
-      // Navegar según el payload si es necesario
+    final route = response.payload?.trim();
+    if (route != null && route.isNotEmpty) {
+      _navigate(route);
     }
   }
 
   void _handleNotificationNavigation(RemoteMessage message) {
-    // Navegar a una pantalla específica según los datos del mensaje
     final data = message.data;
-    if (data.containsKey('episodeId')) {
-      // context.go('/episode/${data['episodeId']}');
-      // Se puede integrar con GoRouter mediante un stream/controller
+    final route = (data['route'] as String?) ?? _buildRouteFromData(data);
+    if (route.isNotEmpty) {
+      _navigate(route);
+    }
+  }
+
+  String _buildRouteFromData(Map<String, dynamic> data) {
+    final type = data['type'] as String?;
+    final id = data['id'] as String?;
+    if (type == 'course' && id != null) return '/course/$id';
+    if (type == 'event' && id != null) return '/events/$id';
+    return '';
+  }
+
+  void _navigate(String route) {
+    if (_navigateToRoute != null) {
+      _navigateToRoute!(route);
+    } else {
+      _pendingRoute = route;
     }
   }
 

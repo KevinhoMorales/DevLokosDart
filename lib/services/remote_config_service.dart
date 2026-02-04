@@ -20,7 +20,7 @@ class RemoteConfigService {
     await _remoteConfig.setDefaults({
       'youtube_api_key': '', // Sin API key por defecto
       'youtube_playlist_id': 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ', // Playlist principal (podcast)
-      'youtube_tutorials_playlist_id': '', // Playlist de tutoriales (vacío = usa la principal)
+      'youtube_tutorials_playlist_id': 'PLPXi7Vgl6Ak9fqyhptJNCjG4HIU_M6MsF', // Cursos Express
       'youtube_channel_id': '', // Canal para búsqueda API (vacío = se obtiene del primer video del playlist)
       'web_3_form': '', // Access Key de Web3Forms para formulario de contacto
       'version_dart': '1.0.3', // Versión mínima requerida

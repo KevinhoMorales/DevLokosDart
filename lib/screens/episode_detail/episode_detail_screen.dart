@@ -17,12 +17,14 @@ class EpisodeDetailScreen extends StatefulWidget {
   final String? episodeId;
   final Episode? episode;
   final YouTubeVideo? youtubeVideo;
+  final String? playlistTitle;
 
   const EpisodeDetailScreen({
     super.key,
     this.episodeId,
     this.episode,
     this.youtubeVideo,
+    this.playlistTitle,
   });
 
   @override
@@ -119,14 +121,13 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   }
 
   String _getAppBarTitle() {
-    final fullTitle = _currentYouTubeVideo?.title ?? widget.youtubeVideo?.title ?? _currentEpisode?.title ?? widget.episode?.title ?? 'Episodio';
-    
-    // Dividir por el primer ||
-    final parts = fullTitle.split('||');
-    if (parts.length > 1) {
-      return parts[0].trim();
+    // Prioridad: nombre de playlist (más corto) cuando viene de Tutoriales
+    if (widget.playlistTitle != null && widget.playlistTitle!.isNotEmpty) {
+      return widget.playlistTitle!;
     }
-    
+    final fullTitle = _currentYouTubeVideo?.title ?? widget.youtubeVideo?.title ?? _currentEpisode?.title ?? widget.episode?.title ?? 'Episodio';
+    final parts = fullTitle.split('||');
+    if (parts.length > 1) return parts[0].trim();
     return fullTitle;
   }
 
@@ -435,10 +436,11 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   }
 
   Widget _buildShareButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _shareEpisode,
+    return Builder(
+      builder: (ctx) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _shareEpisode(ctx),
         borderRadius: BorderRadius.circular(16),
         child: Container(
           width: double.infinity,
@@ -476,10 +478,10 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
           ),
         ),
       ),
-    );
+    ));
   }
 
-  void _shareEpisode() async {
+  void _shareEpisode(BuildContext context) async {
     final episodeTitle = _getVideoTitle();
     final appBarTitle = _getAppBarTitle();
     final videoId = _currentEpisode?.youtubeVideoId ??
@@ -516,7 +518,21 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
       shareText = '🎧 Episodio de DevLokos\n\n📱 Descarga la app: ${EnvironmentConfig.onelinkUrl}';
     }
     try {
-      await Share.share(shareText);
+      Rect sharePositionOrigin = const Rect.fromLTWH(0, 0, 1, 1);
+      if (context.mounted) {
+        final box = context.findRenderObject() as RenderBox?;
+        if (box != null && box.hasSize) {
+          final pos = box.localToGlobal(Offset.zero);
+          sharePositionOrigin = Rect.fromLTWH(pos.dx, pos.dy, box.size.width, box.size.height);
+        } else {
+          final size = MediaQuery.of(context).size;
+          sharePositionOrigin = Rect.fromLTWH(size.width / 2 - 50, size.height / 2 - 50, 100, 100);
+        }
+      }
+      await Share.share(
+        shareText,
+        sharePositionOrigin: sharePositionOrigin,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

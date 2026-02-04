@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/youtube_config.dart';
+import '../models/youtube_playlist_info.dart';
 import '../models/youtube_video.dart';
 
 class YouTubeService {
@@ -11,6 +12,48 @@ class YouTubeService {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
+
+  /// Obtiene las playlists del canal (playlists.list).
+  /// Requiere [channelId].
+  Future<List<YouTubePlaylistInfo>> getChannelPlaylists({
+    required String channelId,
+    int maxResults = 50,
+    String? pageToken,
+  }) async {
+    try {
+      if (!YouTubeConfig.hasApiKey) {
+        throw YouTubeServiceException('API Key de YouTube no configurada.');
+      }
+      final params = <String, String>{
+        'part': 'snippet,contentDetails',
+        'channelId': channelId,
+        'maxResults': maxResults.toString(),
+        'key': YouTubeConfig.apiKey,
+      };
+      if (pageToken != null && pageToken.isNotEmpty) {
+        params['pageToken'] = pageToken;
+      }
+      final uri = Uri.parse('$_baseUrl/playlists').replace(queryParameters: params);
+      final response = await http.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final items = jsonData['items'] as List<dynamic>? ?? [];
+        return items
+            .map((e) => YouTubePlaylistInfo.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      final errorData = json.decode(response.body);
+      throw YouTubeServiceException(
+        'Error al obtener playlists: ${errorData['error']?['message'] ?? 'Error desconocido'}',
+      );
+    } on http.ClientException {
+      throw YouTubeServiceException('Error de conexión. Verifica tu internet.');
+    } catch (e) {
+      if (e is YouTubeServiceException) rethrow;
+      throw YouTubeServiceException('Error inesperado: $e');
+    }
+  }
 
   /// Obtiene los videos de una playlist de YouTube
   /// [playlistId] opcional: si no se pasa, usa la playlist principal

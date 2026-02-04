@@ -69,14 +69,15 @@ class CourseAdminRepository {
           .get();
 
       return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        if (data == null) throw Exception('Documento sin datos: ${doc.id}');
         return Course.fromFirestore(
-          doc.data() as Map<String, dynamic>,
+          data as Map<String, dynamic>,
           doc.id,
         );
       }).toList();
     } catch (e) {
-      print('❌ Error al obtener cursos: $e');
-      return [];
+      rethrow;
     }
   }
 }

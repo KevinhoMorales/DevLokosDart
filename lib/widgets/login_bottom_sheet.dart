@@ -151,7 +151,7 @@ class _LoginBottomSheetState extends State<LoginBottomSheet>
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: Image.asset(
-                  'assets/icons/devlokos_icon.png',
+                  'assets/icons/devlokos_icon.webp',
                   width: 80,
                   height: 80,
                   fit: BoxFit.contain,

@@ -1,0 +1,7 @@
+# Copia este archivo a key.properties y completa los valores.
+# key.properties NO debe subirse a Git (ya está en .gitignore).
+
+storePassword=TU_STORE_PASSWORD
+keyPassword=TU_KEY_PASSWORD
+keyAlias=TU_KEY_ALIAS
+storeFile=../../Keystore/DevLokosKS.jks

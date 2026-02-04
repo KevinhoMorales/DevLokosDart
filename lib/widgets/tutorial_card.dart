@@ -44,13 +44,8 @@ class TutorialCard extends StatelessWidget {
                   // Title
                   _buildTitle(),
                   const SizedBox(height: 8),
-                  
-                  // Meta info (Level, Duration)
-                  _buildMetaInfo(),
-                  const SizedBox(height: 8),
-                  
-                  // Tech stack tags
-                  _buildTechStackTags(),
+                  // Fecha de publicación (desde YouTube)
+                  _buildPublishedAt(),
                 ],
               ),
             ),
@@ -126,93 +121,24 @@ class TutorialCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetaInfo() {
+  Widget _buildPublishedAt() {
     return Row(
       children: [
-        // Level badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: _getLevelColor(tutorial.level).withOpacity(0.2),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: _getLevelColor(tutorial.level),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            tutorial.level,
-            style: TextStyle(
-              color: _getLevelColor(tutorial.level),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        const Icon(
+          Icons.schedule,
+          color: BrandColors.grayMedium,
+          size: 14,
         ),
-        const SizedBox(width: 8),
-        // Duration
-        Row(
-          children: [
-            const Icon(
-              Icons.access_time,
-              color: BrandColors.grayMedium,
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              tutorial.formattedDuration,
-              style: const TextStyle(
-                color: BrandColors.grayMedium,
-                fontSize: 12,
-              ),
-            ),
-          ],
+        const SizedBox(width: 4),
+        Text(
+          tutorial.formattedPublishedAt,
+          style: const TextStyle(
+            color: BrandColors.grayMedium,
+            fontSize: 12,
+          ),
         ),
       ],
     );
-  }
-
-  Widget _buildTechStackTags() {
-    if (tutorial.techStack.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: tutorial.techStack.take(3).map((tech) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: BrandColors.primaryOrange.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: BrandColors.primaryOrange.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Text(
-            tech,
-            style: const TextStyle(
-              color: BrandColors.primaryOrange,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Color _getLevelColor(String level) {
-    switch (level.toLowerCase()) {
-      case 'beginner':
-        return BrandColors.success;
-      case 'intermediate':
-        return BrandColors.warning;
-      case 'advanced':
-        return BrandColors.error;
-      default:
-        return BrandColors.grayMedium;
-    }
   }
 }
 

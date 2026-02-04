@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../bloc/tutorial/tutorial_bloc_exports.dart';
+import '../../models/tutorial.dart';
+import '../../models/youtube_playlist_info.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/tutorial_card.dart';
-import '../../models/tutorial.dart';
-import 'package:provider/provider.dart';
 import '../../providers/youtube_provider.dart';
-import '../../screens/episode_detail/episode_detail_screen.dart';
 import '../../services/remote_config_service.dart';
 
 class TutorialsScreen extends StatefulWidget {
@@ -22,26 +21,6 @@ class TutorialsScreen extends StatefulWidget {
 class _TutorialsScreenState extends State<TutorialsScreen>
     with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
-  String? _selectedCategory;
-  String? _selectedTechStack;
-  String? _selectedLevel;
-
-  final List<String> _categories = [
-    'Backend',
-    'Frontend',
-    'Mobile',
-    'DevOps',
-    'AI',
-    'Databases',
-  ];
-
-  final List<String> _levels = [
-    'Beginner',
-    'Intermediate',
-    'Advanced',
-  ];
-
-  List<String> _techStacks = [];
 
   @override
   bool get wantKeepAlive => true;
@@ -50,7 +29,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
   void initState() {
     super.initState();
     if (RemoteConfigService().isTutorialsPlaylistConfigured) {
-      context.read<TutorialBloc>().add(const LoadTutorials());
+      context.read<TutorialBloc>().add(const LoadPlaylists());
     }
   }
 
@@ -60,42 +39,24 @@ class _TutorialsScreenState extends State<TutorialsScreen>
     super.dispose();
   }
 
-  List<String> _getTechStacksFromState(TutorialState state) {
-    if (state is TutorialLoaded) {
-      final stacks = <String>{};
-      for (final t in state.tutorials) {
-        stacks.addAll(t.techStack);
-      }
-      return stacks.toList()..sort();
-    }
-    return [];
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return BlocListener<TutorialBloc, TutorialState>(
-      listener: (context, state) {
-        if (state is TutorialLoaded && mounted) {
-          setState(() => _techStacks = _getTechStacksFromState(state));
-        }
-      },
-      child: Scaffold(
-        appBar: const CustomAppBar(title: ''),
-        body: Container(
-          decoration: const BoxDecoration(
-            color: BrandColors.primaryBlack,
-          ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                if (RemoteConfigService().isTutorialsPlaylistConfigured) ...[
-                  _buildSearchBar(),
-                  _buildFilters(),
-                ],
-                Expanded(child: _buildContent()),
+    return Scaffold(
+      appBar: const CustomAppBar(title: ''),
+      body: Container(
+        decoration: const BoxDecoration(
+          color: BrandColors.primaryBlack,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              if (RemoteConfigService().isTutorialsPlaylistConfigured) ...[
+                _buildSearchBar(),
+                _buildPlaylistChips(),
               ],
-            ),
+              Expanded(child: _buildContent()),
+            ],
           ),
         ),
       ),
@@ -104,134 +65,93 @@ class _TutorialsScreenState extends State<TutorialsScreen>
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: SearchBarWidget(
         controller: _searchController,
-        hintText: 'Buscar tutoriales por título, tecnología...',
+        hintText: 'Buscar por título...',
         onChanged: (value) {
+          context.read<TutorialBloc>().add(SearchTutorials(value.trim()));
+        },
+        onSubmitted: (value) {
           context.read<TutorialBloc>().add(SearchTutorials(value.trim()));
         },
       ),
     );
   }
 
-  Widget _buildFilters() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildFilterChip(
-              label: 'Categoría',
-              value: _selectedCategory,
-              options: _categories,
-              onSelected: (value) {
-                setState(() {
-                  _selectedCategory = value;
-                });
-                context.read<TutorialBloc>().add(
-                      FilterTutorialsByCategory(value),
-                    );
-              },
-            ),
-            const SizedBox(width: 8),
-            _buildFilterChip(
-              label: 'Nivel',
-              value: _selectedLevel,
-              options: _levels,
-              onSelected: (value) {
-                setState(() {
-                  _selectedLevel = value;
-                });
-                context.read<TutorialBloc>().add(
-                      FilterTutorialsByLevel(value),
-                    );
-              },
-            ),
-            if (_techStacks.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              _buildFilterChip(
-                label: 'Tecnología',
-                value: _selectedTechStack,
-                options: _techStacks,
-                onSelected: (value) {
-                  setState(() {
-                    _selectedTechStack = value;
-                  });
-                  context.read<TutorialBloc>().add(
-                        FilterTutorialsByTechStack(value),
-                      );
-                },
-              ),
-            ],
-            if (_selectedCategory != null || _selectedLevel != null || _selectedTechStack != null) ...[
-              const SizedBox(width: 8),
-              ActionChip(
-                label: const Text('Limpiar'),
-                onPressed: () {
-                  setState(() {
-                    _selectedCategory = null;
-                    _selectedLevel = null;
-                    _selectedTechStack = null;
-                  });
-                  context.read<TutorialBloc>().add(const ClearTutorialFilters());
-                },
-                backgroundColor: BrandColors.cardBackground,
-                labelStyle: const TextStyle(color: BrandColors.primaryWhite),
-                side: const BorderSide(color: BrandColors.primaryOrange),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildPlaylistChips() {
+    return BlocBuilder<TutorialBloc, TutorialState>(
+      buildWhen: (prev, curr) =>
+          curr is PlaylistsLoaded ||
+          curr is TutorialLoaded ||
+          curr is TutorialLoading,
+      builder: (context, state) {
+        List<YouTubePlaylistInfo> playlists = [];
+        String? selectedId;
 
-  Widget _buildFilterChip({
-    required String label,
-    required String? value,
-    required List<String> options,
-    required Function(String) onSelected,
-  }) {
-    return PopupMenuButton<String>(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: value != null ? BrandColors.primaryOrange.withOpacity(0.2) : BrandColors.cardBackground,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: value != null ? BrandColors.primaryOrange : BrandColors.grayMedium,
-            width: 1,
+        if (state is TutorialLoaded) {
+          playlists = state.playlists;
+          selectedId = state.selectedPlaylistId;
+        } else if (state is PlaylistsLoaded) {
+          playlists = state.playlists;
+        }
+
+        if (playlists.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          height: 44,
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: playlists.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final p = playlists[index];
+              final isSelected = p.id == selectedId;
+              return GestureDetector(
+                onTap: () {
+                  context.read<TutorialBloc>().add(SelectPlaylist(
+                        playlistId: p.id,
+                        playlistTitle: p.title,
+                      ));
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? BrandColors.primaryOrange.withOpacity(0.25)
+                        : BrandColors.cardBackground,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: isSelected
+                          ? BrandColors.primaryOrange
+                          : BrandColors.grayMedium.withOpacity(0.5),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      p.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                        color: isSelected
+                            ? BrandColors.primaryOrange
+                            : BrandColors.grayLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              value ?? label,
-              style: TextStyle(
-                color: value != null ? BrandColors.primaryOrange : BrandColors.primaryWhite,
-                fontSize: 12,
-                fontWeight: value != null ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.arrow_drop_down,
-              color: value != null ? BrandColors.primaryOrange : BrandColors.grayMedium,
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-      itemBuilder: (context) => options.map((option) {
-        return PopupMenuItem<String>(
-          value: option,
-          child: Text(option),
         );
-      }).toList(),
-      onSelected: onSelected,
+      },
     );
   }
 
@@ -241,7 +161,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
         icon: Icons.playlist_add_outlined,
         title: 'Tutoriales próximamente',
         subtitle:
-            'Estamos preparando contenido de tutoriales para ti. Cuando configuremos la playlist de YouTube, verás los videos aquí.',
+            'Estamos preparando contenido de tutoriales. Cuando configuremos las playlists, verás los videos aquí.',
       );
     }
 
@@ -261,7 +181,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
             title: 'No hay tutoriales disponibles',
             subtitle: state.message,
             showRetry: true,
-            onRetry: () => context.read<TutorialBloc>().add(const RefreshTutorials()),
+            onRetry: () => context.read<TutorialBloc>().add(const LoadPlaylists()),
           );
         }
 
@@ -272,24 +192,43 @@ class _TutorialsScreenState extends State<TutorialsScreen>
             return _buildEmptyState(
               icon: Icons.search_off,
               title: 'No se encontraron tutoriales',
-              subtitle: 'Intenta con otros filtros o términos de búsqueda',
+              subtitle: state.searchQuery.isNotEmpty
+                  ? 'Intenta con otros términos de búsqueda'
+                  : 'Esta playlist no tiene videos',
             );
           }
 
-          return ListView.builder(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              bottom: MediaQuery.of(context).padding.bottom + 100,
-            ),
-            itemCount: tutorials.length,
-            itemBuilder: (context, index) {
-              final tutorial = tutorials[index];
-              return TutorialCard(
-                tutorial: tutorial,
-                onTap: () => _onTutorialTap(tutorial),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<TutorialBloc>().add(const RefreshTutorials());
             },
+            color: BrandColors.primaryOrange,
+            child: ListView.builder(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).padding.bottom + 100,
+              ),
+              itemCount: tutorials.length,
+              itemBuilder: (context, index) {
+                final tutorial = tutorials[index];
+                return TutorialCard(
+                  tutorial: tutorial,
+                  onTap: () => _onTutorialTap(
+                    tutorial,
+                    state.selectedPlaylistTitle,
+                  ),
+                );
+              },
+            ),
+          );
+        }
+
+        if (state is PlaylistsLoaded && state.playlists.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.playlist_remove,
+            title: 'Sin playlists',
+            subtitle: 'No hay playlists de tutoriales configuradas.',
           );
         }
 
@@ -307,30 +246,40 @@ class _TutorialsScreenState extends State<TutorialsScreen>
   }) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 80,
-              color: BrandColors.grayMedium.withOpacity(0.6),
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: BrandColors.primaryOrange.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 48,
+                color: BrandColors.primaryOrange,
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: BrandColors.primaryWhite,
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: BrandColors.primaryWhite,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: BrandColors.grayMedium,
-                  ),
+              style: TextStyle(
+                fontSize: 15,
+                color: BrandColors.grayMedium,
+              ),
               textAlign: TextAlign.center,
             ),
             if (showRetry && onRetry != null) ...[
@@ -350,18 +299,23 @@ class _TutorialsScreenState extends State<TutorialsScreen>
     );
   }
 
-  void _onTutorialTap(Tutorial tutorial) {
+  void _onTutorialTap(Tutorial tutorial, String? playlistTitle) {
     final youtubeProvider = context.read<YouTubeProvider>();
     final video = youtubeProvider.getVideoById(tutorial.videoId);
 
     if (video != null) {
       context.push(
         '/episode/${tutorial.id}',
-        extra: {'youtubeVideo': video},
+        extra: {
+          'youtubeVideo': video,
+          'playlistTitle': playlistTitle,
+        },
       );
     } else {
-      // Fallback: navegar solo con episodeId (EpisodeDetailScreen intentará cargar)
-      context.push('/episode/${tutorial.id}');
+      context.push(
+        '/episode/${tutorial.id}',
+        extra: {'playlistTitle': playlistTitle},
+      );
     }
   }
 }

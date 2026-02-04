@@ -3,16 +3,20 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'bloc/episode/episode_bloc_exports.dart';
 import 'bloc/auth/auth_bloc_exports.dart';
 import 'bloc/tutorial/tutorial_bloc_exports.dart';
 import 'bloc/academy/academy_bloc_exports.dart';
 import 'bloc/enterprise/enterprise_bloc_exports.dart';
+import 'bloc/event/event_bloc_exports.dart';
 import 'repository/episode_repository.dart';
 import 'repository/academy_repository.dart';
 import 'repository/enterprise_repository.dart';
 import 'repository/tutorial_repository.dart';
+import 'repository/event_repository.dart';
 import 'providers/youtube_provider.dart';
 import 'models/episode.dart';
 import 'models/youtube_video.dart';
@@ -29,6 +33,11 @@ import 'screens/youtube/youtube_screen.dart';
 import 'screens/admin/admin_modules_screen.dart';
 import 'screens/admin/courses_list_screen.dart';
 import 'screens/admin/course_form_screen.dart';
+import 'screens/admin/events_list_screen.dart';
+import 'screens/admin/event_form_screen.dart';
+import 'screens/events/events_screen.dart';
+import 'screens/events/event_detail_screen.dart';
+import 'screens/academy/course_detail_screen.dart';
 import 'repository/course_admin_repository.dart';
 import 'models/course.dart';
 import 'widgets/main_navigation.dart';
@@ -36,6 +45,7 @@ import 'widgets/version_check_wrapper.dart';
 import 'utils/brand_colors.dart';
 import 'firebase_options.dart';
 import 'services/remote_config_service.dart';
+import 'services/analytics_service.dart';
 import 'services/push_notification_service.dart'
     show PushNotificationService, firebaseMessagingBackgroundHandler;
 
@@ -69,7 +79,48 @@ void main() async {
   // Inicializar push notifications
   await PushNotificationService().initialize();
 
+  // Habilitar colección de analítica (Firebase Analytics)
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+
+  // app_first_open solo en la primera ejecución post-instalación
+  final prefs = await SharedPreferences.getInstance();
+  final hasOpenedBefore = prefs.getBool('analytics_app_opened_before') ?? false;
+  if (!hasOpenedBefore) {
+    await AnalyticsService.logAppFirstOpen();
+    await prefs.setBool('analytics_app_opened_before', true);
+  }
+  await AnalyticsService.logAppOpen();
+
   runApp(const DevLokosApp());
+}
+
+/// Configura la navegación al tocar notificaciones push (cursos, eventos).
+class _PushNotificationRouterSetup extends StatefulWidget {
+  final GoRouter router;
+  final Widget child;
+
+  const _PushNotificationRouterSetup({
+    required this.router,
+    required this.child,
+  });
+
+  @override
+  State<_PushNotificationRouterSetup> createState() =>
+      _PushNotificationRouterSetupState();
+}
+
+class _PushNotificationRouterSetupState
+    extends State<_PushNotificationRouterSetup> {
+  @override
+  void initState() {
+    super.initState();
+    PushNotificationService.setNavigationHandler(
+      (route) => widget.router.go(route),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class DevLokosApp extends StatelessWidget {
@@ -96,7 +147,7 @@ class DevLokosApp extends StatelessWidget {
               repository: TutorialRepositoryYouTube(
                 youtubeProvider: context.read<YouTubeProvider>(),
               ),
-            )..add(const LoadTutorials()),
+            )..add(const LoadPlaylists()),
           ),
           BlocProvider<AcademyBloc>(
             create: (context) => AcademyBloc(
@@ -108,15 +159,23 @@ class DevLokosApp extends StatelessWidget {
               repository: EnterpriseRepositoryImpl(),
             )..add(const LoadServices()),
           ),
+          BlocProvider<EventBloc>(
+            create: (context) => EventBloc(
+              repository: EventRepository(),
+            ),
+          ),
         ],
         child: VersionCheckWrapper(
-          child: MaterialApp.router(
-            title: 'DevLokos',
-            theme: BrandColors.lightTheme,
-            darkTheme: BrandColors.darkTheme,
-            themeMode: ThemeMode.system,
-            routerConfig: _router,
-            debugShowCheckedModeBanner: false,
+          child: _PushNotificationRouterSetup(
+            router: _router,
+            child: MaterialApp.router(
+              title: 'DevLokos',
+              theme: BrandColors.lightTheme,
+              darkTheme: BrandColors.darkTheme,
+              themeMode: ThemeMode.system,
+              routerConfig: _router,
+              debugShowCheckedModeBanner: false,
+            ),
           ),
         ),
       ),
@@ -126,6 +185,9 @@ class DevLokosApp extends StatelessWidget {
 
 final GoRouter _router = GoRouter(
   initialLocation: '/splash',
+  observers: [
+    FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
+  ],
   routes: [
     GoRoute(
       path: '/splash',
@@ -181,6 +243,24 @@ final GoRouter _router = GoRouter(
             episodeId: episodeId,
             episode: extra?['episode'] as Episode?,
             youtubeVideo: extra?['youtubeVideo'] as YouTubeVideo?,
+            playlistTitle: extra?['playlistTitle'] as String?,
+          ),
+          state: state,
+          transitionType: 'horizontal',
+          maintainState: true,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/course/:id',
+      pageBuilder: (context, state) {
+        final courseId = state.pathParameters['id']!;
+        final extra = state.extra as Map<String, dynamic>?;
+        final course = extra?['course'] as Course?;
+        return _buildPageWithTransition(
+          child: CourseDetailScreen(
+            courseId: courseId,
+            course: course,
           ),
           state: state,
           transitionType: 'horizontal',
@@ -224,6 +304,31 @@ final GoRouter _router = GoRouter(
         maintainState: true,
       ),
     ),
+    GoRoute(
+      path: '/events',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const EventsScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/events/:id',
+      pageBuilder: (context, state) {
+        final eventId = state.pathParameters['id']!;
+        final extra = state.extra as Map<String, dynamic>?;
+        return _buildPageWithTransition(
+          child: EventDetailScreen(
+            eventId: eventId,
+            event: extra?['event'],
+          ),
+          state: state,
+          transitionType: 'horizontal',
+          maintainState: true,
+        );
+      },
+    ),
     // Rutas de administración
     GoRoute(
       path: '/admin/modules',
@@ -261,11 +366,122 @@ final GoRouter _router = GoRouter(
             future: CourseAdminRepository().getCourseById(courseId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
+                return Scaffold(
+                  backgroundColor: BrandColors.primaryBlack,
+                  body: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
+                    ),
+                  ),
+                );
+              }
+              if (snapshot.hasError) {
+                return Scaffold(
+                  appBar: AppBar(
+                    title: const Text('Error'),
+                    backgroundColor: BrandColors.primaryBlack,
+                  ),
+                  backgroundColor: BrandColors.primaryBlack,
+                  body: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 64, color: BrandColors.error),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No se pudo cargar el curso',
+                            style: TextStyle(color: BrandColors.primaryWhite, fontSize: 18),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            snapshot.error.toString(),
+                            style: TextStyle(color: BrandColors.grayMedium, fontSize: 14),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          TextButton(
+                            onPressed: () => context.go('/admin/courses'),
+                            child: const Text('Volver a cursos'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+              final course = snapshot.data;
+              if (course == null) {
+                return Scaffold(
+                  appBar: AppBar(
+                    title: const Text('Curso no encontrado'),
+                    backgroundColor: BrandColors.primaryBlack,
+                  ),
+                  backgroundColor: BrandColors.primaryBlack,
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.school_outlined, size: 64, color: BrandColors.grayMedium),
+                        const SizedBox(height: 16),
+                        Text(
+                          'El curso no existe o fue eliminado',
+                          style: TextStyle(color: BrandColors.primaryWhite, fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        TextButton(
+                          onPressed: () => context.go('/admin/courses'),
+                          child: const Text('Volver a cursos'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return CourseFormScreen(course: course);
+            },
+          ),
+          state: state,
+          transitionType: 'horizontal',
+          maintainState: true,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/admin/events',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const EventsListScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/admin/events/new',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const EventFormScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/admin/events/:id',
+      pageBuilder: (context, state) {
+        final eventId = state.pathParameters['id']!;
+        return _buildPageWithTransition(
+          child: FutureBuilder(
+            future: EventRepository().getEventById(eventId),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
-              return CourseFormScreen(course: snapshot.data);
+              return EventFormScreen(event: snapshot.data);
             },
           ),
           state: state,
@@ -284,10 +500,12 @@ CustomTransitionPage _buildPageWithTransition({
   required String transitionType,
   bool maintainState = false,
 }) {
+  final screenName = state.matchedLocation;
   switch (transitionType) {
     case 'horizontal':
       return CustomTransitionPage(
         key: state.pageKey,
+        name: screenName,
         child: child,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           // Animación horizontal suave estilo iOS
@@ -314,6 +532,7 @@ CustomTransitionPage _buildPageWithTransition({
     case 'fade':
       return CustomTransitionPage(
         key: state.pageKey,
+        name: screenName,
         child: child,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
@@ -327,6 +546,7 @@ CustomTransitionPage _buildPageWithTransition({
     default:
       return CustomTransitionPage(
         key: state.pageKey,
+        name: screenName,
         child: child,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
@@ -358,12 +578,13 @@ class CustomTransitionPage extends Page<void> {
 
   const CustomTransitionPage({
     required LocalKey key,
+    String? name,
     required this.child,
     this.transitionsBuilder,
     this.transitionDuration = const Duration(milliseconds: 300),
     this.reverseTransitionDuration,
     this.maintainState = false,
-  }) : super(key: key);
+  }) : super(key: key, name: name);
 
   @override
   Route<void> createRoute(BuildContext context) {

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../models/youtube_playlist_info.dart';
 import '../models/youtube_video.dart';
 import '../models/episode.dart';
 import '../services/youtube_service.dart';
 import '../services/cache_service.dart';
+import '../services/tutorial_cache_service.dart';
 import '../constants/youtube_config.dart';
 
 class YouTubeProvider extends ChangeNotifier {
@@ -11,6 +13,8 @@ class YouTubeProvider extends ChangeNotifier {
   List<YouTubeVideo> _videos = [];
   List<YouTubeVideo> _tutorialVideos = [];
   List<YouTubeVideo> _featuredVideos = [];
+  /// Caché en memoria: playlistId -> videos (evita API al cambiar de chip).
+  final Map<String, List<YouTubeVideo>> _playlistVideosCache = {};
   bool _isLoading = false;
   String? _errorMessage;
   String? _nextPageToken;
@@ -477,23 +481,81 @@ class YouTubeProvider extends ChangeNotifier {
     }
   }
 
-  /// Carga videos de la playlist de tutoriales.
-  /// Si youtube_tutorials_playlist_id no está configurado, usa la playlist principal.
-  /// Los videos quedan en _tutorialVideos para reproducción.
-  Future<List<YouTubeVideo>> loadTutorialsVideos({bool refresh = false}) async {
+  /// Obtiene las playlists del canal (excluyendo Bloques Podcast).
+  /// Usa caché (disco + memoria) para minimizar llamadas a la API.
+  Future<List<YouTubePlaylistInfo>> loadChannelPlaylists({
+    bool refresh = false,
+  }) async {
+    if (!refresh) {
+      final cached = await TutorialCacheService.loadPlaylists();
+      if (cached != null && cached.isNotEmpty) {
+        return cached;
+      }
+    }
+    var cId = channelId;
+    if (cId == null || cId.isEmpty) {
+      await loadTutorialsVideos(
+        playlistId: YouTubeConfig.tutorialsPlaylistId,
+        refresh: false,
+      );
+      cId = channelId;
+    }
+    if (cId == null || cId.isEmpty) {
+      print('⚠️ No se pudo obtener channelId para playlists');
+      return [];
+    }
+    final all = await _youtubeService.getChannelPlaylists(channelId: cId);
+    final excludeId = YouTubeConfig.devLokosPlaylistId;
+    final filtered = all.where((p) {
+      if (p.id == excludeId) return false;
+      final title = p.title.toLowerCase();
+      if (title.contains('bloques podcast') || title.contains('devlokos podcast')) {
+        return false;
+      }
+      return true;
+    }).toList();
+    if (filtered.isNotEmpty) {
+      TutorialCacheService.savePlaylists(filtered);
+    }
+    return filtered;
+  }
+
+  /// Carga videos de una playlist (por defecto la de tutoriales).
+  /// Usa caché en memoria y disco para minimizar llamadas a la API.
+  Future<List<YouTubeVideo>> loadTutorialsVideos({
+    bool refresh = false,
+    String? playlistId,
+  }) async {
+    final effectivePlaylistId = playlistId ?? YouTubeConfig.tutorialsPlaylistId;
+
+    if (!refresh) {
+      final mem = _playlistVideosCache[effectivePlaylistId];
+      if (mem != null && mem.isNotEmpty) {
+        _tutorialVideos = mem;
+        return mem;
+      }
+      final disk = await TutorialCacheService.loadPlaylistVideos(effectivePlaylistId);
+      if (disk != null && disk.isNotEmpty) {
+        _playlistVideosCache[effectivePlaylistId] = disk;
+        _tutorialVideos = disk;
+        _updateChannelIdFromVideos(disk);
+        return disk;
+      }
+    }
+
     try {
       _setLoading(true);
       _clearError();
 
-      final playlistId = YouTubeConfig.tutorialsPlaylistId;
-
       final response = await _youtubeService.getPlaylistVideos(
         maxResults: 100,
-        playlistId: playlistId,
+        playlistId: effectivePlaylistId,
       );
 
       _tutorialVideos = response.videos;
-      print('✅ ${response.videos.length} videos de tutoriales cargados');
+      _playlistVideosCache[effectivePlaylistId] = response.videos;
+      _updateChannelIdFromVideos(response.videos);
+      TutorialCacheService.savePlaylistVideos(effectivePlaylistId, response.videos);
       _setLoading(false);
       return response.videos;
     } catch (e) {

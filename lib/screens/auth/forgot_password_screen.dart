@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../utils/brand_colors.dart';
+import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/gradient_button.dart';
 
@@ -89,23 +90,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: BrandColors.primaryBlack,
-          elevation: 0,
-          title: const Text(
-            'Recuperar Contraseña',
-            style: TextStyle(
-              color: BrandColors.primaryWhite,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          leading: IconButton(
-            onPressed: () => context.go('/login'),
-            icon: const Icon(
-              Icons.arrow_back,
-              color: BrandColors.primaryWhite,
-            ),
-          ),
+        appBar: CustomAppBar(
+          title: 'Recuperar Contraseña',
+          showBackButton: true,
         ),
         body: Container(
           decoration: const BoxDecoration(
@@ -157,7 +144,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: Image.asset(
-            'assets/icons/devlokos_icon.png',
+            'assets/icons/devlokos_icon.webp',
             width: 100,
             height: 100,
             fit: BoxFit.contain,

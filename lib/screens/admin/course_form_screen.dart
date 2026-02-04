@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import '../../constants/learning_paths.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../models/course.dart';
@@ -28,7 +29,6 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
   // Controllers
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _linkController = TextEditingController();
   final _professorController = TextEditingController();
   final _durationController = TextEditingController();
 
@@ -42,7 +42,6 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
   bool _isLoading = false;
 
   final List<String> _difficulties = ['Beginner', 'Intermediate', 'Advanced'];
-  final List<String> _learningPaths = ['Mobile', 'Backend', 'DevOps'];
 
   @override
   void initState() {
@@ -67,20 +66,20 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
     _titleController.text = course.title;
     _descriptionController.text = course.description;
     _professorController.text = course.professor ?? '';
-    _linkController.text = course.link ?? '';
     _durationController.text = course.duration.toString();
     _coverImageUrl = course.thumbnailUrl;
     _isFree = !course.isPaid;
     _isPublished = course.isPublished;
     _selectedDifficulty = course.difficulty;
-    _selectedLearningPaths = List.from(course.learningPaths);
+    _selectedLearningPaths = List.from(
+      LearningPaths.normalizePaths(course.learningPaths),
+    );
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
-    _linkController.dispose();
     _professorController.dispose();
     _durationController.dispose();
     super.dispose();
@@ -135,16 +134,6 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
                     }
                     return null;
                   },
-                ),
-                const SizedBox(height: 16),
-
-                // Enlace
-                _buildTextField(
-                  controller: _linkController,
-                  label: 'Enlace del Curso',
-                  hint: 'https://...',
-                  icon: Icons.link,
-                  keyboardType: TextInputType.url,
                 ),
                 const SizedBox(height: 16),
 
@@ -235,13 +224,25 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Imagen de Portada',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: BrandColors.primaryWhite,
-          ),
+        Row(
+          children: [
+            const Text(
+              'Imagen de Portada',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: BrandColors.primaryWhite,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '(Toca para cambiar)',
+              style: TextStyle(
+                fontSize: 12,
+                color: BrandColors.grayMedium,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         GestureDetector(
@@ -419,6 +420,8 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
   }
 
   Widget _buildLearningPathsSection() {
+    final canSelectMore = _selectedLearningPaths.length < LearningPaths.maxPerCourse;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -430,39 +433,91 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
             color: BrandColors.grayMedium,
           ),
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _learningPaths.map((path) {
-            final isSelected = _selectedLearningPaths.contains(path);
-            return FilterChip(
-              label: Text(path),
-              selected: isSelected,
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedLearningPaths.add(path);
-                  } else {
-                    _selectedLearningPaths.remove(path);
-                  }
-                });
-              },
-              backgroundColor: BrandColors.blackLight,
-              selectedColor: BrandColors.primaryOrange.withOpacity(0.2),
-              labelStyle: TextStyle(
-                color: isSelected
-                    ? BrandColors.primaryOrange
-                    : BrandColors.primaryWhite,
-              ),
-              side: BorderSide(
-                color: isSelected
-                    ? BrandColors.primaryOrange
-                    : BrandColors.grayMedium,
-              ),
-            );
-          }).toList(),
+        const SizedBox(height: 6),
+        Text(
+          'Selecciona hasta ${LearningPaths.maxPerCourse} rutas que mejor describan este curso.',
+          style: TextStyle(
+            fontSize: 12,
+            color: BrandColors.grayMedium.withOpacity(0.9),
+          ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          '${_selectedLearningPaths.length} / ${LearningPaths.maxPerCourse} seleccionadas',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: _selectedLearningPaths.length >= LearningPaths.maxPerCourse
+                ? BrandColors.primaryOrange
+                : BrandColors.grayMedium,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...LearningPaths.categories.map((category) {
+          final (categoryName, paths) = category;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  categoryName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: BrandColors.primaryOrange.withOpacity(0.9),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: paths.map((path) {
+                    final isSelected = _selectedLearningPaths.contains(path);
+                    final isDisabled = !canSelectMore && !isSelected;
+                    return FilterChip(
+                      label: Text(path),
+                      selected: isSelected,
+                      onSelected: (canSelectMore || isSelected)
+                          ? (selected) {
+                        setState(() {
+                          if (selected) {
+                            if (canSelectMore) {
+                              _selectedLearningPaths.add(path);
+                            }
+                          } else {
+                            _selectedLearningPaths.remove(path);
+                          }
+                        });
+                      }
+                          : null,
+                      backgroundColor: isDisabled
+                          ? BrandColors.blackMedium
+                          : BrandColors.blackLight,
+                      selectedColor: BrandColors.primaryOrange.withOpacity(0.2),
+                      checkmarkColor: BrandColors.primaryOrange,
+                      labelStyle: TextStyle(
+                        fontSize: 13,
+                        color: isSelected
+                            ? BrandColors.primaryOrange
+                            : isDisabled
+                                ? BrandColors.grayDark
+                                : BrandColors.primaryWhite,
+                      ),
+                      side: BorderSide(
+                        color: isSelected
+                            ? BrandColors.primaryOrange
+                            : isDisabled
+                                ? BrandColors.grayDark.withOpacity(0.4)
+                                : BrandColors.grayMedium,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }
@@ -491,10 +546,11 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
               color: BrandColors.primaryWhite,
             ),
           ),
-          Switch(
+          Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: BrandColors.primaryOrange,
+            activeTrackColor: BrandColors.primaryOrange,
+            activeThumbColor: BrandColors.primaryWhite,
           ),
         ],
       ),
@@ -556,18 +612,51 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
   }
 
   Future<void> _pickCoverImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: BrandColors.blackLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_library, color: BrandColors.primaryOrange),
+              title: const Text(
+                'Galería',
+                style: TextStyle(color: BrandColors.primaryWhite),
+              ),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: Icon(Icons.camera_alt, color: BrandColors.primaryOrange),
+              title: const Text(
+                'Cámara',
+                style: TextStyle(color: BrandColors.primaryWhite),
+              ),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
     try {
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 1920,
         maxHeight: 1080,
         imageQuality: 85,
       );
 
-      if (image != null) {
+      if (image != null && mounted) {
         setState(() {
           _coverImage = File(image.path);
-          _coverImageUrl = null; // Limpiar URL si hay imagen local
+          _coverImageUrl = null;
         });
       }
     } catch (e) {
@@ -580,8 +669,12 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
       return;
     }
 
-    if (_selectedLearningPaths.isEmpty) {
+    if (_selectedLearningPaths.length < LearningPaths.minPerCourse) {
       _showError('Selecciona al menos una ruta de aprendizaje');
+      return;
+    }
+    if (_selectedLearningPaths.length > LearningPaths.maxPerCourse) {
+      _showError('Máximo ${LearningPaths.maxPerCourse} rutas por curso');
       return;
     }
 
@@ -622,9 +715,7 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
           professor: _professorController.text.trim().isEmpty 
               ? null 
               : _professorController.text.trim(),
-          link: _linkController.text.trim().isEmpty 
-              ? null 
-              : _linkController.text.trim(),
+          link: null, // La inscripción se maneja por WhatsApp
         );
 
         final courseId = await _repository.createCourse(course);
@@ -669,9 +760,7 @@ class _CourseFormScreenState extends State<CourseFormScreen> {
           professor: _professorController.text.trim().isEmpty 
               ? null 
               : _professorController.text.trim(),
-          link: _linkController.text.trim().isEmpty 
-              ? null 
-              : _linkController.text.trim(),
+          link: null, // La inscripción se maneja por WhatsApp
         );
 
         await _repository.updateCourse(widget.course!.id, course);
