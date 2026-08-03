@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -31,6 +33,14 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
   final _messageController = TextEditingController();
   String? _selectedProjectType;
   String _portfolioFilter = 'Todos';
+
+  final ScrollController _portfolioScrollController = ScrollController();
+  Timer? _portfolioAutoScrollTimer;
+  Timer? _portfolioResumeTimer;
+  bool _portfolioUserInteracting = false;
+
+  static const Duration _portfolioTickInterval = Duration(milliseconds: 16);
+  static const double _portfolioPixelsPerTick = 0.45;
 
   static const _portfolioFilters = [
     'Todos',
@@ -103,12 +113,72 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
 
   @override
   void dispose() {
+    _stopPortfolioAutoScroll();
+    _portfolioScrollController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _companyController.dispose();
     _messageController.dispose();
     super.dispose();
+  }
+
+  void _schedulePortfolioAutoScroll(int itemCount) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || itemCount <= 1) {
+        _stopPortfolioAutoScroll();
+        return;
+      }
+      if (_portfolioAutoScrollTimer == null ||
+          !_portfolioAutoScrollTimer!.isActive) {
+        _startPortfolioAutoScroll(itemCount);
+      }
+    });
+  }
+
+  void _startPortfolioAutoScroll(int itemCount) {
+    _portfolioAutoScrollTimer?.cancel();
+    if (itemCount <= 1) return;
+    _portfolioAutoScrollTimer = Timer.periodic(_portfolioTickInterval, (_) {
+      _tickPortfolioRail();
+    });
+  }
+
+  void _stopPortfolioAutoScroll() {
+    _portfolioAutoScrollTimer?.cancel();
+    _portfolioAutoScrollTimer = null;
+    _portfolioResumeTimer?.cancel();
+    _portfolioResumeTimer = null;
+  }
+
+  void _pausePortfolioAutoScrollTemporarily() {
+    _portfolioUserInteracting = true;
+    _portfolioResumeTimer?.cancel();
+    _portfolioResumeTimer = Timer(const Duration(seconds: 2), () {
+      _portfolioUserInteracting = false;
+    });
+  }
+
+  void _tickPortfolioRail() {
+    if (!mounted || _portfolioUserInteracting) return;
+    if (!_portfolioScrollController.hasClients) return;
+    final position = _portfolioScrollController.position;
+    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) {
+      return;
+    }
+    final next = position.pixels + _portfolioPixelsPerTick;
+    if (next >= position.maxScrollExtent - 0.5) {
+      _portfolioScrollController.jumpTo(0);
+    } else {
+      _portfolioScrollController.jumpTo(next);
+    }
+  }
+
+  void _onPortfolioFilterSelected(String filter) {
+    setState(() => _portfolioFilter = filter);
+    if (_portfolioScrollController.hasClients) {
+      _portfolioScrollController.jumpTo(0);
+    }
   }
 
   @override
@@ -440,93 +510,117 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
             .toList();
 
     final hPad = Responsive.horizontalPadding(context);
-    final cols = Responsive.portfolioCrossAxisCount(context);
-    final gap = Responsive.portfolioGap(context);
-    final aspect = Responsive.portfolioChildAspectRatio(context);
-    final isCompact = cols <= 2;
+    final tablet = Responsive.isTablet(context);
+    final wide = Responsive.isWide(context);
+    final cardWidth = wide ? 260.0 : (tablet ? 240.0 : 212.0);
+    final railHeight = wide ? 300.0 : (tablet ? 286.0 : 268.0);
+    const gap = 12.0;
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: Responsive.contentMaxWidth(context)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(
-              title: 'Portafolio',
-              padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 4),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 12),
-              child: Text(
-                '${projects.length} proyectos entregados — apps, web y productos reales.',
-                style: TextStyle(
-                  color: BrandColors.grayMedium,
-                  fontSize: isCompact ? 13 : 14,
-                  height: 1.35,
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 14),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _portfolioFilters.map((filter) {
-                  final active = filter == _portfolioFilter;
-                  return FilterChip(
-                    label: Text(filter),
-                    selected: active,
-                    showCheckmark: false,
-                    onSelected: (_) =>
-                        setState(() => _portfolioFilter = filter),
-                    selectedColor: BrandColors.primaryOrange,
-                    backgroundColor: BrandColors.cardBackground,
-                    labelStyle: TextStyle(
-                      color: active
-                          ? BrandColors.primaryWhite
-                          : BrandColors.grayMedium,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                    side: BorderSide(
-                      color: active
-                          ? BrandColors.primaryOrange
-                          : BrandColors.primaryOrange.withValues(alpha: 0.25),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            if (filtered.isEmpty)
-              Padding(
-                padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 8),
-                child: const Text(
-                  'No hay proyectos en esta categoría.',
-                  style: TextStyle(color: BrandColors.grayMedium, fontSize: 13),
-                ),
-              )
-            else
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: hPad),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filtered.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: cols,
-                    mainAxisSpacing: gap,
-                    crossAxisSpacing: gap,
-                    childAspectRatio: aspect,
-                  ),
-                  itemBuilder: (context, index) => _buildPortfolioCard(
-                    filtered[index],
-                    compact: isCompact,
-                  ),
-                ),
-              ),
-          ],
+    if (filtered.length > 1) {
+      _schedulePortfolioAutoScroll(filtered.length);
+    } else {
+      _stopPortfolioAutoScroll();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: 'Portafolio',
+          padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 4),
+          count: projects.length,
         ),
-      ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 12),
+          child: const Text(
+            'Proyectos reales — desliza o déjalos pasar solos.',
+            style: TextStyle(
+              color: BrandColors.grayMedium,
+              fontSize: 13,
+              height: 1.35,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 40,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
+            itemCount: _portfolioFilters.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final filter = _portfolioFilters[index];
+              final active = filter == _portfolioFilter;
+              return FilterChip(
+                label: Text(filter),
+                selected: active,
+                showCheckmark: false,
+                onSelected: (_) => _onPortfolioFilterSelected(filter),
+                selectedColor: BrandColors.primaryOrange,
+                backgroundColor: BrandColors.cardBackground,
+                labelStyle: TextStyle(
+                  color: active
+                      ? BrandColors.primaryWhite
+                      : BrandColors.grayMedium,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                side: BorderSide(
+                  color: active
+                      ? BrandColors.primaryOrange
+                      : BrandColors.primaryOrange.withValues(alpha: 0.25),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (filtered.isEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 8),
+            child: const Text(
+              'No hay proyectos en esta categoría.',
+              style: TextStyle(color: BrandColors.grayMedium, fontSize: 13),
+            ),
+          )
+        else
+          SizedBox(
+            height: railHeight,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollStartNotification &&
+                    notification.dragDetails != null) {
+                  _pausePortfolioAutoScrollTemporarily();
+                }
+                return false;
+              },
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  scrollbars: false,
+                ),
+                child: ListView.builder(
+                  controller: _portfolioScrollController,
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(horizontal: hPad),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    return SizedBox(
+                      width: cardWidth,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          right: index < filtered.length - 1 ? gap : 0,
+                        ),
+                        child: _buildPortfolioCard(filtered[index]),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -571,15 +665,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Widget _buildPortfolioCard(
-    PortfolioProject project, {
-    required bool compact,
-  }) {
-    final titleSize = compact ? 13.0 : 15.0;
-    final bodySize = compact ? 11.0 : 12.5;
-    final pad = compact ? 10.0 : 14.0;
-    final tech = project.technologies.take(compact ? 2 : 3).toList();
-
+  Widget _buildPortfolioCard(PortfolioProject project) {
     final card = Container(
       decoration: BoxDecoration(
         color: BrandColors.cardBackground,
@@ -599,8 +685,9 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: compact ? 5 : 6,
+          SizedBox(
+            height: 132,
+            width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -622,11 +709,11 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                 else
                   Container(
                     color: BrandColors.blackLight,
-                    child: Center(
+                    child: const Center(
                       child: Icon(
                         Icons.folder_open_rounded,
                         color: BrandColors.primaryOrange,
-                        size: compact ? 32 : 40,
+                        size: 36,
                       ),
                     ),
                   ),
@@ -637,15 +724,15 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.7),
+                        Colors.black.withValues(alpha: 0.65),
                       ],
                     ),
                   ),
                 ),
                 if (project.category.isNotEmpty)
                   Positioned(
-                    left: compact ? 8 : 10,
-                    top: compact ? 8 : 10,
+                    left: 10,
+                    top: 10,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -657,9 +744,9 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                       ),
                       child: Text(
                         project.category,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: BrandColors.primaryBlack,
-                          fontSize: compact ? 10 : 11,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -669,83 +756,41 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
             ),
           ),
           Expanded(
-            flex: compact ? 5 : 5,
             child: Padding(
-              padding: EdgeInsets.all(pad),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     project.title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: BrandColors.primaryWhite,
-                      fontSize: titleSize,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
                       height: 1.2,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Expanded(
                     child: Text(
                       project.description,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: BrandColors.grayMedium,
-                        fontSize: bodySize,
+                        fontSize: 12,
                         height: 1.3,
                       ),
-                      maxLines: compact ? 2 : 3,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (!compact && tech.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        ...tech.map(
-                          (t) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: BrandColors.primaryWhite
-                                  .withValues(alpha: 0.06),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: BrandColors.primaryWhite
-                                    .withValues(alpha: 0.1),
-                              ),
-                            ),
-                            child: Text(
-                              t,
-                              style: const TextStyle(
-                                color: BrandColors.grayMedium,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (project.technologies.length > tech.length)
-                          Text(
-                            '+${project.technologies.length - tech.length}',
-                            style: const TextStyle(
-                              color: BrandColors.grayMedium,
-                              fontSize: 10,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  Text(
+                  const SizedBox(height: 8),
+                  const Text(
                     'Ver proyecto',
                     style: TextStyle(
                       color: BrandColors.primaryOrange,
-                      fontSize: compact ? 12 : 13,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

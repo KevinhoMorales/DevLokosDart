@@ -35,14 +35,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         setState(() {
           _appVersion = packageInfo.version;
-          _appBuild = packageInfo.version; // Igual a versión (X.Y.Z = build para UI)
+          _appBuild = packageInfo.buildNumber;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
           _appVersion = AppConstants.appVersion;
-          _appBuild = AppConstants.appVersion;
+          _appBuild = AppConstants.appBuildNumber;
         });
       }
     }
@@ -281,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Compilación',
+                  'Build',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: BrandColors.primaryWhite,
                         fontWeight: FontWeight.w600,

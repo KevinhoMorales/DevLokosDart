@@ -238,14 +238,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
                     child: SectionHeader(
                       title: sectionTitle,
                       padding: EdgeInsets.zero,
-                      trailing: Text(
-                        '${tutorials.length}',
-                        style: const TextStyle(
-                          color: BrandColors.grayMedium,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      count: tutorials.length,
                     ),
                   );
                 }

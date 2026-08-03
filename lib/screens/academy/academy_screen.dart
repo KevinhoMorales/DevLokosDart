@@ -7,6 +7,7 @@ import '../../constants/app_constants.dart';
 import '../../constants/learning_paths.dart';
 import '../../models/course.dart';
 import '../../repository/academy_repository.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/app_empty_state.dart';
@@ -107,11 +108,15 @@ class _AcademyScreenState extends State<AcademyScreen>
   }
 
   Widget _buildFilters() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+    final h = Responsive.horizontalPadding(context);
+    return Align(
+      alignment: Alignment.centerLeft,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.fromLTRB(h, 0, h, 10),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             _buildFilterChip(
               label: 'Ruta',
@@ -123,6 +128,10 @@ class _AcademyScreenState extends State<AcademyScreen>
               },
               onSelected: (value) {
                 setState(() => _selectedLearningPath = value);
+                if (value == null) {
+                  _reapplyFilters();
+                  return;
+                }
                 context
                     .read<AcademyBloc>()
                     .add(FilterCoursesByLearningPath(value));
@@ -136,6 +145,10 @@ class _AcademyScreenState extends State<AcademyScreen>
               labels: {for (final e in _difficulties) e.$1: e.$2},
               onSelected: (value) {
                 setState(() => _selectedDifficulty = value);
+                if (value == null) {
+                  _reapplyFilters();
+                  return;
+                }
                 context
                     .read<AcademyBloc>()
                     .add(FilterCoursesByDifficulty(value));
@@ -143,16 +156,31 @@ class _AcademyScreenState extends State<AcademyScreen>
             ),
             if (_hasActiveFilters) ...[
               const SizedBox(width: 8),
-              ActionChip(
-                label: const Text('Limpiar'),
-                onPressed: _clearFilters,
-                backgroundColor: BrandColors.cardBackground,
-                labelStyle: const TextStyle(
-                  color: BrandColors.primaryWhite,
-                  fontSize: 12,
-                ),
-                side: BorderSide(
-                  color: BrandColors.primaryOrange.withValues(alpha: 0.4),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: AppHaptics.wrap(_clearFilters),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: BrandColors.cardBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: BrandColors.primaryOrange.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: const Text(
+                      'Limpiar',
+                      style: TextStyle(
+                        color: BrandColors.primaryOrange,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -171,27 +199,58 @@ class _AcademyScreenState extends State<AcademyScreen>
     context.read<AcademyBloc>().add(const ClearFilters());
   }
 
+  /// Reaplica filtros locales tras quitar uno (sin perder el otro / búsqueda).
+  void _reapplyFilters() {
+    final bloc = context.read<AcademyBloc>();
+    bloc.add(const ClearFilters());
+    final path = _selectedLearningPath;
+    final difficulty = _selectedDifficulty;
+    final query = _searchController.text.trim();
+    if (path != null) {
+      bloc.add(FilterCoursesByLearningPath(path));
+    }
+    if (difficulty != null) {
+      bloc.add(FilterCoursesByDifficulty(difficulty));
+    }
+    if (query.isNotEmpty) {
+      bloc.add(SearchCourses(query));
+    }
+    setState(() {});
+  }
+
+  static const _clearFilterValue = '__all__';
+
   Widget _buildFilterChip({
     required String label,
     required String? value,
     required List<String> options,
     required Map<String, String> labels,
-    required ValueChanged<String> onSelected,
+    required ValueChanged<String?> onSelected,
   }) {
-    final display = value != null ? (labels[value] ?? value) : label;
+    final active = value != null;
+    final display = active ? (labels[value] ?? value) : label;
     return PopupMenuButton<String>(
       color: BrandColors.cardBackground,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: BrandColors.primaryOrange.withValues(alpha: 0.2),
+        ),
+      ),
+      offset: const Offset(0, 44),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          color: value != null
+          color: active
               ? BrandColors.primaryOrange.withValues(alpha: 0.16)
               : BrandColors.cardBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: value != null
+            color: active
                 ? BrandColors.primaryOrange.withValues(alpha: 0.7)
-                : BrandColors.primaryOrange.withValues(alpha: 0.14),
+                : BrandColors.primaryOrange.withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -200,36 +259,56 @@ class _AcademyScreenState extends State<AcademyScreen>
             Text(
               display,
               style: TextStyle(
-                color: value != null
+                color: active
                     ? BrandColors.primaryOrange
                     : BrandColors.primaryWhite,
-                fontSize: 12,
-                fontWeight: value != null ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
               ),
             ),
-            const SizedBox(width: 2),
+            const SizedBox(width: 4),
             Icon(
               Icons.keyboard_arrow_down_rounded,
-              color: value != null
+              color: active
                   ? BrandColors.primaryOrange
                   : BrandColors.grayMedium,
-              size: 18,
+              size: 20,
             ),
           ],
         ),
       ),
-      itemBuilder: (context) => options
-          .map(
-            (option) => PopupMenuItem<String>(
-              value: option,
-              child: Text(
-                labels[option] ?? option,
-                style: const TextStyle(color: BrandColors.primaryWhite),
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: _clearFilterValue,
+          child: Text(
+            'Todas',
+            style: TextStyle(
+              color: value == null
+                  ? BrandColors.primaryOrange
+                  : BrandColors.primaryWhite,
+              fontWeight: value == null ? FontWeight.w700 : FontWeight.w500,
+            ),
+          ),
+        ),
+        ...options.map(
+          (option) => PopupMenuItem<String>(
+            value: option,
+            child: Text(
+              labels[option] ?? option,
+              style: TextStyle(
+                color: value == option
+                    ? BrandColors.primaryOrange
+                    : BrandColors.primaryWhite,
+                fontWeight:
+                    value == option ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
-          )
-          .toList(),
-      onSelected: onSelected,
+          ),
+        ),
+      ],
+      onSelected: (selected) {
+        onSelected(selected == _clearFilterValue ? null : selected);
+      },
     );
   }
 
@@ -321,13 +400,7 @@ class _AcademyScreenState extends State<AcademyScreen>
             SectionHeader(
               title: 'Cursos',
               padding: EdgeInsets.zero,
-              trailing: Text(
-                '${courses.length}',
-                style: const TextStyle(
-                  color: BrandColors.grayMedium,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              count: courses.length,
             ),
             const SizedBox(height: 12),
             ...courses.map(

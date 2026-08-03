@@ -289,39 +289,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     keyboardType: TextInputType.url,
                     maxLength: 120,
                   ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : AppHaptics.wrap(_save),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: BrandColors.primaryOrange,
-                        foregroundColor: BrandColors.primaryWhite,
-                        disabledBackgroundColor:
-                            BrandColors.primaryOrange.withValues(alpha: 0.4),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: BrandColors.primaryWhite,
-                              ),
-                            )
-                          : const Text(
-                              'Guardar cambios',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
-                    ),
-                  ),
                 ],
               ),
             ),
