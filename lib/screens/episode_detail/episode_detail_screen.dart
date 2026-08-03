@@ -479,16 +479,8 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
       builder: (ctx) => SizedBox(
         width: double.infinity,
         height: 48,
-        child: OutlinedButton.icon(
+        child: OutlinedButton(
           onPressed: () => _shareEpisode(ctx),
-          icon: const Icon(Icons.ios_share_rounded, size: 18),
-          label: const Text(
-            'Compartir episodio',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
           style: OutlinedButton.styleFrom(
             foregroundColor: BrandColors.primaryOrange,
             side: BorderSide(
@@ -498,6 +490,13 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
                 BrandColors.primaryOrange.withValues(alpha: 0.08),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Text(
+            'Compartir episodio',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),

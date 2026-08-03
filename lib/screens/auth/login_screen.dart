@@ -202,11 +202,11 @@ class _LoginScreenState extends State<LoginScreen>
               builder: (ctx) => AlertDialog(
                 backgroundColor: BrandColors.cardBackground,
                 title: const Text(
-                  'Email pendiente de verificación',
+                  'Correo pendiente de verificación',
                   style: TextStyle(color: BrandColors.primaryWhite),
                 ),
                 content: Text(
-                  'Tu cuenta está creada pero tu email aún está pendiente de aceptación. Revisa tu correo y haz clic en el enlace que te enviamos para activar tu cuenta.',
+                  'Tu cuenta está creada pero tu correo aún está pendiente de aceptación. Revisa tu bandeja y haz clic en el enlace que te enviamos para activar tu cuenta.',
                   style: const TextStyle(color: BrandColors.grayLight),
                 ),
                 actions: [
@@ -222,7 +222,7 @@ class _LoginScreenState extends State<LoginScreen>
                       Navigator.of(ctx).pop();
                       context.read<AuthBlocSimple>().add(const AuthResendVerificationEmailRequested());
                     },
-                    child: Text('Enviar de nuevo el email', style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.bold)),
+                    child: Text('Enviar de nuevo el correo', style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

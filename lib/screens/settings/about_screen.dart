@@ -139,42 +139,25 @@ class AboutScreen extends StatelessWidget {
             color: BrandColors.primaryOrange.withOpacity(0.3),
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.link,
-              color: BrandColors.primaryOrange,
-              size: 24,
+            Text(
+              'Conéctate con nosotros',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: BrandColors.primaryWhite,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Conéctate con nosotros',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: BrandColors.primaryWhite,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'linktr.ee/devlokos',
-                    style: TextStyle(
-                      color: BrandColors.primaryOrange,
-                      fontSize: 16,
-                      decoration: TextDecoration.underline,
-                      decorationColor: BrandColors.primaryOrange,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 4),
+            const Text(
+              'linktr.ee/devlokos',
+              style: TextStyle(
+                color: BrandColors.primaryOrange,
+                fontSize: 16,
+                decoration: TextDecoration.underline,
+                decorationColor: BrandColors.primaryOrange,
               ),
-            ),
-            const Icon(
-              Icons.open_in_new,
-              color: BrandColors.primaryOrange,
-              size: 20,
             ),
           ],
         ),

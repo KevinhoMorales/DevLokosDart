@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../bloc/event/event_bloc_exports.dart';
+import '../../models/event.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/event_card.dart';
+import '../../widgets/section_header.dart';
 
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
@@ -20,6 +22,10 @@ class _EventsScreenState extends State<EventsScreen> {
   void initState() {
     super.initState();
     context.read<EventBloc>().add(const LoadEvents());
+  }
+
+  void _openEvent(Event event) {
+    context.push('/events/${event.id}', extra: {'event': event});
   }
 
   @override
@@ -50,8 +56,7 @@ class _EventsScreenState extends State<EventsScreen> {
             if (state.events.isEmpty) {
               return _buildRefreshableEmptyState(context);
             }
-            final upcoming =
-                state.events.where((e) => !e.isPast).toList();
+            final upcoming = state.events.where((e) => !e.isPast).toList();
             final past = state.events.where((e) => e.isPast).toList();
 
             return RefreshIndicator(
@@ -59,41 +64,81 @@ class _EventsScreenState extends State<EventsScreen> {
                 context.read<EventBloc>().add(const RefreshEvents());
               },
               color: BrandColors.primaryOrange,
-              child: ListView(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 16,
-                  bottom: MediaQuery.of(context).padding.bottom + 32,
-                ),
-                children: [
-                  if (upcoming.isNotEmpty) ...[
-                    _buildSectionHeader('Próximos', Icons.schedule_rounded),
-                    const SizedBox(height: 12),
-                    ...upcoming.map(
-                      (event) => EventCard(
-                        event: event,
-                        onTap: () => context.push(
-                          '/events/${event.id}',
-                          extra: {'event': event},
+              backgroundColor: BrandColors.cardBackground,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                      child: Text(
+                        'Meetups, charlas y talleres de la comunidad DevLokos. Reserva tu lugar o revive lo que ya pasó.',
+                        style: TextStyle(
+                          color: BrandColors.grayMedium,
+                          fontSize: 15,
+                          height: 1.4,
                         ),
                       ),
                     ),
-                    if (past.isNotEmpty) const SizedBox(height: 24),
+                  ),
+                  if (upcoming.isNotEmpty) ...[
+                    const SliverToBoxAdapter(
+                      child: SectionHeader(
+                        title: 'Próximos',
+                        padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList.builder(
+                        itemCount: upcoming.length,
+                        itemBuilder: (context, index) {
+                          final event = upcoming[index];
+                          return EventCard(
+                            event: event,
+                            featured: index == 0,
+                            onTap: () => _openEvent(event),
+                          );
+                        },
+                      ),
+                    ),
                   ],
                   if (past.isNotEmpty) ...[
-                    _buildSectionHeader('Pasados', Icons.history_rounded),
-                    const SizedBox(height: 12),
-                    ...past.map(
-                      (event) => EventCard(
-                        event: event,
-                        onTap: () => context.push(
-                          '/events/${event.id}',
-                          extra: {'event': event},
+                    SliverToBoxAdapter(
+                      child: SectionHeader(
+                        title: 'Pasados',
+                        padding: EdgeInsets.fromLTRB(
+                          20,
+                          upcoming.isNotEmpty ? 8 : 16,
+                          20,
+                          12,
                         ),
                       ),
                     ),
-                  ],
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        0,
+                        20,
+                        MediaQuery.of(context).padding.bottom + 28,
+                      ),
+                      sliver: SliverList.builder(
+                        itemCount: past.length,
+                        itemBuilder: (context, index) {
+                          final event = past[index];
+                          return EventCard(
+                            event: event,
+                            onTap: () => _openEvent(event),
+                          );
+                        },
+                      ),
+                    ),
+                  ] else
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: MediaQuery.of(context).padding.bottom + 28,
+                      ),
+                    ),
                 ],
               ),
             );
@@ -105,49 +150,26 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: BrandColors.primaryOrange),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: BrandColors.primaryWhite,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRefreshableEmptyState(BuildContext context) {
     return RefreshIndicator(
       onRefresh: () async {
         context.read<EventBloc>().add(const RefreshEvents());
       },
       color: BrandColors.primaryOrange,
+      backgroundColor: BrandColors.cardBackground,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             minHeight: MediaQuery.of(context).size.height - 200,
           ),
-          child: _buildEmptyState(context),
+          child: const AppEmptyState(
+            icon: Icons.event_available_outlined,
+            title: 'Próximamente',
+            subtitle: 'Estamos preparando eventos increíbles. ¡Vuelve pronto!',
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return const AppEmptyState(
-      icon: Icons.event_available_outlined,
-      title: 'Próximamente',
-      subtitle: 'Estamos preparando eventos increíbles. ¡Vuelve pronto!',
     );
   }
 }

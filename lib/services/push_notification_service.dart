@@ -59,11 +59,17 @@ class PushNotificationService {
   Future<void> initialize({bool requestPermission = false}) async {
     if (kIsWeb) return;
 
-    // Configurar notificaciones locales para Android (foreground)
+    // Configurar notificaciones locales para Android (foreground).
+    // En iOS NO pedir permiso aquí: el diálogo del sistema debe salir solo
+    // cuando el usuario pulsa "Activar y empezar" en onboarding (o en Ajustes).
     const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
     const initSettings = InitializationSettings(
       android: androidSettings,
-      iOS: DarwinInitializationSettings(),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
     );
 
     await _localNotifications.initialize(

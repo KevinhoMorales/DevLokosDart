@@ -285,14 +285,13 @@ class _ErrorWidget extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
+            ElevatedButton(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Reintentar'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: BrandColors.primaryOrange,
                 foregroundColor: Colors.white,
               ),
+              child: const Text('Reintentar'),
             ),
           ],
         ),

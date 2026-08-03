@@ -248,14 +248,13 @@ class _HomeScreenState extends State<HomeScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
+                ElevatedButton(
                   onPressed: _loadEpisodes,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('REINTENTAR'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: BrandColors.primaryOrange,
                     foregroundColor: BrandColors.primaryWhite,
                   ),
+                  child: const Text('REINTENTAR'),
                 ),
               ],
             ),

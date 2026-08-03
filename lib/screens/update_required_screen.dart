@@ -134,23 +134,13 @@ class UpdateRequiredScreen extends StatelessWidget {
                       ),
                       elevation: 4,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.download,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Actualizar Ahora',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: BrandColors.primaryWhite,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Actualizar Ahora',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: BrandColors.primaryWhite,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
                 ),

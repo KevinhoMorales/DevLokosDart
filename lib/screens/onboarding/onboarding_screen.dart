@@ -48,7 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       subtitle: 'Contenido fresco para seguir aprendiendo a tu ritmo.',
       bullets: [
         'Podcast con episodios por temporada',
-        'Tutoriales prácticos para developers',
+        'Tutoriales prácticos para desarrolladores',
       ],
     ),
     _OnboardingPage(
@@ -176,9 +176,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     onPressed: _isFinishing ? null : _next,
                     isLoading: _isFinishing && _isLastPage,
                     text: _isLastPage ? 'Activar y empezar' : 'Siguiente',
-                    icon: _isLastPage
-                        ? Icons.notifications_active_rounded
-                        : Icons.arrow_forward_rounded,
                     width: double.infinity,
                   ),
                   if (_isLastPage) ...[

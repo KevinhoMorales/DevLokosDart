@@ -352,7 +352,7 @@ final GoRouter _router = GoRouter(
       ),
     ),
     GoRoute(
-      path: '/terminos',
+      path: '/terms',
       pageBuilder: (context, state) => _buildPageWithTransition(
         child: LegalDocumentScreen.terms(),
         state: state,
@@ -361,7 +361,7 @@ final GoRouter _router = GoRouter(
       ),
     ),
     GoRoute(
-      path: '/privacidad',
+      path: '/privacy',
       pageBuilder: (context, state) => _buildPageWithTransition(
         child: LegalDocumentScreen.privacy(),
         state: state,

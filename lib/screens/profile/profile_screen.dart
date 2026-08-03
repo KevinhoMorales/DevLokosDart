@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../bloc/auth/auth_bloc_exports.dart';
@@ -151,16 +150,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
           const SizedBox(height: 20),
           Center(
-            child: GestureDetector(
-              onTap: AppHaptics.wrap(_openEmailApp),
-              child: Text(
-                'Hecho con 🧡 en Ecuador · info@devlokos.com',
+            child: Text.rich(
+              TextSpan(
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: BrandColors.grayMedium,
                       fontSize: 12,
                     ),
-                textAlign: TextAlign.center,
+                children: [
+                  const TextSpan(text: 'Hecho con 🧡 en Ecuador · '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: GestureDetector(
+                      onTap: AppHaptics.wrap(_confirmAndOpenEmail),
+                      child: const Text(
+                        'info@devlokos.com',
+                        style: TextStyle(
+                          color: BrandColors.primaryOrange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                          decorationColor: BrandColors.primaryOrange,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -207,10 +224,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: () => LoginHelper.showLoginBottomSheet(context),
-                icon: const Icon(Icons.login_rounded),
-                label: const Text('Iniciar sesión'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: BrandColors.primaryOrange,
                   foregroundColor: BrandColors.primaryWhite,
@@ -219,6 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: const Text('Iniciar sesión'),
               ),
             ),
             const SizedBox(height: 12),
@@ -419,6 +435,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Mes abreviado en español (evita "Aug" del locale del dispositivo).
+  String _formatMemberSince(DateTime date) {
+    const months = [
+      'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+      'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
   Widget _buildInfoCard(UserModel user) {
     final rows = <({String label, String value, IconData icon})>[
       if (user.role != null && user.role!.trim().isNotEmpty)
@@ -431,14 +456,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       if (user.email.trim().isNotEmpty)
         (
-          label: 'Email',
+          label: 'Correo',
           value: user.email.trim(),
           icon: Icons.mail_outline_rounded
         ),
       if (user.createdAt != null)
         (
           label: 'Miembro desde',
-          value: DateFormat('MMM yyyy').format(user.createdAt!),
+          value: _formatMemberSince(user.createdAt!),
           icon: Icons.calendar_today_outlined
         ),
     ];
@@ -523,13 +548,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildEditButton() {
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
+      child: OutlinedButton(
         onPressed: AppHaptics.wrap(_openEditProfile),
-        icon: const Icon(Icons.edit_outlined, size: 18),
-        label: const Text(
-          'Editar perfil',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-        ),
         style: OutlinedButton.styleFrom(
           foregroundColor: BrandColors.primaryOrange,
           side: BorderSide(
@@ -539,6 +559,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+        ),
+        child: const Text(
+          'Editar perfil',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
         ),
       ),
     );
@@ -560,41 +584,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: BrandColors.primaryOrange.withValues(alpha: 0.16),
             ),
           ),
-          child: const Row(
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.admin_panel_settings_outlined,
-                color: BrandColors.primaryOrange,
-                size: 22,
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Admin web',
-                      style: TextStyle(
-                        color: BrandColors.primaryWhite,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'CMS DevLokos',
-                      style: TextStyle(
-                        color: BrandColors.grayMedium,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Administración web',
+                style: TextStyle(
+                  color: BrandColors.primaryWhite,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              Icon(
-                Icons.open_in_new_rounded,
-                color: BrandColors.grayMedium,
-                size: 18,
+              SizedBox(height: 2),
+              Text(
+                'Panel DevLokos',
+                style: TextStyle(
+                  color: BrandColors.grayMedium,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -604,55 +611,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSocialIconsRow(UserModel user) {
-    final items = <({IconData icon, String label, VoidCallback onTap})>[
+    final items = <({String label, VoidCallback onTap})>[
       if (user.instagram != null && user.instagram!.trim().isNotEmpty)
         (
-          icon: Icons.camera_alt_outlined,
           label: 'Instagram',
           onTap: () => _openSocialUrl(
+            label: 'Instagram',
             handle: user.instagram,
             baseUrl: 'https://instagram.com/',
           ),
         ),
       if (user.linkedin != null && user.linkedin!.trim().isNotEmpty)
         (
-          icon: Icons.business_center_outlined,
           label: 'LinkedIn',
           onTap: () => _openSocialUrl(
+            label: 'LinkedIn',
             handle: user.linkedin,
             baseUrl: 'https://www.linkedin.com/in/',
           ),
         ),
       if (user.twitter != null && user.twitter!.trim().isNotEmpty)
         (
-          icon: Icons.alternate_email_rounded,
           label: 'X',
           onTap: () => _openSocialUrl(
+            label: 'X',
             handle: user.twitter,
             baseUrl: 'https://x.com/',
           ),
         ),
       if (user.github != null && user.github!.trim().isNotEmpty)
         (
-          icon: Icons.code_rounded,
           label: 'GitHub',
           onTap: () => _openSocialUrl(
+            label: 'GitHub',
             handle: user.github,
             baseUrl: 'https://github.com/',
           ),
         ),
       if (user.tiktok != null && user.tiktok!.trim().isNotEmpty)
         (
-          icon: Icons.music_note_rounded,
           label: 'TikTok',
           onTap: () => _openSocialUrl(
+            label: 'TikTok',
             handle: user.tiktok,
             baseUrl: 'https://www.tiktok.com/@',
           ),
         ),
       if (user.website != null && user.website!.trim().isNotEmpty)
         (
-          icon: Icons.language_rounded,
           label: 'Web',
           onTap: () => _openWebsite(user.website),
         ),
@@ -672,30 +678,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: BrandColors.primaryOrange.withValues(alpha: 0.22),
             ),
           ),
-          child: const Row(
-            children: [
-              Icon(
-                Icons.add_link_rounded,
-                size: 20,
+          child: const Center(
+            child: Text(
+              'Agrega tus redes sociales',
+              style: TextStyle(
                 color: BrandColors.primaryOrange,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Agrega tus redes sociales',
-                  style: TextStyle(
-                    color: BrandColors.primaryOrange,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: BrandColors.grayMedium,
-                size: 20,
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -731,24 +722,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: BrandColors.primaryOrange.withValues(alpha: 0.4),
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        item.icon,
-                        size: 16,
-                        color: BrandColors.primaryOrange,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        item.label,
-                        style: const TextStyle(
-                          color: BrandColors.primaryOrange,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    item.label,
+                    style: const TextStyle(
+                      color: BrandColors.primaryOrange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -765,7 +745,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return 'https://$v';
   }
 
+  Future<bool> _confirmOpenExternal({
+    required String title,
+    required String message,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BrandColors.blackLight,
+        title: Text(
+          title,
+          style: const TextStyle(color: BrandColors.primaryWhite),
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(color: BrandColors.grayMedium),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: BrandColors.grayMedium),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Abrir',
+              style: TextStyle(
+                color: BrandColors.primaryOrange,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
   Future<void> _openSocialUrl({
+    required String label,
     required String? handle,
     required String baseUrl,
   }) async {
@@ -774,6 +795,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final url = h.startsWith('http') ? h : '$baseUrl$h';
     final uri = Uri.tryParse(url);
     if (uri == null) return;
+
+    final confirmed = await _confirmOpenExternal(
+      title: 'Abrir $label',
+      message: '¿Quieres abrir $label en otra app?',
+    );
+    if (!confirmed || !mounted) return;
+
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -783,6 +811,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (website == null || website.trim().isEmpty) return;
     final uri = Uri.tryParse(_normalizeWebsite(website));
     if (uri == null) return;
+
+    final confirmed = await _confirmOpenExternal(
+      title: 'Abrir web',
+      message: '¿Quieres abrir este sitio web en el navegador?',
+    );
+    if (!confirmed || !mounted) return;
+
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -795,7 +830,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _openEmailApp() async {
+  Future<void> _confirmAndOpenEmail() async {
+    final confirmed = await _confirmOpenExternal(
+      title: 'Abrir correo',
+      message:
+          '¿Quieres abrir tu app de correo para escribir a info@devlokos.com?',
+    );
+    if (!confirmed || !mounted) return;
+
     final uri = Uri(
       scheme: 'mailto',
       path: 'info@devlokos.com',

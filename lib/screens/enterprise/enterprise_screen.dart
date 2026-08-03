@@ -48,8 +48,8 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
           'Productos y plataformas pensadas para tu operación, no plantillas genéricas.',
       icon: 'code',
       features: const [
-        'Discovery y arquitectura',
-        'Desarrollo end-to-end',
+        'Descubrimiento y arquitectura',
+        'Desarrollo de punta a punta',
         'Entrega continua',
       ],
       order: 0,
@@ -58,12 +58,12 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
       id: 'fallback-mobile',
       title: 'Apps móviles',
       description:
-          'iOS y Android con foco en rendimiento, UX y mantenimiento a largo plazo.',
+          'iOS y Android con foco en rendimiento, experiencia de usuario y mantenimiento a largo plazo.',
       icon: 'phone_iphone',
       features: const [
-        'Flutter nativo-feel',
-        'Integraciones backend',
-        'Publicación en stores',
+        'Flutter con sensación nativa',
+        'Integraciones de backend',
+        'Publicación en tiendas',
       ],
       order: 1,
     ),
@@ -71,11 +71,11 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
       id: 'fallback-consulting',
       title: 'Consultoría técnica',
       description:
-          'Acompañamos a tu equipo en decisiones de stack, cloud y procesos.',
+          'Acompañamos a tu equipo en decisiones de stack, nube y procesos.',
       icon: 'explore',
       features: const [
         'Auditoría técnica',
-        'Roadmap de producto',
+        'Hoja de ruta del producto',
         'Mentoría a equipos',
       ],
       order: 2,

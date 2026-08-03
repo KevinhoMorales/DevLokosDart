@@ -208,7 +208,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   const SizedBox(height: 14),
                   CustomTextField(
                     controller: _bioController,
-                    labelText: 'Bio',
+                    labelText: 'Biografía',
                     hintText: 'Una línea sobre ti',
                     prefixIcon: Icons.notes_rounded,
                     maxLength: 160,
@@ -218,7 +218,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   CustomTextField(
                     controller: _roleController,
                     labelText: 'Rol',
-                    hintText: 'Founder, Developer…',
+                    hintText: 'Fundador, Desarrollador…',
                     prefixIcon: Icons.work_outline_rounded,
                     maxLength: 60,
                   ),
@@ -226,7 +226,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   CustomTextField(
                     controller: _companyController,
                     labelText: 'Empresa',
-                    hintText: 'DevLokos, freelance…',
+                    hintText: 'DevLokos, independiente…',
                     prefixIcon: Icons.apartment_rounded,
                     maxLength: 60,
                   ),

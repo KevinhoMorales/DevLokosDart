@@ -5,6 +5,7 @@ import '../../models/course.dart';
 import '../../repository/academy_repository.dart';
 import '../../services/analytics_service.dart';
 import '../../constants/app_constants.dart';
+import '../../constants/learning_paths.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/gradient_button.dart';
@@ -196,7 +197,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     GradientButton(
                       onPressed: _openAcademyWhatsApp,
                       text: 'Inscribirme por WhatsApp',
-                      icon: Icons.chat,
                     ),
                   ],
                 ),
@@ -279,7 +279,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      course.difficulty,
+                      _difficultyLabel(course.difficulty),
                       style: const TextStyle(
                         color: BrandColors.primaryWhite,
                         fontSize: 15,
@@ -326,7 +326,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    path,
+                    LearningPaths.displayLabel(path),
                     style: const TextStyle(
                       color: BrandColors.primaryOrange,
                       fontSize: 12,
@@ -340,6 +340,22 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         ],
       ),
     );
+  }
+
+  String _difficultyLabel(String difficulty) {
+    switch (difficulty.toLowerCase()) {
+      case 'beginner':
+      case 'principiante':
+        return 'Principiante';
+      case 'intermediate':
+      case 'intermedio':
+        return 'Intermedio';
+      case 'advanced':
+      case 'avanzado':
+        return 'Avanzado';
+      default:
+        return difficulty.isEmpty ? 'General' : difficulty;
+    }
   }
 
   bool _hasMetaContent(Course course) {

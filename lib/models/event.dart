@@ -81,14 +81,34 @@ class Event {
     );
   }
 
+  static const List<String> _monthsShort = [
+    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  ];
+
   String get formattedDate {
     if (eventDate == null) return '';
     final d = eventDate!;
-    const months = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
+    return '${d.day} ${_monthsShort[d.month - 1]} ${d.year}';
+  }
+
+  /// Día numérico para badge visual (ej. "28").
+  String get dayLabel {
+    if (eventDate == null) return '';
+    return eventDate!.day.toString().padLeft(2, '0');
+  }
+
+  /// Mes corto en español para badge (ej. "Feb").
+  String get monthLabel {
+    if (eventDate == null) return '';
+    return _monthsShort[eventDate!.month - 1];
+  }
+
+  /// Etiqueta de estado para UI.
+  String get statusLabel {
+    if (isToday) return 'Hoy';
+    if (isPast) return 'Pasado';
+    return 'Próximo';
   }
 
   String get formattedDateTime {

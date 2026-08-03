@@ -16,17 +16,19 @@ class AppConstants {
       'Hola, me gustaría inscribirme en la Academia DevLokos. ¿Cuáles son los pasos?';
 
   // Legal (rutas web + deep links in-app)
-  static const String termsAndConditionsUrl = 'https://devlokos.com/terminos';
-  static const String privacyPolicyUrl = 'https://devlokos.com/privacidad';
-  static const String termsRoute = '/terminos';
-  static const String privacyRoute = '/privacidad';
+  static const String termsAndConditionsUrl = 'https://devlokos.com/terms';
+  static const String privacyPolicyUrl = 'https://devlokos.com/privacy';
+  static const String termsRoute = '/terms';
+  static const String privacyRoute = '/privacy';
   
   // Firebase Collections
   static const String episodesCollection = 'episodes';
   static const String usersCollection = 'users';
   
   // Image Assets
+  /// Logo circular oficial (splash + branding).
   static const String logoPath = 'assets/icons/devlokos_logo.png';
+  /// Ícono circular (mismo arte que el logo, formato webp).
   static const String iconPath = 'assets/icons/devlokos_icon.webp';
   static const String backgroundPath = 'assets/images/background.png';
   

@@ -281,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Build',
+                  'Compilación',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: BrandColors.primaryWhite,
                         fontWeight: FontWeight.w600,

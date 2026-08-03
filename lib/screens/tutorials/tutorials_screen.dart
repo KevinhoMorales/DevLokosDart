@@ -214,7 +214,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
               title: 'No se encontraron tutoriales',
               subtitle: state.searchQuery.isNotEmpty
                   ? 'Intenta con otros términos de búsqueda'
-                  : 'Esta playlist no tiene videos',
+                  : 'Esta lista no tiene videos',
             );
           }
 
@@ -267,8 +267,8 @@ class _TutorialsScreenState extends State<TutorialsScreen>
         if (state is PlaylistsLoaded && state.playlists.isEmpty) {
           return const AppEmptyState(
             icon: Icons.playlist_remove,
-            title: 'Sin playlists',
-            subtitle: 'No hay playlists de tutoriales configuradas.',
+            title: 'Sin listas',
+            subtitle: 'No hay listas de tutoriales configuradas.',
           );
         }
 

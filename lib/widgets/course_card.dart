@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../constants/learning_paths.dart';
 import '../models/course.dart';
 import '../utils/brand_colors.dart';
 
@@ -165,7 +166,7 @@ class CourseCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
-            path,
+            LearningPaths.displayLabel(path),
             style: const TextStyle(
               color: BrandColors.primaryOrange,
               fontSize: 11,

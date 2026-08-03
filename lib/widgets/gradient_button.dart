@@ -7,7 +7,6 @@ class GradientButton extends StatelessWidget {
   final bool isLoading;
   final double? width;
   final double height;
-  final IconData? icon;
   final LinearGradient? gradient;
   final Color? textColor;
 
@@ -18,7 +17,6 @@ class GradientButton extends StatelessWidget {
     this.isLoading = false,
     this.width,
     this.height = 56,
-    this.icon,
     this.gradient,
     this.textColor,
   });
@@ -62,30 +60,14 @@ class GradientButton extends StatelessWidget {
                         ),
                       ),
                     )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (icon != null) ...[
-                          Icon(
-                            icon,
+                  : Text(
+                      text.toUpperCase(),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: textColor ?? BrandColors.primaryWhite,
-                            size: 20,
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(width: 8),
-                        ],
-                        Flexible(
-                          child: Text(
-                            text.toUpperCase(),
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: textColor ?? BrandColors.primaryWhite,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
                     ),
             ),
           ),
@@ -94,6 +76,3 @@ class GradientButton extends StatelessWidget {
     );
   }
 }
-
-
-

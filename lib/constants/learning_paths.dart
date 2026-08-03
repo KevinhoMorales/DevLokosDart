@@ -122,4 +122,25 @@ class LearningPaths {
         .where((p) => all.contains(p))
         .toList();
   }
+
+  /// Etiqueta en español para UI (el valor guardado en Firestore se mantiene).
+  static String displayLabel(String path) {
+    const labels = <String, String>{
+      'Mobile': 'Móvil',
+      'Cross-Platform': 'Multiplataforma',
+      'Cloud': 'Nube',
+      'Testing': 'Pruebas',
+      'Performance': 'Rendimiento',
+      'Monitoring': 'Monitoreo',
+      'Prompt Engineering': 'Ingeniería de prompts',
+      'AI in Apps': 'IA en apps',
+      'Automation': 'Automatización',
+      'Software Architecture': 'Arquitectura de software',
+      'Clean Architecture': 'Arquitectura limpia',
+      'Microservices': 'Microservicios',
+      'Product Management': 'Gestión de producto',
+      'Web Full-Stack': 'Web full-stack',
+    };
+    return labels[path] ?? path;
+  }
 }

@@ -117,7 +117,10 @@ class _AcademyScreenState extends State<AcademyScreen>
               label: 'Ruta',
               value: _selectedLearningPath,
               options: _availableLearningPaths,
-              labels: {for (final p in _availableLearningPaths) p: p},
+              labels: {
+                for (final p in _availableLearningPaths)
+                  p: LearningPaths.displayLabel(p),
+              },
               onSelected: (value) {
                 setState(() => _selectedLearningPath = value);
                 context
@@ -387,10 +390,9 @@ class _AcademyScreenState extends State<AcademyScreen>
   }
 
   Widget _whatsAppButton() {
-    return TextButton.icon(
+    return TextButton(
       onPressed: _openAcademyWhatsApp,
-      icon: const Icon(Icons.chat_rounded, color: BrandColors.primaryOrange),
-      label: const Text(
+      child: const Text(
         'Consultar por WhatsApp',
         style: TextStyle(
           color: BrandColors.primaryOrange,

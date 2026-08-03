@@ -45,8 +45,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       eventId: event.id,
       eventTitle: event.title,
       city: event.city.isNotEmpty ? event.city : null,
-      hasRegistrationLink: event.registrationUrl != null &&
-          event.registrationUrl!.trim().isNotEmpty,
+      hasRegistrationLink:
+          event.registrationUrl != null && event.registrationUrl!.trim().isNotEmpty,
     );
   }
 
@@ -62,6 +62,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         _logEventViewed(event);
       }
     }
+  }
+
+  bool get _hasRegistration {
+    final url = _event?.registrationUrl;
+    return url != null && url.trim().isNotEmpty && !(_event?.isPast ?? true);
   }
 
   @override
@@ -96,10 +101,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
 
     final event = _event!;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: BrandColors.primaryBlack,
+      extendBodyBehindAppBar: true,
       appBar: CustomAppBar(
-        title: event.title.length > 30 ? '${event.title.substring(0, 27)}...' : event.title,
+        title: '',
         showBackButton: true,
         iconActions: [
           AppBarIconAction(
@@ -109,153 +117,319 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          color: BrandColors.primaryBlack,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeroImage(event),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  24,
-                  24,
-                  24,
-                  24 + MediaQuery.of(context).padding.bottom,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (event.formattedDateTime.isNotEmpty || event.locationDisplay.isNotEmpty)
-                      _buildMetaSection(context, event),
-                    const SizedBox(height: 24),
-                    if (event.description.isNotEmpty) ...[
-                      Text(
-                        'Descripción',
-                        style: TextStyle(
-                          color: BrandColors.primaryOrange,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(child: _buildHero(event)),
+              SliverToBoxAdapter(
+                child: Transform.translate(
+                  offset: const Offset(0, -28),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: BrandColors.primaryBlack,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      28,
+                      24,
+                      _hasRegistration ? 120 + bottomInset : 32 + bottomInset,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStatusRow(event),
+                        const SizedBox(height: 16),
+                        Text(
+                          event.title,
+                          style: const TextStyle(
+                            color: BrandColors.primaryWhite,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            height: 1.15,
+                            letterSpacing: -0.4,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        event.description,
-                        style: const TextStyle(
-                          color: BrandColors.grayLight,
-                          fontSize: 16,
-                          height: 1.6,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                    if (event.registrationUrl != null &&
-                        event.registrationUrl!.isNotEmpty) ...[
-                      GradientButton(
-                        onPressed: () => _openRegistrationUrl(context, event),
-                        text: 'Registrarme',
-                        icon: Icons.arrow_forward_rounded,
-                      ),
-                    ],
-                  ],
+                        const SizedBox(height: 20),
+                        _buildMetaGrid(event),
+                        if (event.description.isNotEmpty) ...[
+                          const SizedBox(height: 28),
+                          const Row(
+                            children: [
+                              SizedBox(
+                                width: 4,
+                                height: 18,
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: BrandColors.primaryOrange,
+                                    borderRadius: BorderRadius.all(Radius.circular(2)),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Sobre el evento',
+                                style: TextStyle(
+                                  color: BrandColors.primaryWhite,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            event.description,
+                            style: const TextStyle(
+                              color: BrandColors.grayLight,
+                              fontSize: 16,
+                              height: 1.65,
+                            ),
+                          ),
+                        ],
+                        if (event.isPast) ...[
+                          const SizedBox(height: 28),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: BrandColors.cardBackground,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.08),
+                              ),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(
+                                  Icons.history_rounded,
+                                  color: BrandColors.primaryOrange,
+                                  size: 22,
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Este evento ya terminó. Explora los próximos para no perderte el siguiente.',
+                                    style: TextStyle(
+                                      color: BrandColors.grayMedium,
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeroImage(Event event) {
-    if (event.imageUrl.isEmpty) {
-      return Container(
-        height: 200,
-        color: BrandColors.blackLight,
-        child: Center(
-          child: Icon(
-            Icons.event_rounded,
-            size: 80,
-            color: BrandColors.grayMedium.withOpacity(0.5),
-          ),
-        ),
-      );
-    }
-
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: CachedNetworkImage(
-        imageUrl: event.imageUrl,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
-          color: BrandColors.blackLight,
-          child: const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
-            ),
-          ),
-        ),
-        errorWidget: (context, url, error) => Container(
-          color: BrandColors.blackLight,
-          child: Center(
-            child: Icon(
-              Icons.broken_image_outlined,
-              size: 64,
-              color: BrandColors.grayMedium.withOpacity(0.5),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetaSection(BuildContext context, Event event) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.2),
-        ),
-      ),
-      child: Column(
-        children: [
-          if (event.formattedDateTime.isNotEmpty)
-            _buildMetaRow(
-              Icons.calendar_today_rounded,
-              event.formattedDateTime,
-            ),
-          if (event.formattedDateTime.isNotEmpty && event.locationDisplay.isNotEmpty)
-            const SizedBox(height: 12),
-          if (event.locationDisplay.isNotEmpty)
-            _buildMetaRow(
-              Icons.location_on_outlined,
-              event.locationDisplay,
+          if (_hasRegistration)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildStickyCta(event, bottomInset),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildMetaRow(IconData icon, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: BrandColors.primaryOrange),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: BrandColors.primaryWhite,
-              fontSize: 15,
+  Widget _buildHero(Event event) {
+    final topPad = MediaQuery.of(context).padding.top;
+    return SizedBox(
+      height: 320 + topPad * 0.3,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (event.imageUrl.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: event.imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: BrandColors.blackLight),
+              errorWidget: (_, __, ___) => _heroFallback(),
+            )
+          else
+            _heroFallback(),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.45),
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.85),
+                ],
+                stops: const [0.0, 0.4, 1.0],
+              ),
             ),
           ),
+          if (event.eventDate != null)
+            Positioned(
+              left: 24,
+              bottom: 44,
+              child: _HeroDateBadge(event: event),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2A1810), BrandColors.blackDark, Colors.black],
         ),
-      ],
+      ),
+      child: Center(
+        child: Icon(
+          Icons.event_rounded,
+          size: 88,
+          color: BrandColors.primaryOrange.withValues(alpha: 0.3),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusRow(Event event) {
+    final Color bg;
+    final Color fg;
+    if (event.isToday) {
+      bg = BrandColors.primaryOrange;
+      fg = BrandColors.primaryWhite;
+    } else if (event.isPast) {
+      bg = Colors.white.withValues(alpha: 0.1);
+      fg = BrandColors.grayMedium;
+    } else {
+      bg = BrandColors.primaryOrange.withValues(alpha: 0.18);
+      fg = BrandColors.primaryOrange;
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          event.statusLabel,
+          style: TextStyle(
+            color: fg,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetaGrid(Event event) {
+    final items = <({IconData icon, String label, String value})>[];
+    if (event.formattedDateTime.isNotEmpty) {
+      items.add((
+        icon: Icons.calendar_month_rounded,
+        label: 'Fecha',
+        value: event.formattedDateTime,
+      ));
+    }
+    if (event.locationDisplay.isNotEmpty) {
+      items.add((
+        icon: Icons.location_on_rounded,
+        label: 'Lugar',
+        value: event.locationDisplay,
+      ));
+    }
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: items.map((item) {
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: BrandColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.15),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: BrandColors.primaryOrange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(item.icon, color: BrandColors.primaryOrange, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.label,
+                      style: const TextStyle(
+                        color: BrandColors.grayMedium,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.value,
+                      style: const TextStyle(
+                        color: BrandColors.primaryWhite,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildStickyCta(Event event, double bottomInset) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 14, 20, 14 + bottomInset),
+      decoration: BoxDecoration(
+        color: BrandColors.primaryBlack.withValues(alpha: 0.92),
+        border: Border(
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, -8),
+          ),
+        ],
+      ),
+      child: GradientButton(
+        onPressed: () => _openRegistrationUrl(context, event),
+        text: 'Registrarme',
+        width: double.infinity,
+      ),
     );
   }
 
@@ -274,7 +448,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       final box = context.findRenderObject() as RenderBox?;
       if (box != null && box.hasSize) {
         final pos = box.localToGlobal(Offset.zero);
-        sharePositionOrigin = Rect.fromLTWH(pos.dx, pos.dy, box.size.width, box.size.height);
+        sharePositionOrigin =
+            Rect.fromLTWH(pos.dx, pos.dy, box.size.width, box.size.height);
       } else {
         final size = MediaQuery.of(context).size;
         sharePositionOrigin = Rect.fromLTWH(size.width - 80, 0, 80, 80);
@@ -285,11 +460,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         subject: event.title,
         sharePositionOrigin: sharePositionOrigin,
       );
-    } catch (e) {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('No se pudo compartir el evento'),
+          const SnackBar(
+            content: Text('No se pudo compartir el evento'),
             backgroundColor: BrandColors.error,
           ),
         );
@@ -309,15 +484,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No se pudo abrir el enlace'),
-              backgroundColor: BrandColors.error,
-            ),
-          );
-        }
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo abrir el enlace'),
+            backgroundColor: BrandColors.error,
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -329,5 +502,50 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         );
       }
     }
+  }
+}
+
+class _HeroDateBadge extends StatelessWidget {
+  final Event event;
+
+  const _HeroDateBadge({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 64,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            event.dayLabel,
+            style: const TextStyle(
+              color: BrandColors.primaryWhite,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            event.monthLabel.toUpperCase(),
+            style: const TextStyle(
+              color: BrandColors.primaryOrange,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
