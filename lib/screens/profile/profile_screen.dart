@@ -16,7 +16,6 @@ import '../../utils/brand_colors.dart';
 import '../../utils/login_helper.dart';
 import '../../utils/user_manager.dart';
 import '../../widgets/custom_app_bar.dart' show AppBarIconAction, CustomAppBar;
-import '../../widgets/section_header.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool showBackButton;
@@ -107,6 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           body: SafeArea(
+            bottom: false,
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
@@ -131,46 +131,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bottom = MediaQuery.of(context).padding.bottom;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, bottom + 24),
+      padding: EdgeInsets.fromLTRB(20, 8, 20, bottom + 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(user),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           _buildSocialIconsRow(user),
-          const SizedBox(height: 20),
-          _buildCompactTile(
-            title: 'Editar perfil',
-            subtitle: 'Nombre, bio, empresa y rol',
-            icon: Icons.edit_outlined,
-            onTap: _showEditProfileSheet,
-          ),
-          const SizedBox(height: 8),
-          _buildCompactTile(
-            title: 'Redes sociales',
-            subtitle: _socialSummary(user),
-            icon: Icons.link_rounded,
-            onTap: _showEditSocialsSheet,
-          ),
-          const SizedBox(height: 8),
-          _buildCompactTile(
-            title: user.email,
-            subtitle: user.createdAt != null
-                ? 'Cuenta · desde ${DateFormat('MMM yyyy').format(user.createdAt!)}'
-                : 'Cuenta y ajustes',
-            icon: Icons.manage_accounts_outlined,
-            onTap: () => context.push('/settings'),
-          ),
-          if (_isAdmin) ...[
-            const SizedBox(height: 8),
-            _buildCompactTile(
-              title: 'Admin web',
-              subtitle: 'CMS DevLokos',
-              icon: Icons.admin_panel_settings_outlined,
-              onTap: _openAdminWeb,
-            ),
-          ],
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          _buildMenuGroup(user),
+          const SizedBox(height: 16),
           Center(
             child: GestureDetector(
               onTap: AppHaptics.wrap(_openEmailApp),
@@ -272,17 +242,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  String _resolveDisplayName(UserModel user) {
+    final displayName = user.displayName?.trim() ?? '';
+    if (displayName.isNotEmpty) return displayName;
+
+    final email = user.email.trim();
+    if (email.contains('@')) {
+      final local = email.split('@').first.trim();
+      if (local.isNotEmpty) return local;
+    }
+    return '';
+  }
+
   Widget _buildHeader(UserModel user) {
-    final name = (user.displayName != null && user.displayName!.trim().isNotEmpty)
-        ? user.displayName!.trim()
-        : 'Tu perfil';
+    final name = _resolveDisplayName(user);
+    final hasName = name.isNotEmpty;
     final subtitle = [
       if (user.role != null && user.role!.trim().isNotEmpty) user.role!.trim(),
       if (user.company != null && user.company!.trim().isNotEmpty)
         user.company!.trim(),
     ].join(' · ');
+    final subtitleText =
+        subtitle.isNotEmpty ? subtitle : 'Completa tu perfil';
 
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         GestureDetector(
           onTap: _isUploadingImage
@@ -291,8 +275,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Stack(
             children: [
               Container(
-                width: 88,
-                height: 88,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: BrandColors.primaryOrange.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
@@ -305,8 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ? ClipOval(
                         child: CachedNetworkImage(
                           imageUrl: user.photoURL!,
-                          width: 88,
-                          height: 88,
+                          width: 64,
+                          height: 64,
                           fit: BoxFit.cover,
                           placeholder: (_, __) => const Center(
                             child: CircularProgressIndicator(
@@ -316,21 +300,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           errorWidget: (_, __, ___) => const Icon(
                             Icons.person_rounded,
-                            size: 42,
+                            size: 30,
                             color: BrandColors.primaryOrange,
                           ),
                         ),
                       )
                     : const Icon(
                         Icons.person_rounded,
-                        size: 42,
+                        size: 30,
                         color: BrandColors.primaryOrange,
                       ),
               ),
               if (_isUploadingImage)
                 Container(
-                  width: 88,
-                  height: 88,
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.5),
                     shape: BoxShape.circle,
@@ -347,8 +331,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   bottom: 0,
                   right: 0,
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    width: 22,
+                    height: 22,
                     decoration: BoxDecoration(
                       color: BrandColors.primaryOrange,
                       shape: BoxShape.circle,
@@ -360,38 +344,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: const Icon(
                       Icons.camera_alt_rounded,
                       color: BrandColors.primaryWhite,
-                      size: 14,
+                      size: 11,
                     ),
                   ),
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        Text(
-          name,
-          style: const TextStyle(
-            color: BrandColors.primaryWhite,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 13,
+        const SizedBox(width: 14),
+        Expanded(
+          child: GestureDetector(
+            onTap: AppHaptics.wrap(_showEditProfileSheet),
+            behavior: HitTestBehavior.opaque,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasName ? name : 'Agregar nombre',
+                  style: TextStyle(
+                    color: hasName
+                        ? BrandColors.primaryWhite
+                        : BrandColors.grayMedium,
+                    fontSize: hasName ? 18 : 15,
+                    fontWeight: hasName ? FontWeight.bold : FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitleText,
+                  style: const TextStyle(
+                    color: BrandColors.grayMedium,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-        ],
+        ),
       ],
     );
   }
@@ -410,98 +403,188 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSocialIconsRow(UserModel user) {
-    final items = <({IconData icon, String? value, VoidCallback onTap})>[
-      (
-        icon: Icons.camera_alt_outlined,
-        value: user.instagram,
-        onTap: () => _openSocialUrl(
-          handle: user.instagram,
-          baseUrl: 'https://instagram.com/',
+    final items = <({IconData icon, VoidCallback onTap})>[
+      if (user.instagram != null && user.instagram!.trim().isNotEmpty)
+        (
+          icon: Icons.camera_alt_outlined,
+          onTap: () => _openSocialUrl(
+            handle: user.instagram,
+            baseUrl: 'https://instagram.com/',
+          ),
         ),
-      ),
-      (
-        icon: Icons.business_center_outlined,
-        value: user.linkedin,
-        onTap: () => _openSocialUrl(
-          handle: user.linkedin,
-          baseUrl: 'https://www.linkedin.com/in/',
+      if (user.linkedin != null && user.linkedin!.trim().isNotEmpty)
+        (
+          icon: Icons.business_center_outlined,
+          onTap: () => _openSocialUrl(
+            handle: user.linkedin,
+            baseUrl: 'https://www.linkedin.com/in/',
+          ),
         ),
-      ),
-      (
-        icon: Icons.alternate_email_rounded,
-        value: user.twitter,
-        onTap: () => _openSocialUrl(
-          handle: user.twitter,
-          baseUrl: 'https://x.com/',
+      if (user.twitter != null && user.twitter!.trim().isNotEmpty)
+        (
+          icon: Icons.alternate_email_rounded,
+          onTap: () => _openSocialUrl(
+            handle: user.twitter,
+            baseUrl: 'https://x.com/',
+          ),
         ),
-      ),
-      (
-        icon: Icons.code_rounded,
-        value: user.github,
-        onTap: () => _openSocialUrl(
-          handle: user.github,
-          baseUrl: 'https://github.com/',
+      if (user.github != null && user.github!.trim().isNotEmpty)
+        (
+          icon: Icons.code_rounded,
+          onTap: () => _openSocialUrl(
+            handle: user.github,
+            baseUrl: 'https://github.com/',
+          ),
         ),
-      ),
-      (
-        icon: Icons.music_note_rounded,
-        value: user.tiktok,
-        onTap: () => _openSocialUrl(
-          handle: user.tiktok,
-          baseUrl: 'https://www.tiktok.com/@',
+      if (user.tiktok != null && user.tiktok!.trim().isNotEmpty)
+        (
+          icon: Icons.music_note_rounded,
+          onTap: () => _openSocialUrl(
+            handle: user.tiktok,
+            baseUrl: 'https://www.tiktok.com/@',
+          ),
         ),
-      ),
-      (
-        icon: Icons.language_rounded,
-        value: user.website,
-        onTap: () => _openWebsite(user.website),
-      ),
+      if (user.website != null && user.website!.trim().isNotEmpty)
+        (
+          icon: Icons.language_rounded,
+          onTap: () => _openWebsite(user.website),
+        ),
     ];
 
+    if (items.isEmpty) {
+      return Center(
+        child: InkWell(
+          onTap: AppHaptics.wrap(_showEditSocialsSheet),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: BrandColors.cardBackground,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: BrandColors.primaryOrange.withValues(alpha: 0.28),
+              ),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.add_rounded,
+                  size: 16,
+                  color: BrandColors.primaryOrange,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'Agregar redes',
+                  style: TextStyle(
+                    color: BrandColors.primaryOrange,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (final item in items)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.only(right: 8),
             child: InkWell(
-              onTap: AppHaptics.wrap(() {
-                final hasValue =
-                    item.value != null && item.value!.trim().isNotEmpty;
-                if (hasValue) {
-                  item.onTap();
-                } else {
-                  _showEditSocialsSheet();
-                }
-              }),
+              onTap: AppHaptics.wrap(item.onTap),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                width: 42,
-                height: 42,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: (item.value != null && item.value!.trim().isNotEmpty)
-                      ? BrandColors.primaryOrange.withValues(alpha: 0.2)
-                      : BrandColors.cardBackground,
+                  color: BrandColors.primaryOrange.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: BrandColors.primaryOrange.withValues(
-                      alpha: (item.value != null && item.value!.trim().isNotEmpty)
-                          ? 0.5
-                          : 0.15,
-                    ),
+                    color: BrandColors.primaryOrange.withValues(alpha: 0.5),
                   ),
                 ),
                 child: Icon(
                   item.icon,
                   size: 18,
-                  color: (item.value != null && item.value!.trim().isNotEmpty)
-                      ? BrandColors.primaryOrange
-                      : BrandColors.grayDark,
+                  color: BrandColors.primaryOrange,
                 ),
               ),
             ),
           ),
+        InkWell(
+          onTap: AppHaptics.wrap(_showEditSocialsSheet),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: BrandColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: BrandColors.primaryOrange.withValues(alpha: 0.22),
+              ),
+            ),
+            child: const Icon(
+              Icons.add_rounded,
+              size: 18,
+              color: BrandColors.primaryOrange,
+            ),
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildMenuGroup(UserModel user) {
+    final rows = <Widget>[
+      _buildCompactTile(
+        title: 'Editar perfil',
+        subtitle: 'Nombre, bio, empresa y rol',
+        icon: Icons.edit_outlined,
+        onTap: _showEditProfileSheet,
+        showBottomDivider: true,
+      ),
+      _buildCompactTile(
+        title: 'Redes sociales',
+        subtitle: _socialSummary(user),
+        icon: Icons.link_rounded,
+        onTap: _showEditSocialsSheet,
+        showBottomDivider: true,
+      ),
+      _buildCompactTile(
+        title: user.email,
+        subtitle: user.createdAt != null
+            ? 'Cuenta · desde ${DateFormat('MMM yyyy').format(user.createdAt!)}'
+            : 'Cuenta y ajustes',
+        icon: Icons.manage_accounts_outlined,
+        onTap: () => context.push('/settings'),
+        showBottomDivider: _isAdmin,
+      ),
+      if (_isAdmin)
+        _buildCompactTile(
+          title: 'Admin web',
+          subtitle: 'CMS DevLokos',
+          icon: Icons.admin_panel_settings_outlined,
+          onTap: _openAdminWeb,
+          showBottomDivider: false,
+        ),
+    ];
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: BrandColors.cardBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withValues(alpha: 0.16),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: rows),
     );
   }
 
@@ -510,33 +593,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
+    bool showBottomDivider = false,
   }) {
     return Material(
-      color: BrandColors.cardBackground,
-      borderRadius: BorderRadius.circular(14),
+      color: Colors.transparent,
       child: InkWell(
         onTap: AppHaptics.wrap(onTap),
         enableFeedback: false,
-        borderRadius: BorderRadius.circular(14),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: BrandColors.primaryOrange.withValues(alpha: 0.16),
-            ),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: showBottomDivider
+              ? BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: BrandColors.primaryOrange.withValues(alpha: 0.10),
+                    ),
+                  ),
+                )
+              : null,
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: BrandColors.primaryOrange.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: BrandColors.primaryOrange, size: 18),
+                child: Icon(icon, color: BrandColors.primaryOrange, size: 17),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -860,307 +945,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         size: 20,
       ),
       onTap: AppHaptics.wrap(onTap),
-    );
-  }
-
-  Widget _buildInfoCard({
-    required String title,
-    required IconData icon,
-    String? value,
-    String placeholder = 'Sin completar',
-    bool isEditable = true,
-    int maxLines = 1,
-    VoidCallback? onEdit,
-  }) {
-    final hasValue = value != null && value.trim().isNotEmpty;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: BrandColors.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withValues(alpha: 0.18),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: BrandColors.primaryOrange.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: BrandColors.primaryOrange, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: BrandColors.grayMedium,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  hasValue ? value.trim() : placeholder,
-                  maxLines: maxLines,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: hasValue
-                        ? BrandColors.primaryWhite
-                        : BrandColors.grayDark,
-                    fontSize: 15,
-                    fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isEditable && onEdit != null)
-            IconButton(
-              onPressed: AppHaptics.wrap(onEdit),
-              icon: const Icon(
-                Icons.edit_rounded,
-                color: BrandColors.primaryOrange,
-                size: 20,
-              ),
-              tooltip: 'Editar',
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSocialCard({
-    required String title,
-    required IconData icon,
-    required String placeholder,
-    String? value,
-    required VoidCallback onEdit,
-    required VoidCallback onOpen,
-  }) {
-    final hasValue = value != null && value.trim().isNotEmpty;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: BrandColors.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withValues(alpha: 0.18),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: BrandColors.primaryOrange.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: BrandColors.primaryOrange, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: InkWell(
-              onTap: hasValue ? AppHaptics.wrap(onOpen) : AppHaptics.wrap(onEdit),
-              borderRadius: BorderRadius.circular(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: BrandColors.grayMedium,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    hasValue ? value.trim() : placeholder,
-                    style: TextStyle(
-                      color: hasValue
-                          ? BrandColors.primaryOrange
-                          : BrandColors.grayDark,
-                      fontSize: 15,
-                      fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
-                      decoration:
-                          hasValue ? TextDecoration.underline : TextDecoration.none,
-                      decorationColor: BrandColors.primaryOrange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: AppHaptics.wrap(onEdit),
-            icon: Icon(
-              hasValue ? Icons.edit_rounded : Icons.add_rounded,
-              color: BrandColors.primaryOrange,
-              size: 20,
-            ),
-            tooltip: hasValue ? 'Editar' : 'Agregar',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionRow({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: BrandColors.cardBackground,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: AppHaptics.wrap(onTap),
-        enableFeedback: false,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: BrandColors.primaryOrange.withValues(alpha: 0.18),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: BrandColors.primaryOrange.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: BrandColors.primaryOrange, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: BrandColors.primaryWhite,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: BrandColors.grayMedium,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: BrandColors.grayMedium,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildComingSoonCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: BrandColors.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withValues(alpha: 0.18),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: BrandColors.primaryOrange.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: BrandColors.primaryOrange, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          color: BrandColors.primaryWhite,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: BrandColors.primaryOrange.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Pronto',
-                        style: TextStyle(
-                          color: BrandColors.primaryOrange,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: BrandColors.grayMedium,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

@@ -20,15 +20,16 @@ class EnterpriseRepositoryImpl implements EnterpriseRepository {
   @override
   Future<List<Service>> getServices() async {
     try {
-      final snapshot = await _firestore
-          .collection(_servicesCollection)
-          .where('isPublished', isEqualTo: true)
-          .orderBy('order')
-          .get();
+      // Filtrar/ordenar en memoria: evita índice compuesto isPublished + order.
+      final snapshot = await _firestore.collection(_servicesCollection).get();
 
-      return snapshot.docs
+      final services = snapshot.docs
           .map((doc) => Service.fromFirestore(doc.data(), doc.id))
-          .toList();
+          .where((s) => s.isPublished)
+          .toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+
+      return services;
     } catch (e) {
       print('❌ Error al obtener servicios: $e');
       rethrow;
@@ -38,15 +39,15 @@ class EnterpriseRepositoryImpl implements EnterpriseRepository {
   @override
   Future<List<PortfolioProject>> getPortfolioProjects() async {
     try {
-      final snapshot = await _firestore
-          .collection(_portfolioCollection)
-          .where('isPublished', isEqualTo: true)
-          .orderBy('order')
-          .get();
+      final snapshot = await _firestore.collection(_portfolioCollection).get();
 
-      return snapshot.docs
+      final projects = snapshot.docs
           .map((doc) => PortfolioProject.fromFirestore(doc.data(), doc.id))
-          .toList();
+          .where((p) => p.isPublished)
+          .toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+
+      return projects;
     } catch (e) {
       print('❌ Error al obtener proyectos del portfolio: $e');
       rethrow;
@@ -76,5 +77,3 @@ class EnterpriseRepositoryImpl implements EnterpriseRepository {
     );
   }
 }
-
-

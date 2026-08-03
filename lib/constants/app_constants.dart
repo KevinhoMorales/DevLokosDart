@@ -6,9 +6,9 @@ class AppConstants {
   
   // App Info (debe coincidir con pubspec.yaml - solo fallback si PackageInfo falla)
   static const String appName = 'DevLokos';
-  static const String appVersion = '1.1.2';
-  static const String appBuildNumber = '112';
-  static const String appVersionWithBuild = '1.1.2+112';
+  static const String appVersion = '1.1.3';
+  static const String appBuildNumber = '113';
+  static const String appVersionWithBuild = '1.1.3+113';
 
   // Academia - WhatsApp para inscripción
   static const String academyWhatsAppNumber = '593939598029';

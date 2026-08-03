@@ -23,42 +23,42 @@ class YouTubeVideoCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap ?? () => _launchYouTubeVideo(context),
+        onTap: onTap,
         enableFeedback: false,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           decoration: BoxDecoration(
-            color: BrandColors.blackLight.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(20),
+            color: BrandColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: BrandColors.primaryOrange.withOpacity(0.15),
-              width: 1,
+              color: BrandColors.primaryOrange.withValues(alpha: 0.15),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-                spreadRadius: 0,
-              ),
-              BoxShadow(
-                color: BrandColors.primaryOrange.withOpacity(0.05),
-                blurRadius: 20,
-                offset: const Offset(0, 2),
-                spreadRadius: -4,
-              ),
-            ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildThumbnail(),
+                _buildThumbnail(isCompact),
                 Padding(
-                  padding: EdgeInsets.all(isCompact ? 12 : 16),
-                  child: _buildTitle(),
+                  padding: EdgeInsets.fromLTRB(
+                    isCompact ? 12 : 14,
+                    isCompact ? 10 : 12,
+                    isCompact ? 12 : 14,
+                    isCompact ? 12 : 14,
+                  ),
+                  child: Text(
+                    video.title,
+                    style: TextStyle(
+                      fontSize: isCompact ? 13 : 14,
+                      fontWeight: FontWeight.w600,
+                      color: BrandColors.primaryWhite,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -68,51 +68,41 @@ class YouTubeVideoCard extends StatelessWidget {
     );
   }
 
-  Widget _buildThumbnail() {
-    final height = thumbnailHeight ?? 180;
-    final playSize = height < 140 ? 48.0 : 56.0;
-    
+  Widget _buildThumbnail(bool isCompact) {
+    final height = thumbnailHeight ?? 168;
+    final playSize = isCompact ? 28.0 : 34.0;
+
     return Stack(
       children: [
         SizedBox(
           width: double.infinity,
           height: height,
           child: CachedNetworkImage(
-            imageUrl: _getHighQualityThumbnail(video.thumbnailUrl),
-            width: double.infinity,
-            height: height,
+            imageUrl: highQualityThumb(video.thumbnailUrl),
             fit: BoxFit.cover,
             filterQuality: FilterQuality.high,
-            placeholder: (context, url) => Container(
-              height: height,
-              color: BrandColors.grayDark.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: BrandColors.primaryOrange,
-                  strokeWidth: 2,
-                ),
-              ),
+            placeholder: (_, __) => Container(
+              color: BrandColors.grayDark.withValues(alpha: 0.5),
             ),
-            errorWidget: (context, url, error) => Container(
-              height: height,
-              color: BrandColors.grayDark.withOpacity(0.5),
+            errorWidget: (_, __, ___) => Container(
+              color: BrandColors.grayDark.withValues(alpha: 0.5),
               child: Icon(
                 Icons.play_circle_outline,
-                color: BrandColors.primaryOrange.withOpacity(0.5),
-                size: 48,
+                color: BrandColors.primaryOrange.withValues(alpha: 0.5),
+                size: 36,
               ),
             ),
           ),
         ),
         Positioned.fill(
-          child: Container(
+          child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withOpacity(0.4),
+                  Colors.black.withValues(alpha: 0.45),
                 ],
               ),
             ),
@@ -120,60 +110,39 @@ class YouTubeVideoCard extends StatelessWidget {
         ),
         Positioned.fill(
           child: Center(
-            child: SizedBox(
-              width: playSize + 16,
-              height: playSize + 16,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: BrandColors.primaryOrange.withOpacity(0.35),
-                      blurRadius: 12,
-                      spreadRadius: 0,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  gradient: LinearGradient(
-                    colors: [
-                      BrandColors.primaryOrange,
-                      BrandColors.orangeLight,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+            child: Container(
+              width: playSize + 10,
+              height: playSize + 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: BrandColors.primaryOrange.withValues(alpha: 0.92),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.25),
                 ),
-                child: Center(
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: playSize,
-                  ),
-                ),
+              ),
+              child: Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: playSize,
               ),
             ),
           ),
         ),
         Positioned(
-          bottom: 12,
-          right: 12,
+          bottom: 8,
+          right: 8,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.75),
-              borderRadius: BorderRadius.circular(8),
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
               video.formattedPublishedAt,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
               ),
             ),
           ),
@@ -181,51 +150,9 @@ class YouTubeVideoCard extends StatelessWidget {
       ],
     );
   }
-
-  Widget _buildTitle() {
-    return Text(
-      video.title,
-      style: TextStyle(
-        fontSize: thumbnailHeight != null && thumbnailHeight! < 140 ? 13 : 15,
-        fontWeight: FontWeight.w600,
-        color: BrandColors.primaryWhite,
-        height: 1.35,
-        letterSpacing: 0.2,
-      ),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-
-  String _getHighQualityThumbnail(String thumbnailUrl) {
-    // YouTube proporciona diferentes calidades de thumbnail
-    // Si es un thumbnail de YouTube, intentar obtener la versión de alta calidad
-    if (thumbnailUrl.contains('ytimg.com') || thumbnailUrl.contains('youtube.com')) {
-      // Reemplazar diferentes tamaños de thumbnail con la versión de alta calidad
-      final highQualityUrl = thumbnailUrl
-          .replaceAll('/default.jpg', '/maxresdefault.jpg')
-          .replaceAll('/mqdefault.jpg', '/maxresdefault.jpg')
-          .replaceAll('/hqdefault.jpg', '/maxresdefault.jpg')
-          .replaceAll('/sddefault.jpg', '/maxresdefault.jpg');
-      
-      return highQualityUrl;
-    }
-    return thumbnailUrl;
-  }
-
-  void _launchYouTubeVideo(BuildContext context) {
-    // TODO: Implementar navegación al video o reproducción
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reproduciendo: ${video.title}'),
-        backgroundColor: BrandColors.primaryOrange,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
 }
 
+/// Tile denso para listas (Episodios / resultados).
 class YouTubeVideoListTile extends StatelessWidget {
   final YouTubeVideo video;
   final VoidCallback? onTap;
@@ -238,76 +165,59 @@ class YouTubeVideoListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-      decoration: BoxDecoration(
-        color: BrandColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: BrandColors.primaryOrange,
-          width: 2,
-        ),
-      ),
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
-        onTap: onTap ?? () => _launchYouTubeVideo(context),
+        onTap: onTap,
         enableFeedback: false,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: BrandColors.cardBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.14),
+            ),
+          ),
           child: Row(
             children: [
-              // Thumbnail mejorado
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 100,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: BrandColors.grayDark,
-                  ),
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 112,
+                  height: 72,
                   child: Stack(
+                    fit: StackFit.expand,
                     children: [
                       CachedNetworkImage(
-                        imageUrl: _getHighQualityThumbnail(video.thumbnailUrl),
-                        width: 100,
-                        height: 80,
+                        imageUrl: highQualityThumb(video.thumbnailUrl),
                         fit: BoxFit.cover,
-                        filterQuality: FilterQuality.high,
-                        placeholder: (context, url) => Container(
-                          width: 100,
-                          height: 80,
-                          color: BrandColors.grayDark,
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              color: BrandColors.primaryOrange,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          width: 100,
-                          height: 80,
+                        placeholder: (_, __) =>
+                            Container(color: BrandColors.grayDark),
+                        errorWidget: (_, __, ___) => Container(
                           color: BrandColors.grayDark,
                           child: const Icon(
-                            Icons.error_outline,
-                            color: BrandColors.grayMedium,
-                            size: 32,
+                            Icons.play_circle_outline,
+                            color: BrandColors.primaryOrange,
+                            size: 28,
                           ),
                         ),
                       ),
-                      // Play button overlay
-                      Positioned.fill(
+                      Center(
                         child: Container(
+                          width: 28,
+                          height: 28,
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.play_circle_fill,
-                              color: Colors.white,
-                              size: 32,
+                            shape: BoxShape.circle,
+                            color: BrandColors.primaryOrange.withValues(
+                              alpha: 0.9,
                             ),
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 18,
                           ),
                         ),
                       ),
@@ -316,7 +226,6 @@ class YouTubeVideoListTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,38 +235,22 @@ class YouTubeVideoListTile extends StatelessWidget {
                       style: const TextStyle(
                         color: BrandColors.primaryWhite,
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 13.5,
+                        height: 1.3,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      video.channelTitle,
-                      style: const TextStyle(
-                        color: BrandColors.grayMedium,
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
                       video.formattedPublishedAt,
                       style: const TextStyle(
-                        color: BrandColors.grayLight,
+                        color: BrandColors.grayMedium,
                         fontSize: 11,
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              // Play icon
-              const Icon(
-                Icons.play_circle_outline,
-                color: BrandColors.primaryOrange,
-                size: 28,
               ),
             ],
           ),
@@ -365,30 +258,15 @@ class YouTubeVideoListTile extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _getHighQualityThumbnail(String thumbnailUrl) {
-    // YouTube proporciona diferentes calidades de thumbnail
-    // Si es un thumbnail de YouTube, intentar obtener la versión de alta calidad
-    if (thumbnailUrl.contains('ytimg.com') || thumbnailUrl.contains('youtube.com')) {
-      // Reemplazar diferentes tamaños de thumbnail con la versión de alta calidad
-      final highQualityUrl = thumbnailUrl
-          .replaceAll('/default.jpg', '/maxresdefault.jpg')
-          .replaceAll('/mqdefault.jpg', '/maxresdefault.jpg')
-          .replaceAll('/hqdefault.jpg', '/maxresdefault.jpg')
-          .replaceAll('/sddefault.jpg', '/maxresdefault.jpg');
-      
-      return highQualityUrl;
-    }
-    return thumbnailUrl;
+String highQualityThumb(String thumbnailUrl) {
+  if (thumbnailUrl.contains('ytimg.com') ||
+      thumbnailUrl.contains('youtube.com')) {
+    return thumbnailUrl
+        .replaceAll('/default.jpg', '/hqdefault.jpg')
+        .replaceAll('/mqdefault.jpg', '/hqdefault.jpg')
+        .replaceAll('/sddefault.jpg', '/hqdefault.jpg');
   }
-
-  void _launchYouTubeVideo(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reproduciendo: ${video.title}'),
-        backgroundColor: BrandColors.primaryOrange,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+  return thumbnailUrl;
 }

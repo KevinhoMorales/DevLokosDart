@@ -6,8 +6,17 @@ class RemoteConfigService {
   factory RemoteConfigService() => _instance;
   RemoteConfigService._internal();
 
-  late FirebaseRemoteConfig _remoteConfig;
+  FirebaseRemoteConfig? _remoteConfig;
   PackageInfo? _packageInfo;
+  bool get isInitialized => _remoteConfig != null;
+
+  FirebaseRemoteConfig get _config {
+    final config = _remoteConfig;
+    if (config == null) {
+      throw StateError('RemoteConfigService no inicializado');
+    }
+    return config;
+  }
 
   /// Inicializar Firebase Remote Config
   Future<void> initialize() async {
@@ -17,7 +26,7 @@ class RemoteConfigService {
     _packageInfo = await PackageInfo.fromPlatform();
     
     // Configurar valores por defecto
-    await _remoteConfig.setDefaults({
+    await _config.setDefaults({
       'youtube_api_key': '', // Sin API key por defecto
       'youtube_playlist_id': 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ', // Playlist principal (podcast)
       'youtube_tutorials_playlist_id': 'PLPXi7Vgl6Ak9fqyhptJNCjG4HIU_M6MsF', // Cursos Express
@@ -26,40 +35,31 @@ class RemoteConfigService {
       'version_dart': '1.0.3', // Versión mínima requerida
     });
 
-    // Configurar tiempo de expiración para desarrollo (12 horas)
-    await _remoteConfig.setConfigSettings(RemoteConfigSettings(
-      fetchTimeout: const Duration(seconds: 60),
-      minimumFetchInterval: const Duration(seconds: 0), // Permitir fetch inmediato
+    // Timeout corto en arranque: no bloquear el launch screen negro.
+    await _config.setConfigSettings(RemoteConfigSettings(
+      fetchTimeout: const Duration(seconds: 8),
+      minimumFetchInterval: const Duration(seconds: 0),
     ));
 
-    // Fetch y activar configuración
     await _fetchAndActivate();
-    
-    // Forzar un fetch adicional para asegurar datos actualizados
-    try {
-      await _remoteConfig.fetchAndActivate();
-      print('🔄 Remote Config actualizado forzadamente');
-    } catch (e) {
-      print('⚠️ No se pudo actualizar Remote Config: $e');
-    }
   }
 
   /// Obtener configuración remota
   Future<void> _fetchAndActivate() async {
     try {
-      await _remoteConfig.fetchAndActivate();
+      await _config.fetchAndActivate();
       print('✅ Firebase Remote Config cargado exitosamente');
       
       // Debug: Mostrar todos los valores de Remote Config
       print('🔍 Valores de Remote Config:');
-      print('  - youtube_api_key: "${_remoteConfig.getString('youtube_api_key')}"');
-      print('  - youtube_playlist_id: "${_remoteConfig.getString('youtube_playlist_id')}"');
-      print('  - version_dart: "${_remoteConfig.getString('version_dart')}"');
+      print('  - youtube_api_key: "${_config.getString('youtube_api_key')}"');
+      print('  - youtube_playlist_id: "${_config.getString('youtube_playlist_id')}"');
+      print('  - version_dart: "${_config.getString('version_dart')}"');
       
       // Debug: Mostrar información adicional
       print('📊 Información de Remote Config:');
-      print('  - Last fetch time: ${_remoteConfig.lastFetchTime}');
-      print('  - Last fetch status: ${_remoteConfig.lastFetchStatus}');
+      print('  - Last fetch time: ${_config.lastFetchTime}');
+      print('  - Last fetch status: ${_config.lastFetchStatus}');
       
     } catch (e) {
       print('❌ Error al cargar Firebase Remote Config: $e');
@@ -69,7 +69,8 @@ class RemoteConfigService {
 
   /// Obtener API Key de YouTube desde Remote Config
   String get youtubeApiKey {
-    final apiKey = _remoteConfig.getString('youtube_api_key');
+    if (!isInitialized) return '';
+    final apiKey = _config.getString('youtube_api_key');
     if (apiKey.isEmpty) {
       print('⚠️ API Key no configurada en Remote Config');
       return '';
@@ -80,7 +81,10 @@ class RemoteConfigService {
 
   /// Obtener Playlist ID de YouTube desde Remote Config
   String get youtubePlaylistId {
-    final playlistId = _remoteConfig.getString('youtube_playlist_id');
+    if (!isInitialized) {
+      return 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ';
+    }
+    final playlistId = _config.getString('youtube_playlist_id');
     if (playlistId.isEmpty) {
       print('⚠️ Playlist ID vacío en Remote Config, usando fallback');
       return 'PLPXi7Vgl6Ak-Bm8Y2Xxhp1dwrzWT3AbjZ';
@@ -90,32 +94,36 @@ class RemoteConfigService {
   }
 
   /// Access Key de Web3Forms para envío del formulario de contacto empresarial.
-  String get web3FormAccessKey => _remoteConfig.getString('web_3_form');
+  String get web3FormAccessKey =>
+      isInitialized ? _config.getString('web_3_form') : '';
 
   /// ID del canal de YouTube para búsqueda API. Si está vacío, se obtiene del primer video del playlist.
-  String get youtubeChannelId => _remoteConfig.getString('youtube_channel_id').trim();
+  String get youtubeChannelId =>
+      isInitialized ? _config.getString('youtube_channel_id').trim() : '';
 
   /// Playlist de tutoriales. Si está vacío, se usa la playlist principal.
   String get youtubeTutorialsPlaylistId {
-    final id = _remoteConfig.getString('youtube_tutorials_playlist_id');
+    if (!isInitialized) return youtubePlaylistId;
+    final id = _config.getString('youtube_tutorials_playlist_id');
     return id.isEmpty ? youtubePlaylistId : id;
   }
 
   /// True si se configuró una playlist específica para tutoriales (no usa la principal).
-  bool get isTutorialsPlaylistConfigured =>
-      _remoteConfig.getString('youtube_tutorials_playlist_id').trim().isNotEmpty;
+  bool get isTutorialsPlaylistConfigured => isInitialized &&
+      _config.getString('youtube_tutorials_playlist_id').trim().isNotEmpty;
 
   /// Forzar actualización de configuración remota
   Future<void> forceRefresh() async {
+    if (!isInitialized) return;
     try {
-      await _remoteConfig.fetchAndActivate();
+      await _config.fetchAndActivate();
       print('🔄 Remote Config actualizado forzadamente');
       
       // Debug: Mostrar valores después de actualización
       print('🔍 Valores actualizados de Remote Config:');
-      print('  - youtube_api_key: "${_remoteConfig.getString('youtube_api_key')}"');
-      print('  - youtube_playlist_id: "${_remoteConfig.getString('youtube_playlist_id')}"');
-      print('  - version_dart: "${_remoteConfig.getString('version_dart')}"');
+      print('  - youtube_api_key: "${_config.getString('youtube_api_key')}"');
+      print('  - youtube_playlist_id: "${_config.getString('youtube_playlist_id')}"');
+      print('  - version_dart: "${_config.getString('version_dart')}"');
       
     } catch (e) {
       print('❌ Error al actualizar Remote Config: $e');
@@ -124,9 +132,10 @@ class RemoteConfigService {
   
   /// Verificar si Remote Config está configurado correctamente
   bool get isRemoteConfigConfigured {
-    final hasApiKey = _remoteConfig.getString('youtube_api_key').isNotEmpty;
-    final hasPlaylistId = _remoteConfig.getString('youtube_playlist_id').isNotEmpty;
-    final hasVersion = _remoteConfig.getString('version_dart').isNotEmpty;
+    if (!isInitialized) return false;
+    final hasApiKey = _config.getString('youtube_api_key').isNotEmpty;
+    final hasPlaylistId = _config.getString('youtube_playlist_id').isNotEmpty;
+    final hasVersion = _config.getString('version_dart').isNotEmpty;
     
     print('🔍 Estado de configuración de Remote Config:');
     print('  - YouTube API Key configurado: $hasApiKey');
@@ -138,20 +147,22 @@ class RemoteConfigService {
   }
 
   /// Obtener versión mínima requerida desde Remote Config
-  String get minimumRequiredVersion => _remoteConfig.getString('version_dart');
+  String get minimumRequiredVersion =>
+      isInitialized ? _config.getString('version_dart') : '1.0.3';
   
   /// Obtener versión actual de la aplicación
   String get currentVersion => _packageInfo?.version ?? '1.0.0';
   
   /// Verificar si la aplicación necesita actualización
   bool get needsUpdate {
+    if (!isInitialized) return false;
     final requiredVersion = minimumRequiredVersion;
     final current = currentVersion;
     
     print('🔍 Verificación de versión:');
     print('  - Versión actual: $current');
     print('  - Versión mínima requerida: $requiredVersion');
-    print('  - Valor de version_dart desde Remote Config: "${_remoteConfig.getString('version_dart')}"');
+    print('  - Valor de version_dart desde Remote Config: "${_config.getString('version_dart')}"');
     print('  - ¿Es la versión requerida mayor que la actual? ${_isVersionGreater(requiredVersion, current)}');
     
     final result = _isVersionGreater(requiredVersion, current);
@@ -201,10 +212,11 @@ class RemoteConfigService {
 
   /// Obtener información de debug de Remote Config
   Map<String, dynamic> get debugInfo => {
-    'lastFetchTime': _remoteConfig.lastFetchTime,
-    'lastFetchStatus': _remoteConfig.lastFetchStatus.toString(),
-    'youtube_api_key_configured': _remoteConfig.getString('youtube_api_key').isNotEmpty,
-    'youtube_playlist_id_configured': _remoteConfig.getString('youtube_playlist_id').isNotEmpty,
+    'lastFetchTime': isInitialized ? _config.lastFetchTime : null,
+    'lastFetchStatus':
+        isInitialized ? _config.lastFetchStatus.toString() : 'not_initialized',
+    'youtube_api_key_configured': youtubeApiKey.isNotEmpty,
+    'youtube_playlist_id_configured': youtubePlaylistId.isNotEmpty,
     'current_version': currentVersion,
     'minimum_required_version': minimumRequiredVersion,
     'needs_update': needsUpdate,

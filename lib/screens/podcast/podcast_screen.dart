@@ -569,27 +569,26 @@ class _PodcastScreenState extends State<PodcastScreen>
           title: 'Descubre',
           padding: EdgeInsets.only(left: 4, bottom: 4),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 210,
+          height: 188,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
             clipBehavior: Clip.none,
             itemCount: discoverVideos.length,
             itemBuilder: (context, index) {
               final video = discoverVideos[index];
               return SizedBox(
-                width: 260,
+                width: 236,
                 child: Padding(
                   padding: EdgeInsets.only(
-                    right: index < discoverVideos.length - 1 ? 14 : 0,
+                    right: index < discoverVideos.length - 1 ? 12 : 0,
                   ),
                   child: YouTubeVideoCard(
                     video: video,
                     onTap: () => _onVideoTap(video),
                     showChannelTitle: false,
-                    thumbnailHeight: 130,
+                    thumbnailHeight: 118,
                   ),
                 ),
               );
@@ -602,112 +601,30 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   Widget _buildSearchResultsContent() {
     if (_isSearching) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Buscando en el canal...',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: BrandColors.grayMedium,
-              ),
-            ),
-          ],
-        ),
-      );
+      return const AppLoading(message: 'Buscando episodios...');
     }
 
     if (_searchError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, color: BrandColors.grayMedium, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                _searchError!,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: BrandColors.grayMedium,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: () => _performApiSearch(_searchQuery),
-                icon: const Icon(Icons.refresh, color: BrandColors.primaryOrange),
-                label: const Text('Reintentar', style: TextStyle(color: BrandColors.primaryOrange)),
-              ),
-            ],
-          ),
-        ),
+      return AppErrorState(
+        message: _searchError!,
+        onRetry: () => _performApiSearch(_searchQuery),
       );
     }
 
     if (_apiSearchResults == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.search, color: BrandColors.primaryOrange.withOpacity(0.8), size: 56),
-              const SizedBox(height: 16),
-              Text(
-                'Presiona Enter para buscar',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: BrandColors.primaryWhite,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Busca por invitado, tema o número de episodio',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: BrandColors.grayMedium,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+      return const AppEmptyState(
+        icon: Icons.search_rounded,
+        title: 'Presiona Enter para buscar',
+        subtitle: 'Busca por invitado, tema o número de episodio',
       );
     }
 
     final searchResults = _apiSearchResults!;
     if (searchResults.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.search_off, color: BrandColors.grayMedium, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                'No se encontraron episodios',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: BrandColors.primaryWhite,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Intenta con otros términos de búsqueda',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: BrandColors.grayMedium,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+      return const AppEmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'Sin resultados',
+        subtitle: 'Intenta con otros términos de búsqueda',
       );
     }
 
@@ -715,43 +632,27 @@ class _PodcastScreenState extends State<PodcastScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: BrandColors.primaryOrange,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Resultados (${searchResults.length})',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: BrandColors.primaryWhite,
-                  fontSize: 18,
-                ),
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: SectionHeader(
+            title: 'Resultados (${searchResults.length})',
+            padding: EdgeInsets.zero,
           ),
         ),
         Expanded(
           child: ListView.builder(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).padding.bottom + 100.0,
+              left: 20,
+              right: 20,
+              bottom: MediaQuery.of(context).padding.bottom + 100,
             ),
             itemCount: searchResults.length,
             itemBuilder: (context, index) {
               final video = searchResults[index];
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                child: YouTubeVideoCard(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: YouTubeVideoListTile(
                   video: video,
                   onTap: () => _onVideoTap(video),
-                  thumbnailHeight: 200,
                 ),
               );
             },
@@ -786,7 +687,7 @@ class _PodcastScreenState extends State<PodcastScreen>
             else if (filteredVideos.isEmpty)
               AppEmptyState(
                 icon: Icons.podcasts_outlined,
-                title: _selectedSeason,
+                title: 'Sin episodios en $_selectedSeason',
                 subtitle: _isLoadingMoreEpisodes || youtubeProvider.isLoading
                     ? 'Buscando episodios de esta temporada...'
                     : PodcastSeasons.emptyMessage(_selectedSeason),
@@ -799,17 +700,16 @@ class _PodcastScreenState extends State<PodcastScreen>
     );
   }
 
-  /// Lista de episodios (scroll manejado por el SingleChildScrollView padre).
+  /// Lista densa de episodios (scroll del SingleChildScrollView padre).
   Widget _buildEpisodesListView(List<YouTubeVideo> filteredVideos) {
     return Column(
       children: [
         for (final video in filteredVideos)
           Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: YouTubeVideoCard(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: YouTubeVideoListTile(
               video: video,
               onTap: () => _onVideoTap(video),
-              thumbnailHeight: 200,
             ),
           ),
       ],

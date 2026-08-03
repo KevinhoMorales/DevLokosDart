@@ -104,7 +104,8 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
   ) async {
     final prevState = state;
     if (prevState is TutorialLoaded &&
-        prevState.selectedPlaylistId == event.playlistId) {
+        prevState.selectedPlaylistId == event.playlistId &&
+        !prevState.isSwitching) {
       return;
     }
 
@@ -117,18 +118,22 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
       return;
     }
 
+    // Mantener chips + selección visible; no emitir TutorialLoading.
+    emit(TutorialLoaded(
+      playlists: playlists,
+      selectedPlaylistId: event.playlistId,
+      selectedPlaylistTitle: event.playlistTitle,
+      tutorials: const [],
+      filteredTutorials: const [],
+      searchQuery: '',
+      isSwitching: true,
+    ));
+
     try {
-      var stillWaiting = true;
-      Future.delayed(const Duration(milliseconds: 150), () {
-        if (stillWaiting) {
-          emit(const TutorialLoading());
-        }
-      });
       final tutorials = await _repository.getTutorialsByPlaylist(
         event.playlistId,
         refresh: false,
       );
-      stillWaiting = false;
 
       emit(TutorialLoaded(
         playlists: playlists,
@@ -137,8 +142,19 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
         tutorials: tutorials,
         filteredTutorials: tutorials,
         searchQuery: '',
+        isSwitching: false,
       ));
     } catch (e) {
+      emit(TutorialLoaded(
+        playlists: playlists,
+        selectedPlaylistId: event.playlistId,
+        selectedPlaylistTitle: event.playlistTitle,
+        tutorials: prevState is TutorialLoaded ? prevState.tutorials : const [],
+        filteredTutorials:
+            prevState is TutorialLoaded ? prevState.filteredTutorials : const [],
+        searchQuery: '',
+        isSwitching: false,
+      ));
       emit(TutorialError(message: _toUserFriendlyMessage(e)));
     }
   }
@@ -154,11 +170,7 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
     if (playlistId == null) return;
 
     try {
-      emit(current.copyWith(
-        tutorials: [],
-        filteredTutorials: [],
-      ));
-      emit(const TutorialLoading());
+      emit(current.copyWith(isSwitching: true));
 
       final tutorials = await _repository.getTutorialsByPlaylist(
         playlistId,
@@ -178,8 +190,10 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
                     .contains(current.searchQuery.toLowerCase()))
                 .toList(),
         searchQuery: current.searchQuery,
+        isSwitching: false,
       ));
     } catch (e) {
+      emit(current.copyWith(isSwitching: false));
       emit(TutorialError(
         message: _toUserFriendlyMessage(e),
         cachedTutorials: current.tutorials,

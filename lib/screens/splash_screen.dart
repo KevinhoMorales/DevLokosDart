@@ -37,8 +37,9 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
     );
 
+    // Empieza visible: evita frame negro entre LaunchScreen y splash Flutter.
     _fadeAnimation = Tween<double>(
-      begin: 0.0,
+      begin: 1.0,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
@@ -46,11 +47,11 @@ class _SplashScreenState extends State<SplashScreen>
     ));
 
     _scaleAnimation = Tween<double>(
-      begin: 0.5,
+      begin: 0.92,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.2, 0.8, curve: Curves.elasticOut),
+      curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
     ));
 
     _animationController.forward();

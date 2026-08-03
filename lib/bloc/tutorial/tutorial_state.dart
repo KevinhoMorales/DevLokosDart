@@ -33,6 +33,8 @@ class TutorialLoaded extends TutorialState {
   final List<Tutorial> tutorials;
   final List<Tutorial> filteredTutorials;
   final String searchQuery;
+  /// True while switching playlist / refreshing without wiping chips.
+  final bool isSwitching;
 
   const TutorialLoaded({
     required this.playlists,
@@ -41,6 +43,7 @@ class TutorialLoaded extends TutorialState {
     required this.tutorials,
     required this.filteredTutorials,
     this.searchQuery = '',
+    this.isSwitching = false,
   });
 
   TutorialLoaded copyWith({
@@ -50,6 +53,7 @@ class TutorialLoaded extends TutorialState {
     List<Tutorial>? tutorials,
     List<Tutorial>? filteredTutorials,
     String? searchQuery,
+    bool? isSwitching,
   }) {
     return TutorialLoaded(
       playlists: playlists ?? this.playlists,
@@ -59,6 +63,7 @@ class TutorialLoaded extends TutorialState {
       tutorials: tutorials ?? this.tutorials,
       filteredTutorials: filteredTutorials ?? this.filteredTutorials,
       searchQuery: searchQuery ?? this.searchQuery,
+      isSwitching: isSwitching ?? this.isSwitching,
     );
   }
 
@@ -70,6 +75,7 @@ class TutorialLoaded extends TutorialState {
         tutorials,
         filteredTutorials,
         searchQuery,
+        isSwitching,
       ];
 }
 

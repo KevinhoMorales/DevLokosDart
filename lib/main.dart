@@ -73,30 +73,40 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Inicializar Firebase Remote Config
+  // Remote Config / push / analytics: no bloquear el primer frame del splash.
+  // Si Remote Config tarda o falla, usamos defaults y seguimos.
   print('🔄 Inicializando Firebase Remote Config...');
-  final remoteConfig = RemoteConfigService();
-  await remoteConfig.initialize();
-
-  // Verificar configuración
-  print('🔍 Verificando configuración de Remote Config...');
-  final isConfigured = remoteConfig.isRemoteConfigConfigured;
-  print('✅ Remote Config configurado: $isConfigured');
-
-  // Inicializar push notifications
-  await PushNotificationService().initialize();
-
-  // Habilitar colección de analítica (Firebase Analytics)
-  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-
-  // app_first_open solo en la primera ejecución post-instalación
-  final prefs = await SharedPreferences.getInstance();
-  final hasOpenedBefore = prefs.getBool('analytics_app_opened_before') ?? false;
-  if (!hasOpenedBefore) {
-    await AnalyticsService.logAppFirstOpen();
-    await prefs.setBool('analytics_app_opened_before', true);
+  try {
+    await RemoteConfigService()
+        .initialize()
+        .timeout(const Duration(seconds: 10));
+    print(
+      '✅ Remote Config configurado: ${RemoteConfigService().isRemoteConfigConfigured}',
+    );
+  } catch (e) {
+    print('⚠️ Remote Config omitido en arranque: $e');
   }
-  await AnalyticsService.logAppOpen();
+
+  try {
+    await PushNotificationService()
+        .initialize()
+        .timeout(const Duration(seconds: 5));
+  } catch (e) {
+    print('⚠️ Push notifications omitidas en arranque: $e');
+  }
+
+  try {
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+    final prefs = await SharedPreferences.getInstance();
+    final hasOpenedBefore = prefs.getBool('analytics_app_opened_before') ?? false;
+    if (!hasOpenedBefore) {
+      await AnalyticsService.logAppFirstOpen();
+      await prefs.setBool('analytics_app_opened_before', true);
+    }
+    await AnalyticsService.logAppOpen();
+  } catch (e) {
+    print('⚠️ Analytics omitida en arranque: $e');
+  }
 
   runApp(const DevLokosApp());
 }

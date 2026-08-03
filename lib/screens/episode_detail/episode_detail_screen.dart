@@ -37,6 +37,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   YouTubeVideo? _currentYouTubeVideo;
   YoutubePlayerController? _controller;
   Duration? _savedPosition;
+  bool _descriptionExpanded = false;
 
   @override
   void initState() {
@@ -121,28 +122,39 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
     super.dispose();
   }
 
+  String _getFullTitle() {
+    return _currentYouTubeVideo?.title ??
+        widget.youtubeVideo?.title ??
+        _currentEpisode?.title ??
+        widget.episode?.title ??
+        'Sin título';
+  }
+
   String _getAppBarTitle() {
     // Prioridad: nombre de playlist (más corto) cuando viene de Tutoriales
     if (widget.playlistTitle != null && widget.playlistTitle!.isNotEmpty) {
       return widget.playlistTitle!;
     }
-    final fullTitle = _currentYouTubeVideo?.title ?? widget.youtubeVideo?.title ?? _currentEpisode?.title ?? widget.episode?.title ?? 'Episodio';
-    final parts = fullTitle.split('||');
+    final parts = _getFullTitle().split('||');
     if (parts.length > 1) return parts[0].trim();
-    return fullTitle;
+    return _getFullTitle();
   }
 
+  /// Título del episodio (parte izquierda de "tema || invitado").
   String _getVideoTitle() {
-    final fullTitle = _currentYouTubeVideo?.title ?? widget.youtubeVideo?.title ?? _currentEpisode?.title ?? widget.episode?.title ?? 'Sin título';
-    
-    // Dividir por el primer ||
-    final parts = fullTitle.split('||');
+    final parts = _getFullTitle().split('||');
+    if (parts.length > 1) return parts[0].trim();
+    return _getFullTitle();
+  }
+
+  /// Invitado / guest (parte derecha de "tema || invitado").
+  String? _getGuestName() {
+    final parts = _getFullTitle().split('||');
     if (parts.length > 1) {
-      // Tomar todo desde el primer || hacia la derecha
-      return parts.sublist(1).join('||').trim();
+      final guest = parts.sublist(1).join('||').trim();
+      if (guest.isNotEmpty) return guest;
     }
-    
-    return fullTitle;
+    return null;
   }
 
   @override
@@ -153,34 +165,26 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
         title: _getAppBarTitle(),
         showBackButton: true,
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              BrandColors.primaryBlack,
-              BrandColors.primaryBlack,
-              BrandColors.blackDark.withOpacity(0.95),
-            ],
-            stops: const [0.0, 0.5, 1.0],
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            8,
+            16,
+            MediaQuery.of(context).padding.bottom + 24,
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildVideoPlayer(),
-                const SizedBox(height: 24),
-                _buildEpisodeInfo(),
-                const SizedBox(height: 20),
-                _buildEpisodeDescription(),
-                const SizedBox(height: 20),
-                _buildShareButton(),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildVideoPlayer(),
+              const SizedBox(height: 16),
+              _buildEpisodeHeader(),
+              const SizedBox(height: 20),
+              _buildEpisodeDescription(),
+              const SizedBox(height: 20),
+              _buildShareButton(),
+            ],
           ),
         ),
       ),
@@ -190,246 +194,94 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   Widget _buildVideoPlayer() {
     final videoId = _currentYouTubeVideo?.videoId ?? widget.youtubeVideo?.videoId;
     if (videoId == null || videoId.isEmpty || _controller == null) {
-      return Container(
-        height: 220,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: BrandColors.blackLight.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: BrandColors.primaryOrange.withOpacity(0.15),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.play_circle_outline_rounded,
-                color: BrandColors.primaryOrange.withOpacity(0.5),
-                size: 56,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Video no disponible',
-                style: TextStyle(
-                  color: BrandColors.grayMedium,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: BrandColors.primaryOrange.withOpacity(0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 2),
-            spreadRadius: -4,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          children: [
-            YoutubePlayer(
-              controller: _controller!,
-              showVideoProgressIndicator: true,
-              progressIndicatorColor: BrandColors.primaryOrange,
-              progressColors: const ProgressBarColors(
-                playedColor: BrandColors.primaryOrange,
-                handleColor: BrandColors.primaryOrange,
-              ),
-              onReady: () {
-                print('✅ Reproductor de YouTube listo');
-              },
-              onEnded: (data) {
-                print('🏁 Video terminado');
-              },
-            ),
-            // Logo de DevLokos para cubrir el botón de pantalla completa nativo
-            Positioned(
-              bottom: 12,
-              right: 12,
-              child: GestureDetector(
-                onTap: () async {
-                  AppHaptics.light();
-                  if (_controller != null) {
-                    _savedPosition = _controller!.value.position;
-                  }
-                  final result = await Navigator.of(context).push<Duration?>(
-                    MaterialPageRoute(
-                      builder: (context) => FullEpisodeScreen(
-                        episode: _currentEpisode ?? widget.episode,
-                        youtubeVideo: _currentYouTubeVideo ?? widget.youtubeVideo,
-                        initialPosition: _savedPosition,
-                      ),
-                      fullscreenDialog: true,
-                    ),
-                  );
-                  if (result != null && _controller != null) {
-                    _controller!.seekTo(result);
-                  }
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.75),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: BrandColors.primaryOrange.withOpacity(0.25),
-                      width: 1,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.fullscreen_rounded,
-                    color: BrandColors.primaryOrange,
-                    size: 22,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEpisodeInfo() {
-    final title = _getVideoTitle();
-    final publishedAt = _currentYouTubeVideo?.publishedAt ?? widget.youtubeVideo?.publishedAt ?? _currentEpisode?.publishedDate ?? widget.episode?.publishedDate;
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.15),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: BrandColors.primaryWhite,
-              fontWeight: FontWeight.w600,
-              fontSize: 18,
-              height: 1.35,
-              letterSpacing: 0.2,
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: BrandColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.12),
             ),
           ),
-          if (publishedAt != null) ...[
-            const SizedBox(height: 16),
-            Row(
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.calendar_today_rounded,
-                  color: BrandColors.primaryOrange.withOpacity(0.9),
-                  size: 18,
+                  Icons.play_circle_outline_rounded,
+                  color: BrandColors.grayDark,
+                  size: 48,
                 ),
-                const SizedBox(width: 8),
+                SizedBox(height: 8),
                 Text(
-                  _formatDate(publishedAt),
+                  'Video no disponible',
                   style: TextStyle(
-                    color: BrandColors.grayLight.withOpacity(0.9),
+                    color: BrandColors.grayMedium,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEpisodeDescription() {
-    final description = _currentYouTubeVideo?.description ?? widget.youtubeVideo?.description ?? _currentEpisode?.description ?? widget.episode?.description ?? 'Sin descripción disponible.';
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.15),
-          width: 1,
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: BrandColors.primaryOrange,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Descripción',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: BrandColors.primaryWhite,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
+          YoutubePlayer(
+            controller: _controller!,
+            showVideoProgressIndicator: true,
+            progressIndicatorColor: BrandColors.primaryOrange,
+            progressColors: const ProgressBarColors(
+              playedColor: BrandColors.primaryOrange,
+              handleColor: BrandColors.primaryOrange,
+            ),
+            onReady: () {},
+            onEnded: (_) {},
           ),
-          const SizedBox(height: 16),
-          Text(
-            description,
-            style: TextStyle(
-              color: BrandColors.grayLight.withOpacity(0.85),
-              fontSize: 15,
-              height: 1.6,
-              letterSpacing: 0.2,
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: GestureDetector(
+              onTap: () async {
+                AppHaptics.light();
+                if (_controller != null) {
+                  _savedPosition = _controller!.value.position;
+                }
+                final result = await Navigator.of(context).push<Duration?>(
+                  MaterialPageRoute(
+                    builder: (context) => FullEpisodeScreen(
+                      episode: _currentEpisode ?? widget.episode,
+                      youtubeVideo:
+                          _currentYouTubeVideo ?? widget.youtubeVideo,
+                      initialPosition: _savedPosition,
+                    ),
+                    fullscreenDialog: true,
+                  ),
+                );
+                if (result != null && _controller != null) {
+                  _controller!.seekTo(result);
+                }
+              },
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.fullscreen_rounded,
+                  color: BrandColors.primaryWhite,
+                  size: 20,
+                ),
+              ),
             ),
           ),
         ],
@@ -437,50 +289,174 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
     );
   }
 
-  Widget _buildShareButton() {
-    return Builder(
-      builder: (ctx) => Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _shareEpisode(ctx),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
-          decoration: BoxDecoration(
-            gradient: BrandColors.primaryGradient,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: BrandColors.primaryOrange.withOpacity(0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
+  Widget _buildEpisodeHeader() {
+    final title = _getVideoTitle();
+    final guest = _getGuestName();
+    final publishedAt = _currentYouTubeVideo?.publishedAt ??
+        widget.youtubeVideo?.publishedAt ??
+        _currentEpisode?.publishedDate ??
+        widget.episode?.publishedDate;
+    final duration = _currentEpisode?.duration ?? widget.episode?.duration;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: BrandColors.primaryWhite,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            height: 1.3,
+            letterSpacing: -0.2,
+          ),
+        ),
+        if (guest != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            guest,
+            style: const TextStyle(
+              color: BrandColors.primaryOrange,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+        if (publishedAt != null || (duration != null && duration.isNotEmpty)) ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (publishedAt != null)
+                _metaChip(
+                  icon: Icons.calendar_today_rounded,
+                  label: _formatDate(publishedAt),
+                ),
+              if (duration != null && duration.isNotEmpty && duration != '0:00')
+                _metaChip(
+                  icon: Icons.schedule_rounded,
+                  label: duration,
+                ),
             ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.share_rounded,
-                color: BrandColors.primaryWhite,
-                size: 22,
+        ],
+      ],
+    );
+  }
+
+  Widget _metaChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: BrandColors.cardBackground,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: BrandColors.primaryOrange, size: 13),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: BrandColors.grayMedium,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEpisodeDescription() {
+    final description = _currentYouTubeVideo?.description ??
+        widget.youtubeVideo?.description ??
+        _currentEpisode?.description ??
+        widget.episode?.description ??
+        'Sin descripción disponible.';
+    final canExpand = description.length > 220;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Descripción',
+          style: TextStyle(
+            color: BrandColors.primaryWhite,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            letterSpacing: -0.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: Text(
+            description,
+            maxLines: _descriptionExpanded || !canExpand ? null : 5,
+            overflow: _descriptionExpanded || !canExpand
+                ? TextOverflow.visible
+                : TextOverflow.ellipsis,
+            style: TextStyle(
+              color: BrandColors.grayLight.withValues(alpha: 0.88),
+              fontSize: 14,
+              height: 1.55,
+            ),
+          ),
+        ),
+        if (canExpand) ...[
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: AppHaptics.wrap(() {
+              setState(() => _descriptionExpanded = !_descriptionExpanded);
+            }),
+            child: Text(
+              _descriptionExpanded ? 'Ver menos' : 'Ver más',
+              style: const TextStyle(
+                color: BrandColors.primaryOrange,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(width: 12),
-              Text(
-                'Compartir episodio',
-                style: TextStyle(
-                  color: BrandColors.primaryWhite,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildShareButton() {
+    return Builder(
+      builder: (ctx) => SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: OutlinedButton.icon(
+          onPressed: () => _shareEpisode(ctx),
+          icon: const Icon(Icons.ios_share_rounded, size: 18),
+          label: const Text(
+            'Compartir episodio',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: BrandColors.primaryOrange,
+            side: BorderSide(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.45),
+            ),
+            backgroundColor:
+                BrandColors.primaryOrange.withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   void _shareEpisode(BuildContext context) async {
@@ -492,13 +468,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
         widget.youtubeVideo?.videoId ??
         '';
 
-    String guest = '';
-    if (episodeTitle.contains('||')) {
-      final parts = episodeTitle.split('||');
-      if (parts.length > 1) {
-        guest = parts[1].trim();
-      }
-    }
+    String guest = _getGuestName() ?? '';
     if (guest.isEmpty) guest = episodeTitle;
 
     final youtubeUrl = videoId.isNotEmpty
@@ -506,18 +476,18 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
         : '';
 
     final buffer = StringBuffer();
-    buffer.writeln('🎧 Descubre el episodio "$appBarTitle"${guest.isNotEmpty ? ' con $guest' : ''}');
+    buffer.writeln('Descubre el episodio "$appBarTitle"${guest.isNotEmpty ? ' con $guest' : ''}');
     buffer.writeln();
-    buffer.writeln('📱 Descarga DevLokos y accede a más episodios:');
+    buffer.writeln('Descarga DevLokos y accede a más episodios:');
     buffer.writeln(EnvironmentConfig.onelinkUrl);
     if (youtubeUrl.isNotEmpty) {
       buffer.writeln();
-      buffer.writeln('▶️ Ver en YouTube:');
+      buffer.writeln('Ver en YouTube:');
       buffer.write(youtubeUrl);
     }
     var shareText = buffer.toString().trim();
     if (shareText.isEmpty) {
-      shareText = '🎧 Episodio de DevLokos\n\n📱 Descarga la app: ${EnvironmentConfig.onelinkUrl}';
+      shareText = 'Episodio de DevLokos\n\nDescarga la app: ${EnvironmentConfig.onelinkUrl}';
     }
     try {
       Rect sharePositionOrigin = const Rect.fromLTWH(0, 0, 1, 1);
