@@ -51,11 +51,12 @@ class _PodcastScreenState extends State<PodcastScreen>
   Timer? _discoverAutoScrollTimer;
   Timer? _discoverResumeTimer;
   bool _discoverUserInteracting = false;
-  double _discoverCardStride = 248;
   bool _isLoadingMoreEpisodes = false;
   static const int _discoverCount = 10;
   static const double _paginationThreshold = 480;
-  static const Duration _discoverAutoScrollInterval = Duration(milliseconds: 4500);
+  /// Continuous rail drift (~28 px/s).
+  static const Duration _discoverTickInterval = Duration(milliseconds: 16);
+  static const double _discoverPixelsPerTick = 0.45;
 
   @override
   bool get wantKeepAlive => true; // Mantener el estado vivo cuando se navega
@@ -297,8 +298,8 @@ class _PodcastScreenState extends State<PodcastScreen>
     _discoverAutoScrollTimer?.cancel();
     final count = _discoverVideos?.length ?? 0;
     if (count <= 1) return;
-    _discoverAutoScrollTimer = Timer.periodic(_discoverAutoScrollInterval, (_) {
-      _advanceDiscoverRail();
+    _discoverAutoScrollTimer = Timer.periodic(_discoverTickInterval, (_) {
+      _tickDiscoverRail();
     });
   }
 
@@ -317,25 +318,17 @@ class _PodcastScreenState extends State<PodcastScreen>
     });
   }
 
-  void _advanceDiscoverRail() {
+  void _tickDiscoverRail() {
     if (!mounted || _discoverUserInteracting) return;
     if (!_discoverScrollController.hasClients) return;
     final position = _discoverScrollController.position;
     if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
 
-    final next = position.pixels + _discoverCardStride;
-    if (next >= position.maxScrollExtent - 4) {
-      _discoverScrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutCubic,
-      );
+    final next = position.pixels + _discoverPixelsPerTick;
+    if (next >= position.maxScrollExtent - 0.5) {
+      _discoverScrollController.jumpTo(0);
     } else {
-      _discoverScrollController.animateTo(
-        next.clamp(0.0, position.maxScrollExtent),
-        duration: const Duration(milliseconds: 450),
-        curve: Curves.easeOutCubic,
-      );
+      _discoverScrollController.jumpTo(next);
     }
   }
 
@@ -647,8 +640,6 @@ class _PodcastScreenState extends State<PodcastScreen>
     final wide = Responsive.isWide(context);
     final cardWidth = wide ? 300.0 : (tablet ? 280.0 : 236.0);
     const gap = 12.0;
-    // Gap is inside each item's SizedBox width, so stride == cardWidth.
-    _discoverCardStride = cardWidth;
     final thumbHeight = tablet ? 140.0 : 118.0;
     final railHeight = tablet ? 220.0 : 188.0;
 
@@ -671,28 +662,34 @@ class _PodcastScreenState extends State<PodcastScreen>
               }
               return false;
             },
-            child: ListView.builder(
-              controller: _discoverScrollController,
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              itemCount: discoverVideos.length,
-              itemBuilder: (context, index) {
-                final video = discoverVideos[index];
-                return SizedBox(
-                  width: cardWidth,
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: index < discoverVideos.length - 1 ? gap : 0,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                scrollbars: false,
+              ),
+              child: ListView.builder(
+                controller: _discoverScrollController,
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                physics: const BouncingScrollPhysics(),
+                itemCount: discoverVideos.length,
+                itemBuilder: (context, index) {
+                  final video = discoverVideos[index];
+                  return SizedBox(
+                    width: cardWidth,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: index < discoverVideos.length - 1 ? gap : 0,
+                      ),
+                      child: YouTubeVideoCard(
+                        video: video,
+                        onTap: () => _onVideoTap(video),
+                        showChannelTitle: false,
+                        thumbnailHeight: thumbHeight,
+                      ),
                     ),
-                    child: YouTubeVideoCard(
-                      video: video,
-                      onTap: () => _onVideoTap(video),
-                      showChannelTitle: false,
-                      thumbnailHeight: thumbHeight,
-                    ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),
