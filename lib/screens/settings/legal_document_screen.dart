@@ -11,7 +11,7 @@ class LegalSectionData {
   const LegalSectionData({required this.title, required this.body});
 }
 
-/// Pantalla legal in-app (negro / card brand / acento naranja).
+/// Pantalla legal in-app (texto sobre fondo negro; título en el app bar).
 class LegalDocumentScreen extends StatelessWidget {
   final String title;
   final List<InlineSpan> intro;
@@ -374,120 +374,55 @@ class LegalDocumentScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 12, 20, bottom + 24),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: BrandColors.cardBackground,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: BrandColors.primaryOrange.withValues(alpha: 0.22),
+          padding: EdgeInsets.fromLTRB(20, 8, 20, bottom + 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  style: TextStyle(
+                    color: BrandColors.primaryWhite.withValues(alpha: 0.85),
+                    fontSize: 15,
+                    height: 1.55,
+                  ),
+                  children: intro,
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: BrandColors.primaryOrange.withValues(alpha: 0.06),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+              for (final section in sections) ...[
+                const SizedBox(height: 28),
+                Text(
+                  section.title,
+                  style: const TextStyle(
+                    color: BrandColors.primaryOrange,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 3,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        BrandColors.primaryOrange,
-                        BrandColors.orangeLight,
-                        Colors.transparent,
-                      ],
+                const SizedBox(height: 10),
+                Text.rich(
+                  TextSpan(
+                    style: TextStyle(
+                      color: BrandColors.primaryWhite.withValues(alpha: 0.85),
+                      fontSize: 15,
+                      height: 1.55,
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: BrandColors.primaryOrange,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text.rich(
-                        TextSpan(
-                          style: TextStyle(
-                            color: BrandColors.primaryWhite.withValues(alpha: 0.8),
-                            fontSize: 14,
-                            height: 1.55,
-                          ),
-                          children: intro,
-                        ),
-                      ),
-                      for (final section in sections) ...[
-                        const SizedBox(height: 28),
-                        Text(
-                          section.title,
-                          style: const TextStyle(
-                            color: BrandColors.primaryOrange,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text.rich(
-                          TextSpan(
-                            style: TextStyle(
-                              color:
-                                  BrandColors.primaryWhite.withValues(alpha: 0.8),
-                              fontSize: 14,
-                              height: 1.55,
-                            ),
-                            children: section.body,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 28),
-                      GestureDetector(
-                        onTap: AppHaptics.wrap(() => _openEmail(context)),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: BrandColors.primaryOrange.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: BrandColors.primaryOrange.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'info@devlokos.com',
-                              style: TextStyle(
-                                color: BrandColors.primaryOrange,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    children: section.body,
                   ),
                 ),
               ],
-            ),
+              const SizedBox(height: 28),
+              GestureDetector(
+                onTap: AppHaptics.wrap(() => _openEmail(context)),
+                child: Text(
+                  'info@devlokos.com',
+                  style: TextStyle(
+                    color: BrandColors.primaryOrange.withValues(alpha: 0.95),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

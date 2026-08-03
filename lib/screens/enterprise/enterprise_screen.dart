@@ -308,19 +308,24 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
       (Icons.rocket_launch_outlined, '04', 'Entrega'),
     ];
 
+    final hPad = Responsive.horizontalPadding(context);
+    final crossAxisCount = Responsive.isTablet(context) ? 4 : 2;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(
+        SectionHeader(
           title: 'Nuestro proceso',
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+          padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 12),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: hPad),
           child: LayoutBuilder(
             builder: (context, constraints) {
               const gap = 10.0;
-              final tileW = (constraints.maxWidth - gap) / 2;
+              final cols = crossAxisCount;
+              final tileW =
+                  (constraints.maxWidth - gap * (cols - 1)) / cols;
               return Wrap(
                 spacing: gap,
                 runSpacing: gap,
@@ -328,7 +333,12 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   return SizedBox(
                     width: tileW,
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                      padding: EdgeInsets.fromLTRB(
+                        cols == 4 ? 14 : 12,
+                        cols == 4 ? 14 : 12,
+                        cols == 4 ? 14 : 12,
+                        cols == 4 ? 14 : 12,
+                      ),
                       decoration: BoxDecoration(
                         color: BrandColors.cardBackground,
                         borderRadius: BorderRadius.circular(14),
@@ -346,7 +356,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                               Icon(
                                 step.$1,
                                 color: BrandColors.primaryOrange,
-                                size: 18,
+                                size: cols == 4 ? 20 : 18,
                               ),
                               const Spacer(),
                               Text(
@@ -365,9 +375,9 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                           const SizedBox(height: 8),
                           Text(
                             step.$3,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: BrandColors.primaryWhite,
-                              fontSize: 13,
+                              fontSize: cols == 4 ? 14 : 13,
                               fontWeight: FontWeight.w600,
                               height: 1.2,
                             ),

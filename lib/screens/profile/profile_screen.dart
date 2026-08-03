@@ -392,8 +392,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Mes abreviado en español (evita "Aug" del locale del dispositivo).
   String _formatMemberSince(DateTime date) {
     const months = [
-      'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-      'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
     ];
     return '${months[date.month - 1]} ${date.year}';
   }

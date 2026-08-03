@@ -26,8 +26,11 @@ class AppConstants {
   static const String usersCollection = 'users';
   
   // Image Assets
-  /// Logo circular oficial (splash + branding).
+  /// Logo wordmark (fondo negro) — iconos / branding general.
   static const String logoPath = 'assets/icons/devlokos_logo.png';
+
+  /// Logo wordmark con fondo transparente — splash / launch.
+  static const String logoMarkPath = 'assets/icons/devlokos_logo_mark.png';
   /// Ícono circular (mismo arte que el logo, formato webp).
   static const String iconPath = 'assets/icons/devlokos_icon.webp';
   static const String backgroundPath = 'assets/images/background.png';

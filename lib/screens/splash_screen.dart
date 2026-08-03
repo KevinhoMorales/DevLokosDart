@@ -264,7 +264,16 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          color: BrandColors.primaryBlack,
+          gradient: RadialGradient(
+            center: Alignment(0, -0.15),
+            radius: 1.15,
+            colors: [
+              Color(0xFF2A160C),
+              BrandColors.blackDark,
+              BrandColors.primaryBlack,
+            ],
+            stops: [0.0, 0.45, 1.0],
+          ),
         ),
         child: Center(
           child: AnimatedBuilder(
@@ -277,26 +286,46 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Logo circular oficial (mismo que LaunchScreen)
-                      Image.asset(
-                        AppConstants.logoPath,
-                        width: 200,
-                        height: 200,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
+                      Container(
+                        width: 240,
+                        height: 240,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: BrandColors.primaryOrange
+                                  .withValues(alpha: 0.22),
+                              blurRadius: 48,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Image.asset(
+                          AppConstants.logoMarkPath,
+                          width: 240,
+                          height: 240,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                        ),
                       ),
                       const SizedBox(height: 28),
                       Text(
-                        'APRENDE - CREA - CRECE',
+                        'APRENDE · CREA · CRECE',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: BrandColors.grayMedium,
-                          letterSpacing: 1.2,
-                        ),
+                              color: BrandColors.grayMedium,
+                              letterSpacing: 1.4,
+                              fontWeight: FontWeight.w500,
+                            ),
                       ),
                       const SizedBox(height: 48),
-                      const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          BrandColors.primaryOrange,
+                      const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            BrandColors.primaryOrange,
+                          ),
                         ),
                       ),
                     ],
