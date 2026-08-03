@@ -28,6 +28,7 @@ class TutorialCard extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onTap,
+        enableFeedback: false,
         borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

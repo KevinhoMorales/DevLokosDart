@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 
 class FullEpisodeScreen extends StatefulWidget {
@@ -154,7 +155,7 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
                       bottom: 8,
                       right: 8,
                       child: GestureDetector(
-                        onTap: _exitFullScreen,
+                        onTap: AppHaptics.wrap(_exitFullScreen),
                         child: Container(
                           width: 35,
                           height: 35,

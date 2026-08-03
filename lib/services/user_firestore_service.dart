@@ -7,134 +7,80 @@ class UserFirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Actualiza la URL de la foto de perfil en Firestore
+  static DocumentReference<Map<String, dynamic>> _userDoc(String uid) {
+    return _firestore
+        .collection(EnvironmentConfig.getUsersCollectionPath())
+        .doc(EnvironmentConfig.getUsersCollectionPath())
+        .collection('users')
+        .doc(uid);
+  }
+
+  /// Crea o actualiza campos del perfil (merge). Evita not-found si el doc no existía.
+  static Future<void> upsertProfileFields(Map<String, dynamic> fields) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('Usuario no autenticado');
+    }
+
+    final ref = _userDoc(user.uid);
+    final existing = await ref.get();
+
+    final data = <String, dynamic>{
+      ...fields,
+      'uid': user.uid,
+      'id': user.uid,
+      'email': user.email ?? fields['email'] ?? '',
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (!existing.exists) {
+      data['isActive'] = true;
+      data['createdAt'] = FieldValue.serverTimestamp();
+      data.putIfAbsent('displayName', () => user.displayName ?? '');
+      data.putIfAbsent('photoURL', () => user.photoURL ?? '');
+    }
+
+    await ref.set(data, SetOptions(merge: true));
+  }
+
   static Future<void> updateUserPhotoURL(String photoURL) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('Usuario no autenticado');
-      }
-
-      final userId = user.uid;
-      print('📤 Actualizando foto de perfil en Firestore para UID: $userId');
-      
-      await _firestore
-          .collection(EnvironmentConfig.getUsersCollectionPath())
-          .doc(EnvironmentConfig.getUsersCollectionPath())
-          .collection("users")
-          .doc(userId)
-          .update({
-        'photoURL': photoURL,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      print('✅ Foto de perfil actualizada en Firestore exitosamente');
+      await upsertProfileFields({'photoURL': photoURL});
     } catch (e) {
-      print('❌ Error al actualizar foto de perfil en Firestore: $e');
       throw Exception('Error al actualizar foto de perfil en Firestore: $e');
     }
   }
 
-  /// Actualiza el nombre de usuario en Firestore
   static Future<void> updateUserDisplayName(String displayName) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('Usuario no autenticado');
-      }
-
-      final userId = user.uid;
-      print('📤 Actualizando nombre de usuario en Firestore para UID: $userId');
-      
-      await _firestore
-          .collection(EnvironmentConfig.getUsersCollectionPath())
-          .doc(EnvironmentConfig.getUsersCollectionPath())
-          .collection("users")
-          .doc(userId)
-          .update({
-        'displayName': displayName,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      print('✅ Nombre de usuario actualizado en Firestore exitosamente');
+      await upsertProfileFields({'displayName': displayName});
     } catch (e) {
-      print('❌ Error al actualizar nombre de usuario en Firestore: $e');
       throw Exception('Error al actualizar nombre de usuario en Firestore: $e');
     }
   }
 
-  /// Obtiene los datos actualizados del usuario desde Firestore
   static Future<UserModel?> getUserFromFirestore() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        return null;
-      }
-
-      print('📥 Obteniendo datos de usuario desde Firestore para UID: ${user.uid}');
-      
-      final doc = await _firestore
-          .collection(EnvironmentConfig.getUsersCollectionPath())
-          .doc(EnvironmentConfig.getUsersCollectionPath())
-          .collection("users")
-          .doc(user.uid)
-          .get();
-
-      if (doc.exists) {
-        final data = doc.data()!;
-        final userModel = UserModel.fromMap(data);
-        print('✅ Datos de usuario obtenidos desde Firestore exitosamente');
-        return userModel;
-      } else {
-        print('❌ Usuario no encontrado en Firestore');
-        return null;
-      }
-    } catch (e) {
-      print('❌ Error al obtener datos de usuario desde Firestore: $e');
-      return null;
-    }
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    return getUserFromFirestoreByUid(user.uid);
   }
 
-  /// Obtiene los datos del usuario desde Firestore usando un UID específico
   static Future<UserModel?> getUserFromFirestoreByUid(String uid) async {
     try {
-      print('📥 Obteniendo datos de usuario desde Firestore para UID: $uid');
-      
-      final doc = await _firestore
-          .collection(EnvironmentConfig.getUsersCollectionPath())
-          .doc(EnvironmentConfig.getUsersCollectionPath())
-          .collection("users")
-          .doc(uid)
-          .get();
+      final doc = await _userDoc(uid).get();
+      if (!doc.exists || doc.data() == null) return null;
 
-      if (doc.exists) {
-        final data = doc.data()!;
-        final userModel = UserModel.fromMap(data);
-        print('✅ Datos de usuario obtenidos desde Firestore exitosamente para UID: $uid');
-        return userModel;
-      } else {
-        print('❌ Usuario no encontrado en Firestore con UID: $uid');
-        return null;
-      }
+      final data = Map<String, dynamic>.from(doc.data()!);
+      data['uid'] = data['uid'] ?? data['id'] ?? uid;
+      data['id'] = data['id'] ?? uid;
+      return UserModel.fromMap(data);
     } catch (e) {
-      print('❌ Error al obtener datos de usuario desde Firestore con UID $uid: $e');
+      print('❌ Error al obtener usuario de Firestore ($uid): $e');
       return null;
     }
   }
 
-  /// Sincroniza los datos locales con Firestore
   static Future<UserModel?> syncUserData() async {
-    try {
-      final firestoreUser = await getUserFromFirestore();
-      if (firestoreUser != null) {
-        // Los datos se guardan localmente en el AuthBloc cuando se obtienen
-        print('✅ Datos de usuario sincronizados con Firestore');
-        return firestoreUser;
-      }
-      return null;
-    } catch (e) {
-      print('❌ Error al sincronizar datos de usuario: $e');
-      return null;
-    }
+    return getUserFromFirestore();
   }
 }

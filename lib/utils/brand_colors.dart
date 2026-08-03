@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_haptics.dart';
 
 /// Clase para manejar los colores del brand DevLokos
 /// Basado en el logo oficial con colores naranja, negro y blanco
@@ -71,6 +72,7 @@ class BrandColors {
   // Colores para temas
   static ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
+    splashFactory: AppHaptics.splashFactory,
     colorScheme: ColorScheme.fromSeed(
       seedColor: primaryOrange,
       brightness: Brightness.light,
@@ -85,15 +87,60 @@ class BrandColors {
 
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryOrange,
-      brightness: Brightness.dark,
+    splashFactory: AppHaptics.splashFactory,
+    brightness: Brightness.dark,
+    colorScheme: const ColorScheme.dark(
+      primary: primaryOrange,
+      secondary: primaryOrange,
+      surface: primaryBlack,
+      error: error,
+      onPrimary: primaryBlack,
+      onSecondary: primaryBlack,
+      onSurface: primaryWhite,
+      onError: primaryWhite,
     ),
     scaffoldBackgroundColor: primaryBlack,
+    canvasColor: primaryBlack,
+    cardColor: cardBackground,
+    dividerColor: blackMedium,
     appBarTheme: const AppBarTheme(
       backgroundColor: primaryBlack,
       foregroundColor: primaryWhite,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: primaryBlack,
+      elevation: 0,
+      selectedItemColor: primaryOrange,
+      unselectedItemColor: grayMedium,
+      type: BottomNavigationBarType.fixed,
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: cardBackground,
+      surfaceTintColor: Colors.transparent,
+      modalBackgroundColor: cardBackground,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: cardBackground,
+      surfaceTintColor: Colors.transparent,
+    ),
+    // Feedback háptico unificado vía AppHaptics.splashFactory (evitar doble buzz)
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(enableFeedback: false),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(enableFeedback: false),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(enableFeedback: false),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(enableFeedback: false),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(enableFeedback: false),
     ),
   );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 
@@ -104,6 +105,7 @@ class AboutScreen extends StatelessWidget {
   Widget _buildLinkSection(BuildContext context) {
     return GestureDetector(
       onTap: () async {
+        AppHaptics.light();
         try {
           final uri = Uri.parse('https://linktr.ee/devlokos');
           if (await canLaunchUrl(uri)) {

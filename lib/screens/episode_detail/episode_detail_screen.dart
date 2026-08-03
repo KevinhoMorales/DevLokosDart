@@ -6,6 +6,7 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
@@ -273,6 +274,7 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
               right: 12,
               child: GestureDetector(
                 onTap: () async {
+                  AppHaptics.light();
                   if (_controller != null) {
                     _savedPosition = _controller!.value.position;
                   }

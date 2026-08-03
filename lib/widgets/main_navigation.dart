@@ -60,6 +60,7 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   void _onItemTapped(int index) {
+    // Haptic vía Theme.splashFactory (InkResponse del BottomNavigationBar)
     setState(() {
       _selectedIndex = index;
     });
@@ -91,6 +92,7 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.primaryBlack,
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
@@ -109,7 +111,9 @@ class _MainNavigationState extends State<MainNavigation> {
           type: BottomNavigationBarType.fixed,
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
+          enableFeedback: false,
           backgroundColor: BrandColors.primaryBlack,
+          elevation: 0,
           selectedItemColor: BrandColors.primaryOrange,
           unselectedItemColor: BrandColors.grayMedium,
           selectedLabelStyle: const TextStyle(

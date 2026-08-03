@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../bloc/tutorial/tutorial_bloc_exports.dart';
 import '../../models/tutorial.dart';
 import '../../models/youtube_playlist_info.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_loading.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/tutorial_card.dart';
@@ -111,6 +114,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
               final isSelected = p.id == selectedId;
               return GestureDetector(
                 onTap: () {
+                  AppHaptics.selection();
                   context.read<TutorialBloc>().add(SelectPlaylist(
                         playlistId: p.id,
                         playlistTitle: p.title,
@@ -168,11 +172,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
     return BlocBuilder<TutorialBloc, TutorialState>(
       builder: (context, state) {
         if (state is TutorialLoading) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
-            ),
-          );
+          return const AppLoading(message: 'Cargando tutoriales...');
         }
 
         if (state is TutorialError) {
@@ -244,58 +244,12 @@ class _TutorialsScreenState extends State<TutorialsScreen>
     bool showRetry = false,
     VoidCallback? onRetry,
   }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: BrandColors.primaryOrange.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 48,
-                color: BrandColors.primaryOrange,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: BrandColors.primaryWhite,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 15,
-                color: BrandColors.grayMedium,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (showRetry && onRetry != null) ...[
-              const SizedBox(height: 24),
-              TextButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18, color: BrandColors.primaryOrange),
-                label: const Text(
-                  'Reintentar',
-                  style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      showRetry: showRetry,
+      onRetry: onRetry,
     );
   }
 

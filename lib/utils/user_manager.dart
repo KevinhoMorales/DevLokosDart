@@ -3,71 +3,136 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/user_firestore_service.dart';
 
-/// Modelo de usuario para almacenamiento local
+/// Modelo de usuario (local + Firestore).
 class UserModel {
   final String uid;
   final String email;
   final String? displayName;
   final String? photoURL;
+  final String? bio;
+  final String? company;
+  final String? role;
+  final String? instagram;
+  final String? linkedin;
+  final String? twitter;
+  final String? github;
+  final String? tiktok;
+  final String? website;
   final DateTime? createdAt;
 
-  UserModel({
+  const UserModel({
     required this.uid,
     required this.email,
     this.displayName,
     this.photoURL,
+    this.bio,
+    this.company,
+    this.role,
+    this.instagram,
+    this.linkedin,
+    this.twitter,
+    this.github,
+    this.tiktok,
+    this.website,
     this.createdAt,
   });
 
-  /// Convierte un UserModel a Map
+  UserModel copyWith({
+    String? uid,
+    String? email,
+    String? displayName,
+    String? photoURL,
+    String? bio,
+    String? company,
+    String? role,
+    String? instagram,
+    String? linkedin,
+    String? twitter,
+    String? github,
+    String? tiktok,
+    String? website,
+    DateTime? createdAt,
+    bool clearPhotoURL = false,
+  }) {
+    return UserModel(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      photoURL: clearPhotoURL ? null : (photoURL ?? this.photoURL),
+      bio: bio ?? this.bio,
+      company: company ?? this.company,
+      role: role ?? this.role,
+      instagram: instagram ?? this.instagram,
+      linkedin: linkedin ?? this.linkedin,
+      twitter: twitter ?? this.twitter,
+      github: github ?? this.github,
+      tiktok: tiktok ?? this.tiktok,
+      website: website ?? this.website,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
+      'id': uid,
       'email': email,
       'displayName': displayName,
       'photoURL': photoURL,
+      'bio': bio,
+      'company': company,
+      'role': role,
+      'instagram': instagram,
+      'linkedin': linkedin,
+      'twitter': twitter,
+      'github': github,
+      'tiktok': tiktok,
+      'website': website,
       'createdAt': createdAt?.toIso8601String(),
     };
   }
 
-  /// Crea un UserModel desde un Map
   factory UserModel.fromMap(Map<String, dynamic> map) {
     DateTime? createdAt;
-    
-    // Manejar diferentes tipos de createdAt (String, Timestamp, DateTime)
+
     if (map['createdAt'] != null) {
       try {
         if (map['createdAt'] is String) {
           createdAt = DateTime.parse(map['createdAt']);
-        } else if (map['createdAt'].toString().contains('Timestamp')) {
-          // Es un Timestamp de Firestore, convertir a DateTime
-          final timestamp = map['createdAt'];
-          createdAt = timestamp.toDate();
         } else if (map['createdAt'] is DateTime) {
-          createdAt = map['createdAt'];
+          createdAt = map['createdAt'] as DateTime;
+        } else {
+          // Timestamp de Firestore
+          createdAt = (map['createdAt'] as dynamic).toDate() as DateTime;
         }
-      } catch (e) {
-        print('⚠️ Error al convertir createdAt: $e');
+      } catch (_) {
         createdAt = null;
       }
     }
-    
+
     return UserModel(
-      uid: map['uid'] ?? '',
-      email: map['email'] ?? '',
-      displayName: map['displayName'],
-      photoURL: map['photoURL'],
+      uid: (map['uid'] ?? map['id'] ?? '').toString(),
+      email: (map['email'] ?? '').toString(),
+      displayName: map['displayName'] as String?,
+      photoURL: map['photoURL'] as String?,
+      bio: map['bio'] as String?,
+      company: map['company'] as String?,
+      role: map['role'] as String?,
+      instagram: map['instagram'] as String?,
+      linkedin: map['linkedin'] as String?,
+      twitter: map['twitter'] as String?,
+      github: map['github'] as String?,
+      tiktok: map['tiktok'] as String?,
+      website: map['website'] as String?,
       createdAt: createdAt,
     );
   }
 
-  /// Convierte un UserModel a JSON
   String toJson() => json.encode(toMap());
 
-  /// Crea un UserModel desde JSON
-  factory UserModel.fromJson(String source) => UserModel.fromMap(json.decode(source));
+  factory UserModel.fromJson(String source) =>
+      UserModel.fromMap(json.decode(source) as Map<String, dynamic>);
 
-  /// Crea un UserModel desde Firebase User
   factory UserModel.fromFirebaseUser(User user) {
     return UserModel(
       uid: user.uid,
@@ -77,13 +142,14 @@ class UserModel {
       createdAt: user.metadata.creationTime ?? DateTime.now(),
     );
   }
+
+  bool get hasBio => bio != null && bio!.trim().isNotEmpty;
 }
 
-/// Gestor de usuarios para almacenamiento local
+/// Gestor de usuarios para almacenamiento local + sync Firestore.
 class UserManager {
   static const String _userKey = 'saved_user';
-  
-  /// Guarda un usuario en el almacenamiento local
+
   static Future<void> saveUser(UserModel user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -93,12 +159,10 @@ class UserManager {
     }
   }
 
-  /// Obtiene el usuario guardado localmente
   static Future<UserModel?> getUser() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userJson = prefs.getString(_userKey);
-      
       if (userJson != null && userJson.isNotEmpty) {
         return UserModel.fromJson(userJson);
       }
@@ -108,7 +172,6 @@ class UserManager {
     }
   }
 
-  /// Elimina el usuario guardado localmente
   static Future<void> deleteUser() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -118,149 +181,132 @@ class UserManager {
     }
   }
 
-  /// Verifica si existe un usuario guardado localmente
   static Future<bool> hasUser() async {
     try {
-      final user = await getUser();
-      return user != null;
-    } catch (e) {
+      return await getUser() != null;
+    } catch (_) {
       return false;
     }
   }
 
-  /// Actualiza los datos del usuario guardado
   static Future<void> updateUser(UserModel user) async {
     await saveUser(user);
   }
 
-  /// Actualiza solo la URL de la foto de perfil del usuario
-  static Future<void> updateUserPhotoURL(String photoURL) async {
-    try {
-      final user = await getUser();
-      if (user != null) {
-        // Actualizar localmente
-        final updatedUser = UserModel(
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: photoURL,
-          createdAt: user.createdAt,
-        );
-        await saveUser(updatedUser);
-        print('✅ URL de foto de perfil actualizada localmente: $photoURL');
-        
-        // Sincronizar con Firestore
-        await UserFirestoreService.updateUserPhotoURL(photoURL);
-        print('✅ URL de foto de perfil sincronizada con Firestore');
-      }
-    } catch (e) {
-      print('❌ Error al actualizar URL de foto: $e');
-      throw Exception('Error al actualizar foto de perfil: $e');
-    }
-  }
-
-  /// Obtiene el UID del usuario guardado
   static Future<String?> getUserUid() async {
     try {
-      final user = await getUser();
-      return user?.uid;
-    } catch (e) {
+      return (await getUser())?.uid;
+    } catch (_) {
       return null;
     }
   }
 
-  /// Sincroniza los datos del usuario desde Firestore
+  static Future<void> updateUserPhotoURL(String photoURL) async {
+    try {
+      final user = await getUser();
+      if (user == null) return;
+      final updated = user.copyWith(photoURL: photoURL);
+      await saveUser(updated);
+      await UserFirestoreService.updateUserPhotoURL(photoURL);
+    } catch (e) {
+      throw Exception('Error al actualizar foto de perfil: $e');
+    }
+  }
+
+  static Future<void> updateUserDisplayName(String displayName) async {
+    try {
+      final user = await getUser();
+      if (user == null) return;
+      final updated = user.copyWith(displayName: displayName);
+      await saveUser(updated);
+      await UserFirestoreService.updateUserDisplayName(displayName);
+    } catch (e) {
+      throw Exception('Error al actualizar nombre de usuario: $e');
+    }
+  }
+
+  /// Actualiza campos de perfil (bio, redes, etc.) local + Firestore (upsert).
+  static Future<UserModel> updateProfileFields({
+    String? displayName,
+    String? bio,
+    String? company,
+    String? role,
+    String? instagram,
+    String? linkedin,
+    String? twitter,
+    String? github,
+    String? tiktok,
+    String? website,
+  }) async {
+    final user = await getUser();
+    if (user == null) {
+      throw Exception('No hay usuario local');
+    }
+
+    final updated = user.copyWith(
+      displayName: displayName,
+      bio: bio,
+      company: company,
+      role: role,
+      instagram: instagram,
+      linkedin: linkedin,
+      twitter: twitter,
+      github: github,
+      tiktok: tiktok,
+      website: website,
+    );
+    await saveUser(updated);
+
+    final firestoreFields = <String, dynamic>{};
+    if (displayName != null) firestoreFields['displayName'] = displayName;
+    if (bio != null) firestoreFields['bio'] = bio;
+    if (company != null) firestoreFields['company'] = company;
+    if (role != null) firestoreFields['role'] = role;
+    if (instagram != null) firestoreFields['instagram'] = instagram;
+    if (linkedin != null) firestoreFields['linkedin'] = linkedin;
+    if (twitter != null) firestoreFields['twitter'] = twitter;
+    if (github != null) firestoreFields['github'] = github;
+    if (tiktok != null) firestoreFields['tiktok'] = tiktok;
+    if (website != null) firestoreFields['website'] = website;
+
+    if (firestoreFields.isNotEmpty) {
+      await UserFirestoreService.upsertProfileFields(firestoreFields);
+    }
+    return updated;
+  }
+
   static Future<UserModel?> syncUserFromFirestore() async {
     try {
       final firestoreUser = await UserFirestoreService.getUserFromFirestore();
       if (firestoreUser != null) {
         await saveUser(firestoreUser);
-        print('✅ Usuario sincronizado desde Firestore: ${firestoreUser.email}');
         return firestoreUser;
       }
       return null;
-    } catch (e) {
-      print('❌ Error al sincronizar usuario desde Firestore: $e');
+    } catch (_) {
       return null;
     }
   }
 
-  /// Sincroniza automáticamente los datos del usuario al iniciar la app
-  /// Si el usuario existe en Firestore, sobrescribe los datos locales
   static Future<UserModel?> syncUserOnAppStart() async {
     try {
-      print('🔄 Iniciando sincronización automática de usuario al iniciar la app...');
-      
-      // Verificar si hay un usuario guardado localmente
       final currentUser = await getUser();
-      if (currentUser == null) {
-        print('🔍 No hay usuario local, no se puede sincronizar');
-        return null;
-      }
+      if (currentUser == null) return null;
 
-      print('👤 Usuario local encontrado: ${currentUser.email}');
-      print('👤 UID local: ${currentUser.uid}');
-      print('👤 Datos locales actuales:');
-      print('   - Email: ${currentUser.email}');
-      print('   - Display Name: ${currentUser.displayName}');
-      print('   - Photo URL: ${currentUser.photoURL}');
-      
-      // Intentar obtener datos actualizados desde Firestore usando el UID local
-      print('🔍 Consultando Firestore con UID: ${currentUser.uid}');
-      final firestoreUser = await UserFirestoreService.getUserFromFirestoreByUid(currentUser.uid);
-      
+      final firestoreUser =
+          await UserFirestoreService.getUserFromFirestoreByUid(currentUser.uid);
+
       if (firestoreUser != null) {
-        print('📥 Datos encontrados en Firestore');
-        print('   - Email: ${firestoreUser.email}');
-        print('   - Display Name: ${firestoreUser.displayName}');
-        print('   - Photo URL: ${firestoreUser.photoURL}');
-        
-        // Siempre sobrescribir con Firestore (fuente de verdad)
-        final hasChanges = currentUser.email != firestoreUser.email ||
-                          currentUser.displayName != firestoreUser.displayName ||
-                          currentUser.photoURL != firestoreUser.photoURL;
-        if (hasChanges) {
-          print('🔄 Sobrescribiendo datos locales con Firestore');
-        }
-        await saveUser(firestoreUser);
-        print('✅ UserManager actualizado con datos de Firestore');
-        
-        return firestoreUser;
-      } else {
-        print('⚠️ Usuario no encontrado en Firestore con UID: ${currentUser.uid}');
-        print('⚠️ Manteniendo datos locales');
-        return currentUser;
+        // Preservar uid local si Firestore trae vacío por docs legacy
+        final merged = firestoreUser.uid.isEmpty
+            ? firestoreUser.copyWith(uid: currentUser.uid)
+            : firestoreUser;
+        await saveUser(merged);
+        return merged;
       }
-    } catch (e) {
-      print('❌ Error en sincronización automática: $e');
-      // En caso de error, devolver datos locales si existen
+      return currentUser;
+    } catch (_) {
       return await getUser();
-    }
-  }
-
-  /// Actualiza el nombre de usuario tanto local como en Firestore
-  static Future<void> updateUserDisplayName(String displayName) async {
-    try {
-      final user = await getUser();
-      if (user != null) {
-        // Actualizar localmente
-        final updatedUser = UserModel(
-          uid: user.uid,
-          email: user.email,
-          displayName: displayName,
-          photoURL: user.photoURL,
-          createdAt: user.createdAt,
-        );
-        await saveUser(updatedUser);
-        print('✅ Nombre de usuario actualizado localmente: $displayName');
-        
-        // Sincronizar con Firestore
-        await UserFirestoreService.updateUserDisplayName(displayName);
-        print('✅ Nombre de usuario sincronizado con Firestore');
-      }
-    } catch (e) {
-      print('❌ Error al actualizar nombre de usuario: $e');
-      throw Exception('Error al actualizar nombre de usuario: $e');
     }
   }
 }

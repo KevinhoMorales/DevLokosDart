@@ -7,6 +7,7 @@ import '../utils/brand_colors.dart';
 import '../config/environment_config.dart';
 import '../utils/user_manager.dart';
 import '../constants/app_constants.dart';
+import '../services/onboarding_service.dart';
 import '../services/remote_config_service.dart';
 import '../services/user_firestore_service.dart';
 
@@ -82,6 +83,14 @@ class _SplashScreenState extends State<SplashScreen>
       }
       
       print('✅ SplashScreen: Versión OK, continuando con navegación...');
+
+      // Onboarding solo la primera vez que abren la app
+      final onboardingDone = await OnboardingService.isCompleted();
+      if (!onboardingDone) {
+        if (!mounted) return;
+        context.go('/onboarding');
+        return;
+      }
       
       // 1. Verificar si hay un usuario guardado localmente
       final hasLocalUser = await UserManager.hasUser();

@@ -5,6 +5,8 @@ import '../../bloc/academy/academy_bloc_exports.dart';
 import '../../constants/learning_paths.dart';
 import '../../repository/academy_repository.dart';
 import '../../utils/brand_colors.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_loading.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/course_card.dart';
@@ -211,11 +213,7 @@ class _AcademyScreenState extends State<AcademyScreen>
     return BlocBuilder<AcademyBloc, AcademyState>(
       builder: (context, state) {
         if (state is AcademyLoading) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
-            ),
-          );
+          return const AppLoading(message: 'Cargando cursos...');
         }
 
         // Mostrar empty state para errores de índice o cuando no hay cursos
@@ -323,7 +321,6 @@ class _AcademyScreenState extends State<AcademyScreen>
     );
   }
 
-  /// Empty state con estilo de Eventos (icono circular, tipografía consistente)
   Widget _buildEmptyStateTutorialsStyle({
     required IconData icon,
     required String title,
@@ -332,62 +329,13 @@ class _AcademyScreenState extends State<AcademyScreen>
     VoidCallback? onRetry,
     Widget? action,
   }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(40, 40, 40, 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: BrandColors.primaryOrange.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 48,
-                color: BrandColors.primaryOrange,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: BrandColors.primaryWhite,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 15,
-                color: BrandColors.grayMedium,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action,
-            ],
-            if (showRetry && onRetry != null) ...[
-              const SizedBox(height: 24),
-              TextButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18, color: BrandColors.primaryOrange),
-                label: const Text(
-                  'Reintentar',
-                  style: TextStyle(color: BrandColors.primaryOrange, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      showRetry: showRetry,
+      onRetry: onRetry,
+      action: action,
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/episode.dart';
+import '../utils/app_haptics.dart';
 import '../utils/brand_colors.dart';
 
 class FeaturedEpisodeCard extends StatelessWidget {
@@ -16,7 +17,7 @@ class FeaturedEpisodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: AppHaptics.wrap(onTap),
       child: Container(
         width: 180,
         decoration: BoxDecoration(

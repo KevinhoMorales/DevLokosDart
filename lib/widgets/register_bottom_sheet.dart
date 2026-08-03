@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../bloc/auth/auth_bloc_exports.dart';
 import '../constants/app_constants.dart';
+import '../utils/app_haptics.dart';
 import '../utils/brand_colors.dart';
 import '../utils/login_helper.dart';
 import '../widgets/custom_text_field.dart';
@@ -438,6 +439,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
         Checkbox(
           value: _acceptTerms,
           onChanged: (value) {
+            AppHaptics.selection();
             setState(() {
               _acceptTerms = value ?? false;
             });
@@ -448,6 +450,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
         Expanded(
           child: GestureDetector(
             onTap: () {
+              AppHaptics.selection();
               setState(() {
                 _acceptTerms = !_acceptTerms;
               });
@@ -461,7 +464,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
                   const TextSpan(text: 'Acepto los '),
                   WidgetSpan(
                     child: GestureDetector(
-                      onTap: () => _openTermsAndConditions(),
+                      onTap: AppHaptics.wrap(_openTermsAndConditions),
                       child: const Text(
                         'términos y condiciones',
                         style: TextStyle(
@@ -476,7 +479,7 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
                   const TextSpan(text: ' y la '),
                   WidgetSpan(
                     child: GestureDetector(
-                      onTap: () => _openPrivacyPolicy(),
+                      onTap: AppHaptics.wrap(_openPrivacyPolicy),
                       child: const Text(
                         'política de privacidad',
                         style: TextStyle(

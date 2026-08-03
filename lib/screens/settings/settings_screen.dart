@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../constants/app_constants.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../services/push_notification_service.dart';
@@ -226,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           else
             Switch.adaptive(
               value: _notificationsEnabled,
-              onChanged: _onNotificationsChanged,
+              onChanged: AppHaptics.wrapChanged(_onNotificationsChanged),
               activeTrackColor: BrandColors.primaryOrange.withOpacity(0.5),
               activeThumbColor: BrandColors.primaryOrange,
             ),
@@ -304,7 +305,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildAboutSection() {
     return GestureDetector(
-      onTap: () => context.push('/settings/about'),
+      onTap: AppHaptics.wrap(() => context.push('/settings/about')),
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: double.infinity,
@@ -390,7 +391,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String url,
   }) {
     return GestureDetector(
-      onTap: () => _openUrl(url),
+      onTap: AppHaptics.wrap(() => _openUrl(url)),
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: double.infinity,

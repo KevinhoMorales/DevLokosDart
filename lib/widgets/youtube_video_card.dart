@@ -24,6 +24,7 @@ class YouTubeVideoCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap ?? () => _launchYouTubeVideo(context),
+        enableFeedback: false,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
@@ -249,6 +250,7 @@ class YouTubeVideoListTile extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onTap ?? () => _launchYouTubeVideo(context),
+        enableFeedback: false,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
