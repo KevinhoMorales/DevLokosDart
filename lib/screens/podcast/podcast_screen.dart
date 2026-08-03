@@ -169,12 +169,16 @@ class _PodcastScreenState extends State<PodcastScreen>
 
     // Ya hay lista: solo rellenar huecos hasta _discoverCount
     if (_discoverVideos != null && _discoverVideos!.isNotEmpty) {
-      if (_discoverVideos!.length >= _discoverCount) return;
+      if (_discoverVideos!.length >= _discoverCount) {
+        _scheduleDiscoverAutoScroll();
+        return;
+      }
       final existingIds = _discoverVideos!.map((v) => v.videoId).toSet();
       final extras = validVideos
           .where((v) => !existingIds.contains(v.videoId))
           .take(_discoverCount - _discoverVideos!.length);
       _discoverVideos = [..._discoverVideos!, ...extras];
+      _scheduleDiscoverAutoScroll();
       return;
     }
 
@@ -185,6 +189,19 @@ class _PodcastScreenState extends State<PodcastScreen>
     final shuffled = List<YouTubeVideo>.from(validVideos)
       ..shuffle(Random(daySeed));
     _discoverVideos = shuffled.take(_discoverCount).toList();
+    _scheduleDiscoverAutoScroll();
+  }
+
+  void _scheduleDiscoverAutoScroll() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final count = _discoverVideos?.length ?? 0;
+      if (count <= 1) return;
+      if (_discoverAutoScrollTimer == null ||
+          !_discoverAutoScrollTimer!.isActive) {
+        _startDiscoverAutoScroll();
+      }
+    });
   }
 
   void _generateSortedVideos(List<YouTubeVideo> allVideos) {
@@ -630,18 +647,10 @@ class _PodcastScreenState extends State<PodcastScreen>
     final wide = Responsive.isWide(context);
     final cardWidth = wide ? 300.0 : (tablet ? 280.0 : 236.0);
     const gap = 12.0;
-    _discoverCardStride = cardWidth + gap;
+    // Gap is inside each item's SizedBox width, so stride == cardWidth.
+    _discoverCardStride = cardWidth;
     final thumbHeight = tablet ? 140.0 : 118.0;
     final railHeight = tablet ? 220.0 : 188.0;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted &&
-          discoverVideos.length > 1 &&
-          (_discoverAutoScrollTimer == null ||
-              !_discoverAutoScrollTimer!.isActive)) {
-        _startDiscoverAutoScroll();
-      }
-    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
