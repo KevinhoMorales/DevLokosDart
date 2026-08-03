@@ -64,8 +64,9 @@
 
 ### Pasos para AAB
 1. Crear `android/key.properties` si no existe (ver `key.properties.example`)
-2. `flutter build appbundle --release`
-3. Salida: `build/app/outputs/bundle/release/app-release.aab`
+2. Confirmar ambiente: por defecto `DEVLOKOS_ENV=prod` (cursos/eventos = mismos datos que la web). No pases `DEVLOKOS_ENV=dev` en release.
+3. `flutter build appbundle --release`
+4. Salida: `build/app/outputs/bundle/release/app-release.aab`
 
 ---
 

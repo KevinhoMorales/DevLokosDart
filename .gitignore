@@ -52,6 +52,8 @@ android/key.properties
 **/*_secrets.*
 **/*_keys.*
 **/*_config.*
+# Ambiente de la app: tracked (default prod; override con --dart-define=DEVLOKOS_ENV=dev)
+!lib/config/environment_config.dart
 .env
 .env.local
 .env.production

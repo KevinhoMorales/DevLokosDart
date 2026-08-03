@@ -43,5 +43,7 @@ En el proyecto TypeScript (Vercel / `.env.local`):
 
 - `NEXT_PUBLIC_FIREBASE_*` (Auth client)
 - `FIREBASE_ADMIN_SDK_KEY` (service account JSON)
-- `FIREBASE_ENV=prod` (o `dev`)
+- `FIREBASE_ENV=prod` (o `dev`) — debe coincidir con la app (`DEVLOKOS_ENV`, default `prod`)
 - `FIREBASE_STORAGE_BUCKET` / `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` para uploads
+
+La app móvil lee `prod/prod/courses` y `prod/prod/events` por defecto. Si la web muestra cursos/eventos y la app no, casi siempre es porque el build usó `DEVLOKOS_ENV=dev`.

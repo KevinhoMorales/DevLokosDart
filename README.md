@@ -67,18 +67,17 @@ cd DevLokosDart
 flutter pub get
 ```
 
-### 2. Configurar ambiente (obligatorio)
+### 2. Ambiente Firestore
 
-El archivo `lib/config/environment_config.dart` está en `.gitignore`. Créalo desde la plantilla:
+Por defecto la app usa **`prod`** (mismas rutas que [devlokos.com](https://devlokos.com) y el CMS: `prod/prod/courses`, `prod/prod/events`).
+
+Para apuntar a la sandbox `dev/dev`:
 
 ```bash
-cp lib/config/environment_config.example.dart lib/config/environment_config.dart
+flutter run --dart-define=DEVLOKOS_ENV=dev
 ```
 
-Edita `environment_config.dart`:
-
-- `_environment`: `'dev'` para desarrollo, `'prod'` para release
-- `onelinkUrl`: URL de descarga de la app (OneLink / deep link)
+Opcional: edita `onelinkUrl` en [`lib/config/environment_config.dart`](lib/config/environment_config.dart).
 
 ### 3. Firebase nativo
 
@@ -201,7 +200,7 @@ firebase deploy --only firestore:rules,storage
 lib/
 ├── main.dart                 # Bootstrap, GoRouter, MultiBlocProvider
 ├── firebase_options.dart     # Credenciales FlutterFire
-├── config/                   # environment_config.dart (local, gitignored)
+├── config/                   # environment_config.dart (default prod; dart-define DEVLOKOS_ENV)
 ├── bloc/                     # auth, episode, tutorial, academy, enterprise, event
 ├── repository/               # Capa de datos (YouTube + Firestore)
 ├── services/                 # Remote Config, Analytics, Push, Cache, Admin...
