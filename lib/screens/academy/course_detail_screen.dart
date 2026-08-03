@@ -6,6 +6,7 @@ import '../../repository/academy_repository.dart';
 import '../../services/analytics_service.dart';
 import '../../constants/app_constants.dart';
 import '../../constants/learning_paths.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/gradient_button.dart';
@@ -47,36 +48,36 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       courseId: course.id,
       courseTitle: course.title,
       level: course.difficulty,
-      learningPaths: course.learningPaths.isNotEmpty ? course.learningPaths : null,
+      learningPaths:
+          course.learningPaths.isNotEmpty ? course.learningPaths : null,
     );
   }
 
   Future<void> _loadCourse() async {
     final course = await AcademyRepositoryImpl().getCourseById(widget.courseId);
-    if (mounted) {
-      setState(() {
-        _course = course;
-        _isLoading = false;
-        if (course == null) {
-          _error = 'Curso no encontrado';
-        } else if (!course.isPublished) {
-          _error = 'Curso no disponible';
-          _course = null; // No mostrar cursos no publicados
-        }
-      });
-      if (course != null && course.isPublished) {
-        _logCourseViewed(course);
+    if (!mounted) return;
+    setState(() {
+      _course = course;
+      _isLoading = false;
+      if (course == null) {
+        _error = 'Curso no encontrado';
+      } else if (!course.isPublished) {
+        _error = 'Curso no disponible';
+        _course = null;
       }
+    });
+    if (course != null && course.isPublished) {
+      _logCourseViewed(course);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
+      return const Scaffold(
         backgroundColor: BrandColors.primaryBlack,
-        appBar: const CustomAppBar(title: 'Curso', showBackButton: true),
-        body: const Center(
+        appBar: CustomAppBar(title: 'Curso', showBackButton: true),
+        body: Center(
           child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
           ),
@@ -102,158 +103,289 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     }
 
     final course = _course!;
-    // No mostrar cursos no publicados (por si llegaron por deep link)
-    if (!course.isPublished) {
-      return Scaffold(
-        backgroundColor: BrandColors.primaryBlack,
-        appBar: const CustomAppBar(title: 'Curso', showBackButton: true),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Text(
-              'Curso no disponible',
-              style: const TextStyle(color: BrandColors.grayMedium),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
-    }
+    final bottom = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: BrandColors.primaryBlack,
       appBar: CustomAppBar(
-        title: course.title.length > 30
-            ? '${course.title.substring(0, 27)}...'
+        title: course.title.length > 28
+            ? '${course.title.substring(0, 25)}...'
             : course.title,
         showBackButton: true,
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          color: BrandColors.primaryBlack,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeroImage(course),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  24,
-                  24,
-                  24,
-                  24 + MediaQuery.of(context).padding.bottom,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_hasMetaContent(course)) ...[
-                    _buildMetaSection(course),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _HeroCover(course: course),
+                  const SizedBox(height: 20),
+                  Text(
+                    course.title,
+                    style: const TextStyle(
+                      color: BrandColors.primaryWhite,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _MetaCard(course: course),
+                  if (course.description.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                  ],
-                    if (course.description.isNotEmpty) ...[
-                      _buildSectionTitle('Descripción'),
-                      const SizedBox(height: 8),
-                      Text(
-                        course.description,
-                        style: const TextStyle(
-                          color: BrandColors.grayLight,
-                          fontSize: 16,
-                          height: 1.6,
-                        ),
+                    const _SectionTitle('Descripción'),
+                    const SizedBox(height: 10),
+                    Text(
+                      course.description,
+                      style: TextStyle(
+                        color: BrandColors.primaryWhite.withValues(alpha: 0.88),
+                        fontSize: 15,
+                        height: 1.55,
                       ),
-                      const SizedBox(height: 24),
-                    ],
-                    if (course.learningObjectives.isNotEmpty) ...[
-                      _buildSectionTitle('Qué aprenderás'),
-                      const SizedBox(height: 8),
-                      ...course.learningObjectives.map(
-                        (obj) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                size: 20,
-                                color: BrandColors.primaryOrange,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  obj,
-                                  style: const TextStyle(
-                                    color: BrandColors.grayLight,
-                                    fontSize: 15,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    GradientButton(
-                      onPressed: _openAcademyWhatsApp,
-                      text: 'Inscribirme por WhatsApp',
                     ),
                   ],
+                  if (course.learningObjectives.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    const _SectionTitle('Qué aprenderás'),
+                    const SizedBox(height: 12),
+                    ...course.learningObjectives.map(
+                      (obj) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 2),
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: BrandColors.primaryOrange
+                                    .withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                size: 12,
+                                color: BrandColors.primaryOrange,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                obj,
+                                style: TextStyle(
+                                  color: BrandColors.primaryWhite
+                                      .withValues(alpha: 0.85),
+                                  fontSize: 14,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (course.modules.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    const _SectionTitle('Contenido del curso'),
+                    const SizedBox(height: 12),
+                    ...List.generate(course.modules.length, (i) {
+                      final mod = course.modules[i];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: BrandColors.cardBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: BrandColors.primaryOrange
+                                .withValues(alpha: 0.14),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: BrandColors.primaryOrange
+                                    .withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${i + 1}',
+                                style: const TextStyle(
+                                  color: BrandColors.primaryOrange,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                mod.title.isNotEmpty
+                                    ? mod.title
+                                    : 'Módulo ${i + 1}',
+                                style: const TextStyle(
+                                  color: BrandColors.primaryWhite,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(20, 12, 20, bottom + 12),
+            decoration: BoxDecoration(
+              color: BrandColors.primaryBlack,
+              border: Border(
+                top: BorderSide(
+                  color: BrandColors.primaryOrange.withValues(alpha: 0.2),
                 ),
               ),
-            ],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, -6),
+                ),
+              ],
+            ),
+            child: GradientButton(
+              onPressed: AppHaptics.wrap(_openAcademyWhatsApp),
+              text: 'Inscribirme por WhatsApp',
+              width: double.infinity,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeroImage(Course course) {
-    if (course.thumbnailUrl == null || course.thumbnailUrl!.isEmpty) {
-      return Container(
-        height: 200,
-        color: BrandColors.blackLight,
-        child: Center(
-          child: Icon(
-            Icons.school_rounded,
-            size: 80,
-            color: BrandColors.grayMedium.withValues(alpha: 0.5),
-          ),
-        ),
-      );
+  Future<void> _openAcademyWhatsApp() async {
+    if (_course != null) {
+      AnalyticsService.logAcademyWhatsAppClicked(courseTitle: _course!.title);
     }
+    final message = _course != null
+        ? 'Hola, me gustaría inscribirme en el curso "${_course!.title}" de la Academia DevLokos. ¿Cuáles son los pasos?'
+        : AppConstants.academyWhatsAppMessage;
+    final url = 'https://wa.me/${AppConstants.academyWhatsAppNumber}'
+        '?text=${Uri.encodeComponent(message)}';
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo abrir WhatsApp'),
+            backgroundColor: BrandColors.error,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo abrir WhatsApp'),
+            backgroundColor: BrandColors.error,
+          ),
+        );
+      }
+    }
+  }
+}
 
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: CachedNetworkImage(
-        imageUrl: course.thumbnailUrl!,
-        fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
-          color: BrandColors.blackLight,
-          child: const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
+class _HeroCover extends StatelessWidget {
+  final Course course;
+
+  const _HeroCover({required this.course});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: BrandColors.primaryOrange.withValues(alpha: 0.28),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (course.thumbnailUrl != null && course.thumbnailUrl!.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: course.thumbnailUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: BrandColors.grayDark),
+              errorWidget: (_, __, ___) => Container(
+                color: BrandColors.blackLight,
+                child: const Icon(
+                  Icons.school_rounded,
+                  color: BrandColors.primaryOrange,
+                  size: 48,
+                ),
+              ),
+            )
+          else
+            Container(
+              color: BrandColors.blackLight,
+              child: const Icon(
+                Icons.school_rounded,
+                color: BrandColors.primaryOrange,
+                size: 48,
+              ),
+            ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.7),
+                ],
+              ),
             ),
           ),
-        ),
-        errorWidget: (context, url, error) => Container(
-          color: BrandColors.blackLight,
-          child: Center(
-            child: Icon(
-              Icons.broken_image_outlined,
-              size: 64,
-              color: BrandColors.grayMedium.withValues(alpha: 0.5),
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildMetaSection(Course course) {
+class _MetaCard extends StatelessWidget {
+  final Course course;
+
+  const _MetaCard({required this.course});
+
+  @override
+  Widget build(BuildContext context) {
     final hasDifficulty = course.difficulty.isNotEmpty;
     final hasDuration = course.duration > 0;
-    final hasProfessor = course.professor != null && course.professor!.isNotEmpty;
+    final hasProfessor =
+        course.professor != null && course.professor!.trim().isNotEmpty;
     final hasPaths = course.learningPaths.isNotEmpty;
 
     if (!hasDifficulty && !hasDuration && !hasProfessor && !hasPaths) {
@@ -261,38 +393,48 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     }
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BrandColors.blackLight.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
+        color: BrandColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: BrandColors.primaryOrange.withValues(alpha: 0.2),
+          color: BrandColors.primaryOrange.withValues(alpha: 0.22),
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (hasDifficulty || hasDuration)
             Row(
               children: [
-                if (hasDifficulty) ...[
-                  Icon(Icons.school, size: 20, color: BrandColors.primaryOrange),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _difficultyLabel(course.difficulty),
-                      style: const TextStyle(
+                if (hasDifficulty)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.school_outlined,
+                        size: 16,
                         color: BrandColors.primaryWhite,
-                        fontSize: 15,
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _difficultyLabel(course.difficulty),
+                        style: const TextStyle(
+                          color: BrandColors.primaryWhite,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                if (hasDifficulty && hasDuration) const Spacer(),
                 if (hasDuration)
                   Text(
                     course.formattedDuration,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: BrandColors.grayMedium,
-                      fontSize: 14,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
               ],
@@ -301,36 +443,48 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
             if (hasDifficulty || hasDuration) const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.person_outline, size: 20, color: BrandColors.primaryOrange),
-                const SizedBox(width: 12),
-                Text(
-                  course.professor!,
-                  style: const TextStyle(
-                    color: BrandColors.primaryWhite,
-                    fontSize: 15,
+                const Icon(
+                  Icons.person_outline_rounded,
+                  size: 16,
+                  color: BrandColors.primaryWhite,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    course.professor!.trim(),
+                    style: const TextStyle(
+                      color: BrandColors.primaryWhite,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
             ),
           ],
           if (hasPaths) ...[
-            if (hasDifficulty || hasDuration || hasProfessor) const SizedBox(height: 12),
+            if (hasDifficulty || hasDuration || hasProfessor)
+              const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: course.learningPaths.map((path) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: BrandColors.primaryOrange.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
+                    color: BrandColors.primaryOrange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: BrandColors.primaryOrange.withValues(alpha: 0.35),
+                    ),
                   ),
                   child: Text(
                     LearningPaths.displayLabel(path),
                     style: const TextStyle(
                       color: BrandColors.primaryOrange,
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 );
@@ -358,67 +512,35 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     }
   }
 
-  bool _hasMetaContent(Course course) {
-    return course.difficulty.isNotEmpty ||
-        course.duration > 0 ||
-        (course.professor != null && course.professor!.isNotEmpty) ||
-        course.learningPaths.isNotEmpty;
-  }
+}
 
-  Widget _buildSectionTitle(String title) {
+class _SectionTitle extends StatelessWidget {
+  final String title;
+
+  const _SectionTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
-          width: 4,
-          height: 22,
+          width: 3,
+          height: 18,
           decoration: BoxDecoration(
             color: BrandColors.primaryOrange,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         Text(
           title,
           style: const TextStyle(
             color: BrandColors.primaryOrange,
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
     );
-  }
-
-  Future<void> _openAcademyWhatsApp() async {
-    if (_course != null) {
-      AnalyticsService.logAcademyWhatsAppClicked(courseTitle: _course!.title);
-    }
-    final message = _course != null
-        ? 'Hola, me gustaría inscribirme en el curso "${_course!.title}" de la Academia DevLokos. ¿Cuáles son los pasos?'
-        : AppConstants.academyWhatsAppMessage;
-    final url = 'https://wa.me/${AppConstants.academyWhatsAppNumber}'
-        '?text=${Uri.encodeComponent(message)}';
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo abrir WhatsApp'),
-            backgroundColor: BrandColors.error,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo abrir WhatsApp'),
-            backgroundColor: BrandColors.error,
-          ),
-        );
-      }
-    }
   }
 }

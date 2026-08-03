@@ -37,4 +37,23 @@ class Responsive {
   /// Columnas para listas densas de episodios.
   static int episodeCrossAxisCount(BuildContext context) =>
       isTablet(context) ? 2 : 1;
+
+  /// Columnas del grid de portafolio: phone 2 · tablet 3 · wide 4.
+  static int portfolioCrossAxisCount(BuildContext context) {
+    final w = _size(context).width;
+    if (w >= 1100) return 4;
+    if (w >= 700 || isTablet(context)) return 3;
+    return 2;
+  }
+
+  /// Relación ancho/alto de cada card de portafolio.
+  static double portfolioChildAspectRatio(BuildContext context) {
+    final cols = portfolioCrossAxisCount(context);
+    if (cols >= 4) return 0.82;
+    if (cols == 3) return 0.78;
+    return 0.70;
+  }
+
+  static double portfolioGap(BuildContext context) =>
+      isTablet(context) ? 16 : 12;
 }

@@ -6,6 +6,7 @@ import '../../bloc/enterprise/enterprise_bloc_exports.dart';
 import '../../models/enterprise.dart';
 import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
+import '../../utils/responsive.dart';
 import '../../utils/service_icons.dart';
 import '../../widgets/app_error_state.dart';
 import '../../widgets/content_skeleton.dart';
@@ -438,84 +439,94 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
             )
             .toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(
-          title: 'Portafolio',
-          padding: EdgeInsets.fromLTRB(20, 24, 20, 4),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-          child: Text(
-            '${projects.length} proyectos entregados — apps, web y productos reales.',
-            style: const TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 13,
-              height: 1.35,
+    final hPad = Responsive.horizontalPadding(context);
+    final cols = Responsive.portfolioCrossAxisCount(context);
+    final gap = Responsive.portfolioGap(context);
+    final aspect = Responsive.portfolioChildAspectRatio(context);
+    final isCompact = cols <= 2;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: Responsive.contentMaxWidth(context)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionHeader(
+              title: 'Portafolio',
+              padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 4),
             ),
-          ),
-        ),
-        SizedBox(
-          height: 40,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: _portfolioFilters.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final filter = _portfolioFilters[index];
-              final active = filter == _portfolioFilter;
-              return FilterChip(
-                label: Text(filter),
-                selected: active,
-                showCheckmark: false,
-                onSelected: (_) => setState(() => _portfolioFilter = filter),
-                selectedColor: BrandColors.primaryOrange,
-                backgroundColor: BrandColors.cardBackground,
-                labelStyle: TextStyle(
-                  color: active
-                      ? BrandColors.primaryWhite
-                      : BrandColors.grayMedium,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
+            Padding(
+              padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 12),
+              child: Text(
+                '${projects.length} proyectos entregados — apps, web y productos reales.',
+                style: TextStyle(
+                  color: BrandColors.grayMedium,
+                  fontSize: isCompact ? 13 : 14,
+                  height: 1.35,
                 ),
-                side: BorderSide(
-                  color: active
-                      ? BrandColors.primaryOrange
-                      : BrandColors.primaryOrange.withValues(alpha: 0.25),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (filtered.isEmpty)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 8),
-            child: Text(
-              'No hay proyectos en esta categoría.',
-              style: TextStyle(color: BrandColors.grayMedium, fontSize: 13),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filtered.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.72,
               ),
-              itemBuilder: (context, index) =>
-                  _buildPortfolioCard(filtered[index]),
             ),
-          ),
-      ],
+            Padding(
+              padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 14),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _portfolioFilters.map((filter) {
+                  final active = filter == _portfolioFilter;
+                  return FilterChip(
+                    label: Text(filter),
+                    selected: active,
+                    showCheckmark: false,
+                    onSelected: (_) =>
+                        setState(() => _portfolioFilter = filter),
+                    selectedColor: BrandColors.primaryOrange,
+                    backgroundColor: BrandColors.cardBackground,
+                    labelStyle: TextStyle(
+                      color: active
+                          ? BrandColors.primaryWhite
+                          : BrandColors.grayMedium,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    side: BorderSide(
+                      color: active
+                          ? BrandColors.primaryOrange
+                          : BrandColors.primaryOrange.withValues(alpha: 0.25),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            if (filtered.isEmpty)
+              Padding(
+                padding: EdgeInsets.fromLTRB(hPad, 8, hPad, 8),
+                child: const Text(
+                  'No hay proyectos en esta categoría.',
+                  style: TextStyle(color: BrandColors.grayMedium, fontSize: 13),
+                ),
+              )
+            else
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: hPad),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filtered.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: cols,
+                    mainAxisSpacing: gap,
+                    crossAxisSpacing: gap,
+                    childAspectRatio: aspect,
+                  ),
+                  itemBuilder: (context, index) => _buildPortfolioCard(
+                    filtered[index],
+                    compact: isCompact,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -560,21 +571,36 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
-  Widget _buildPortfolioCard(PortfolioProject project) {
+  Widget _buildPortfolioCard(
+    PortfolioProject project, {
+    required bool compact,
+  }) {
+    final titleSize = compact ? 13.0 : 15.0;
+    final bodySize = compact ? 11.0 : 12.5;
+    final pad = compact ? 10.0 : 14.0;
+    final tech = project.technologies.take(compact ? 2 : 3).toList();
+
     final card = Container(
       decoration: BoxDecoration(
         color: BrandColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: BrandColors.primaryOrange.withValues(alpha: 0.2),
+          color: BrandColors.primaryOrange.withValues(alpha: 0.22),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: BrandColors.primaryOrange.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: 5,
+            flex: compact ? 5 : 6,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -596,11 +622,11 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                 else
                   Container(
                     color: BrandColors.blackLight,
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.folder_open_rounded,
                         color: BrandColors.primaryOrange,
-                        size: 32,
+                        size: compact ? 32 : 40,
                       ),
                     ),
                   ),
@@ -611,15 +637,15 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.65),
+                        Colors.black.withValues(alpha: 0.7),
                       ],
                     ),
                   ),
                 ),
                 if (project.category.isNotEmpty)
                   Positioned(
-                    left: 8,
-                    top: 8,
+                    left: compact ? 8 : 10,
+                    top: compact ? 8 : 10,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -631,9 +657,9 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                       ),
                       child: Text(
                         project.category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: BrandColors.primaryBlack,
-                          fontSize: 10,
+                          fontSize: compact ? 10 : 11,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -643,17 +669,17 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
             ),
           ),
           Expanded(
-            flex: 4,
+            flex: compact ? 5 : 5,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+              padding: EdgeInsets.all(pad),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     project.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: BrandColors.primaryWhite,
-                      fontSize: 13,
+                      fontSize: titleSize,
                       fontWeight: FontWeight.w700,
                       height: 1.2,
                     ),
@@ -664,20 +690,62 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   Expanded(
                     child: Text(
                       project.description,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: BrandColors.grayMedium,
-                        fontSize: 11,
+                        fontSize: bodySize,
                         height: 1.3,
                       ),
-                      maxLines: 3,
+                      maxLines: compact ? 2 : 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Text(
+                  if (!compact && tech.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        ...tech.map(
+                          (t) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: BrandColors.primaryWhite
+                                  .withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: BrandColors.primaryWhite
+                                    .withValues(alpha: 0.1),
+                              ),
+                            ),
+                            child: Text(
+                              t,
+                              style: const TextStyle(
+                                color: BrandColors.grayMedium,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (project.technologies.length > tech.length)
+                          Text(
+                            '+${project.technologies.length - tech.length}',
+                            style: const TextStyle(
+                              color: BrandColors.grayMedium,
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 6),
+                  Text(
                     'Ver proyecto',
                     style: TextStyle(
                       color: BrandColors.primaryOrange,
-                      fontSize: 12,
+                      fontSize: compact ? 12 : 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -695,7 +763,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: AppHaptics.wrap(() => _openPortfolioUrl(url)),
         child: card,
       ),

@@ -21,82 +21,134 @@ class CourseCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         enableFeedback: false,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
+          margin: const EdgeInsets.only(bottom: 14),
           decoration: BoxDecoration(
             color: BrandColors.cardBackground,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: BrandColors.primaryOrange.withValues(alpha: 0.15),
+              color: BrandColors.primaryOrange.withValues(alpha: 0.22),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: BrandColors.primaryOrange.withValues(alpha: 0.06),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (course.thumbnailUrl != null &&
-                    course.thumbnailUrl!.isNotEmpty)
-                  _buildThumbnail()
-                else
-                  _buildPlaceholderThumb(),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        course.title,
-                        style: const TextStyle(
-                          color: BrandColors.primaryWhite,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          height: 1.25,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildCover(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title,
+                      style: const TextStyle(
+                        color: BrandColors.primaryWhite,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildMetaInfo(),
+                    if (course.learningPaths.isNotEmpty) ...[
                       const SizedBox(height: 10),
-                      _buildMetaInfo(),
-                      if (course.learningPaths.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        _buildLearningPaths(),
-                      ],
+                      _buildLearningPaths(),
                     ],
-                  ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Ver curso',
+                      style: TextStyle(
+                        color: BrandColors.primaryOrange,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildThumbnail() {
+  Widget _buildCover() {
     return SizedBox(
       width: double.infinity,
-      height: 128,
-      child: CachedNetworkImage(
-        imageUrl: course.thumbnailUrl!,
-        fit: BoxFit.cover,
-        placeholder: (_, __) => Container(color: BrandColors.grayDark),
-        errorWidget: (_, __, ___) => _buildPlaceholderThumb(),
+      height: 148,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (course.thumbnailUrl != null && course.thumbnailUrl!.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: course.thumbnailUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: BrandColors.grayDark),
+              errorWidget: (_, __, ___) => _placeholder(),
+            )
+          else
+            _placeholder(),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.05),
+                  Colors.black.withValues(alpha: 0.55),
+                ],
+              ),
+            ),
+          ),
+          if (course.modules.isNotEmpty)
+            Positioned(
+              right: 10,
+              bottom: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: BrandColors.primaryBlack.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: BrandColors.primaryOrange.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Text(
+                  '${course.modules.length} módulos',
+                  style: const TextStyle(
+                    color: BrandColors.primaryWhite,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _buildPlaceholderThumb() {
+  Widget _placeholder() {
     return Container(
-      width: double.infinity,
-      height: 96,
       color: BrandColors.blackLight,
       child: const Center(
         child: Icon(
           Icons.school_rounded,
           color: BrandColors.primaryOrange,
-          size: 36,
+          size: 40,
         ),
       ),
     );
@@ -106,50 +158,36 @@ class CourseCard extends StatelessWidget {
     final difficultyLabel = _difficultyLabel(course.difficulty);
     final difficultyColor = _difficultyColor(course.difficulty);
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
           decoration: BoxDecoration(
-            color: difficultyColor.withValues(alpha: 0.18),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: difficultyColor.withValues(alpha: 0.5)),
+            color: difficultyColor.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: difficultyColor.withValues(alpha: 0.45)),
           ),
           child: Text(
             difficultyLabel,
             style: TextStyle(
               color: difficultyColor,
               fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
-        if (course.duration > 0) ...[
-          const SizedBox(width: 10),
-          const Icon(
-            Icons.access_time_rounded,
-            color: BrandColors.grayMedium,
-            size: 14,
-          ),
-          const SizedBox(width: 4),
+        if (course.duration > 0)
           Text(
             course.formattedDuration,
             style: const TextStyle(
               color: BrandColors.grayMedium,
               fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ],
-        if (course.modules.isNotEmpty) ...[
-          const Spacer(),
-          Text(
-            '${course.modules.length} módulos',
-            style: const TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 12,
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -160,17 +198,20 @@ class CourseCard extends StatelessWidget {
       runSpacing: 6,
       children: course.learningPaths.take(3).map((path) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
           decoration: BoxDecoration(
-            color: BrandColors.primaryOrange.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(6),
+            color: BrandColors.primaryOrange.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.35),
+            ),
           ),
           child: Text(
             LearningPaths.displayLabel(path),
             style: const TextStyle(
               color: BrandColors.primaryOrange,
               fontSize: 11,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
           ),
         );
