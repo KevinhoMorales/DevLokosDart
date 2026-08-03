@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,47 +21,50 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _fadeIn;
-  late final Animation<double> _rise;
-  late final Animation<double> _barWidth;
+  static const double _logoSize = 200;
+
+  late final AnimationController _fadeController;
+  late final Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: BrandColors.primaryBlack,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
+
+    _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 450),
     );
-    _fadeIn = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
-    );
-    _rise = Tween<double>(begin: 14, end: 0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
-      ),
-    );
-    _barWidth = Tween<double>(begin: 0, end: 56).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.35, 0.95, curve: Curves.easeOutCubic),
-      ),
-    );
-    _controller.forward();
+    _fade = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _fadeController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      precacheImage(
+        const AssetImage(AppConstants.splashStickerPath),
+        context,
+      );
+    });
     _navigateToNextScreen();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
   Future<void> _navigateToNextScreen() async {
-    await Future.delayed(const Duration(seconds: 3));
-    
+    await Future.delayed(const Duration(milliseconds: 1800));
+
     if (mounted) {
       await _checkUserAndNavigate();
     }
@@ -258,65 +262,41 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BrandColors.primaryBlack,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
+      body: ColoredBox(
         color: BrandColors.primaryBlack,
         child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              return Opacity(
-                opacity: _fadeIn.value,
-                child: Transform.translate(
-                  offset: Offset(0, _rise.value),
-                  child: Column(
-                    children: [
-                      const Spacer(flex: 5),
-                      Image.asset(
-                        AppConstants.splashStickerPath,
-                        width: 220,
-                        height: 220,
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.high,
-                      ),
-                      const SizedBox(height: 20),
-                      Container(
-                        width: _barWidth.value,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: BrandColors.primaryOrange,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'APRENDE · CREA · CRECE',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: BrandColors.grayMedium.withValues(alpha: 0.95),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2.4,
-                        ),
-                      ),
-                      const Spacer(flex: 4),
-                      const SizedBox(
-                        width: 26,
-                        height: 26,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            BrandColors.primaryOrange,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 36),
-                    ],
+          child: FadeTransition(
+            opacity: _fade,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    AppConstants.splashStickerPath,
+                    width: _logoSize,
+                    height: _logoSize,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.high,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) => const SizedBox(
+                      width: _logoSize,
+                      height: _logoSize,
+                    ),
                   ),
-                ),
-              );
-            },
+                  const SizedBox(height: 36),
+                  const SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        BrandColors.primaryOrange,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

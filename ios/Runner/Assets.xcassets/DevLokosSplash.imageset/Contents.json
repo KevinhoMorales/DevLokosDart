@@ -1,0 +1,8 @@
+{
+  "images" : [
+    { "filename" : "DevLokosSplash.png", "idiom" : "universal", "scale" : "1x" },
+    { "filename" : "DevLokosSplash@2x.png", "idiom" : "universal", "scale" : "2x" },
+    { "filename" : "DevLokosSplash@3x.png", "idiom" : "universal", "scale" : "3x" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}

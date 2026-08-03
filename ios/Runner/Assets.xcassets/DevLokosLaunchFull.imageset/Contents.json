@@ -1,0 +1,8 @@
+{
+  "images" : [
+    { "filename" : "DevLokosLaunchFull.png", "idiom" : "universal", "scale" : "1x" },
+    { "filename" : "DevLokosLaunchFull@2x.png", "idiom" : "universal", "scale" : "2x" },
+    { "filename" : "DevLokosLaunchFull@3x.png", "idiom" : "universal", "scale" : "3x" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}

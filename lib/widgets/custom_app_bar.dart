@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -123,17 +124,17 @@ class _CustomAppBarState extends State<CustomAppBar> {
         elevation: 0,
         actions: [
           if (!widget.showBackButton)
-            _buildAppBarIcon(
-              icon: Icons.person_rounded,
+            _buildProfileAction(
               onTap: () {
                 final authState = context.read<AuthBlocSimple>().state;
                 if (authState is AuthAuthenticated && _currentUser != null) {
-                  context.push('/profile');
+                  context.push('/profile').then((_) {
+                    if (mounted) _loadUser();
+                  });
                 } else {
                   LoginHelper.showLoginBottomSheet(context);
                 }
               },
-              tooltip: 'Perfil',
             ),
           if (widget.iconActions != null)
             ...widget.iconActions!.map((ia) {
@@ -153,6 +154,57 @@ class _CustomAppBarState extends State<CustomAppBar> {
 
   static const double _iconSize = 40;
   static const double _innerIconSize = 22;
+  static const double _cardRadius = 10;
+
+  Widget _buildProfileAction({required VoidCallback onTap}) {
+    final photoUrl = _currentUser?.photoURL?.trim();
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
+
+    return IconButton(
+      onPressed: onTap,
+      tooltip: 'Perfil',
+      style: IconButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(44, 44),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: SizedBox(
+        width: _iconSize,
+        height: _iconSize,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_cardRadius),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(_cardRadius),
+            ),
+            child: hasPhoto
+                ? CachedNetworkImage(
+                    imageUrl: photoUrl,
+                    width: _iconSize,
+                    height: _iconSize,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => const Icon(
+                      Icons.person_rounded,
+                      color: BrandColors.primaryOrange,
+                      size: _innerIconSize,
+                    ),
+                    errorWidget: (_, __, ___) => const Icon(
+                      Icons.person_rounded,
+                      color: BrandColors.primaryOrange,
+                      size: _innerIconSize,
+                    ),
+                  )
+                : const Icon(
+                    Icons.person_rounded,
+                    color: BrandColors.primaryOrange,
+                    size: _innerIconSize,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildAppBarIcon({
     required IconData icon,
@@ -181,7 +233,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
         child: Container(
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(_cardRadius),
           ),
           alignment: Alignment.center,
           child: Icon(

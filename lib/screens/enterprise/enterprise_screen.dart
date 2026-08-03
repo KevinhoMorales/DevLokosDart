@@ -537,19 +537,8 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
       children: [
         SectionHeader(
           title: 'Portafolio',
-          padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 4),
+          padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 12),
           count: projects.length,
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 12),
-          child: const Text(
-            'Proyectos reales — desliza o déjalos pasar solos.',
-            style: TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 13,
-              height: 1.35,
-            ),
-          ),
         ),
         SizedBox(
           height: 40,

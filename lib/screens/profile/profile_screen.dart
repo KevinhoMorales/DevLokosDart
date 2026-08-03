@@ -242,31 +242,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  color: BrandColors.primaryOrange.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: BrandColors.primaryOrange.withValues(alpha: 0.45),
-                    width: 2,
-                  ),
+                  color: BrandColors.primaryOrange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: user.photoURL != null && user.photoURL!.isNotEmpty
-                    ? ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: user.photoURL!,
-                          width: 76,
-                          height: 76,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: BrandColors.primaryOrange,
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => const Icon(
-                            Icons.person_rounded,
-                            size: 34,
+                    ? CachedNetworkImage(
+                        imageUrl: user.photoURL!,
+                        width: 76,
+                        height: 76,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                             color: BrandColors.primaryOrange,
                           ),
+                        ),
+                        errorWidget: (_, __, ___) => const Icon(
+                          Icons.person_rounded,
+                          size: 34,
+                          color: BrandColors.primaryOrange,
                         ),
                       )
                     : const Icon(
@@ -281,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   height: 76,
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Center(
                     child: CircularProgressIndicator(
@@ -292,14 +287,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 )
               else
                 Positioned(
-                  bottom: 0,
-                  right: 0,
+                  bottom: -2,
+                  right: -2,
                   child: Container(
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
                       color: BrandColors.primaryOrange,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: BrandColors.primaryBlack,
                         width: 2,

@@ -59,6 +59,7 @@ dev_dependencies:
   bloc_test: ^9.1.5
   mocktail: ^1.0.1
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.4
 
 flutter:
   uses-material-design: true
@@ -66,6 +67,20 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+
+# Splash nativo: negro. El logo vive en DevLokosLaunch.storyboard (iOS)
+# y en launch_background (Android) para evitar caché rota de LaunchScreen.
+flutter_native_splash:
+  color: "#000000"
+  android: true
+  ios: false
+  web: false
+  android_gravity: center
+  android_12:
+    color: "#000000"
+    image: assets/icons/devlokos_splash_sticker.png
+    icon_background_color: "#000000"
+  fullscreen: true
 
 # Configuración de íconos de la aplicación DevLokos
 flutter_launcher_icons:
