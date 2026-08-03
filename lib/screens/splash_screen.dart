@@ -3,10 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../constants/app_constants.dart';
 import '../utils/brand_colors.dart';
 import '../config/environment_config.dart';
 import '../utils/user_manager.dart';
-import '../constants/app_constants.dart';
 import '../services/onboarding_service.dart';
 import '../services/remote_config_service.dart';
 import '../services/user_firestore_service.dart';
@@ -20,41 +20,42 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+  late final AnimationController _controller;
+  late final Animation<double> _fadeIn;
+  late final Animation<double> _rise;
+  late final Animation<double> _barWidth;
 
   @override
   void initState() {
     super.initState();
-    _setupAnimations();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _fadeIn = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.65, curve: Curves.easeOut),
+    );
+    _rise = Tween<double>(begin: 14, end: 0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
+      ),
+    );
+    _barWidth = Tween<double>(begin: 0, end: 56).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.35, 0.95, curve: Curves.easeOutCubic),
+      ),
+    );
+    _controller.forward();
     _navigateToNextScreen();
   }
 
-  void _setupAnimations() {
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    );
-
-    // Empieza visible: evita frame negro entre LaunchScreen y splash Flutter.
-    _fadeAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
-    ));
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.92,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
-    ));
-
-    _animationController.forward();
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _navigateToNextScreen() async {
@@ -239,7 +240,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _launchUpdateUrl() async {
     try {
-      const url = 'https://onelink.to/DevLokos';
+      final url = EnvironmentConfig.onelinkUrl;
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(
           Uri.parse(url),
@@ -254,80 +255,63 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: BrandColors.primaryBlack,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.15),
-            radius: 1.15,
-            colors: [
-              Color(0xFF2A160C),
-              BrandColors.blackDark,
-              BrandColors.primaryBlack,
-            ],
-            stops: [0.0, 0.45, 1.0],
-          ),
-        ),
-        child: Center(
+        width: double.infinity,
+        height: double.infinity,
+        color: BrandColors.primaryBlack,
+        child: SafeArea(
           child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
+            animation: _controller,
+            builder: (context, _) {
+              return Opacity(
+                opacity: _fadeIn.value,
+                child: Transform.translate(
+                  offset: Offset(0, _rise.value),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const Spacer(flex: 5),
+                      Image.asset(
+                        AppConstants.splashStickerPath,
+                        width: 220,
+                        height: 220,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      ),
+                      const SizedBox(height: 20),
                       Container(
-                        width: 240,
-                        height: 240,
+                        width: _barWidth.value,
+                        height: 3,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: BrandColors.primaryOrange
-                                  .withValues(alpha: 0.22),
-                              blurRadius: 48,
-                              spreadRadius: 4,
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          AppConstants.logoMarkPath,
-                          width: 240,
-                          height: 240,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
+                          color: BrandColors.primaryOrange,
+                          borderRadius: BorderRadius.circular(99),
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 16),
                       Text(
                         'APRENDE · CREA · CRECE',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: BrandColors.grayMedium,
-                              letterSpacing: 1.4,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: BrandColors.grayMedium.withValues(alpha: 0.95),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 2.4,
+                        ),
                       ),
-                      const SizedBox(height: 48),
+                      const Spacer(flex: 4),
                       const SizedBox(
-                        width: 28,
-                        height: 28,
+                        width: 26,
+                        height: 26,
                         child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
+                          strokeWidth: 2.4,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             BrandColors.primaryOrange,
                           ),
                         ),
                       ),
+                      const SizedBox(height: 36),
                     ],
                   ),
                 ),

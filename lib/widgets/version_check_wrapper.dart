@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../config/environment_config.dart';
 import '../services/remote_config_service.dart';
 import '../utils/brand_colors.dart';
 
@@ -102,7 +103,7 @@ class _VersionCheckWrapperState extends State<VersionCheckWrapper> {
 
   Future<void> _launchUpdateUrl() async {
     try {
-      const url = 'https://onelink.to/DevLokos';
+      final url = EnvironmentConfig.onelinkUrl;
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       }

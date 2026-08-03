@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../config/environment_config.dart';
 import '../utils/brand_colors.dart';
 import '../services/remote_config_service.dart';
 
@@ -165,8 +166,7 @@ class UpdateRequiredScreen extends StatelessWidget {
   /// Lanzar la tienda de aplicaciones
   Future<void> _launchAppStore() async {
     try {
-      // Usar Onelink.to para redirección automática a la tienda correcta
-      const url = 'https://onelink.to/DevLokos';
+      final url = EnvironmentConfig.onelinkUrl;
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(
           Uri.parse(url),

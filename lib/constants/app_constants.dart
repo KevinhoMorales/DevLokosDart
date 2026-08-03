@@ -31,6 +31,11 @@ class AppConstants {
 
   /// Logo wordmark con fondo transparente — splash / launch.
   static const String logoMarkPath = 'assets/icons/devlokos_logo_mark.png';
+
+  /// Sticker circular oficial para splash.
+  static const String splashStickerPath =
+      'assets/icons/devlokos_splash_sticker.png';
+
   /// Ícono circular (mismo arte que el logo, formato webp).
   static const String iconPath = 'assets/icons/devlokos_icon.webp';
   static const String backgroundPath = 'assets/images/background.png';

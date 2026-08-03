@@ -13,8 +13,8 @@ class EnvironmentConfig {
     defaultValue: 'prod',
   );
 
-  /// URL de descarga de la app (AppsFlyer OneLink u otro deep link).
-  static const String onelinkUrl = 'https://devlokos.onelink.me/XXXX';
+  /// URL de descarga de la app (OneLink).
+  static const String onelinkUrl = 'https://onelink.to/devlokos';
 
   /// `true` si el ambiente es desarrollo.
   static bool isDevelopment() => _environment == 'dev';
@@ -25,11 +25,6 @@ class EnvironmentConfig {
       throw StateError(
         'EnvironmentConfig: DEVLOKOS_ENV debe ser "dev" o "prod", '
         'valor actual: "$_environment"',
-      );
-    }
-    if (onelinkUrl.contains('XXXX')) {
-      print(
-        '⚠️ EnvironmentConfig: actualiza onelinkUrl con tu OneLink real.',
       );
     }
   }
