@@ -341,6 +341,21 @@ class AnalyticsService {
     await _analytics.logEvent(name: 'products_viewed');
   }
 
+  static Future<void> logProductViewed({
+    required String productId,
+    required String productTitle,
+    String? productType,
+  }) async {
+    await _analytics.logEvent(
+      name: 'product_viewed',
+      parameters: {
+        'product_id': _truncate(productId, 100),
+        'product_title': _truncate(productTitle, 100),
+        if (productType != null) 'product_type': _truncate(productType, 40),
+      },
+    );
+  }
+
   static Future<void> logProductStoreClicked({
     required String productId,
     required String storeLabel,

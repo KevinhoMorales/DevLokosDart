@@ -45,6 +45,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (synced != null) user = synced;
     }
     if (!mounted) return;
+
+    // Sin sesión: abrir login en bottom sheet y salir (sin pantalla intermedia).
+    if (user == null) {
+      final authState = context.read<AuthBlocSimple>().state;
+      if (authState is! AuthAuthenticated) {
+        setState(() => _isLoading = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await LoginHelper.showLoginBottomSheet(context);
+          if (!mounted) return;
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/home');
+          }
+        });
+        return;
+      }
+    }
+
     setState(() {
       _currentUser = user;
       _isLoading = false;
@@ -121,11 +141,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildContent() {
-    if (_currentUser == null) {
-      return _buildLoggedOutState();
+    final user = _currentUser;
+    if (user == null) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
+        ),
+      );
     }
-
-    final user = _currentUser!;
     final bottom = MediaQuery.of(context).padding.bottom;
 
     return SingleChildScrollView(
@@ -181,75 +204,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildLoggedOutState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: BrandColors.primaryOrange.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                size: 44,
-                color: BrandColors.primaryOrange,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Inicia sesión en tu perfil',
-              style: TextStyle(
-                color: BrandColors.primaryWhite,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Guarda tu foto, bio y redes para que la comunidad te conozca.',
-              style: TextStyle(color: BrandColors.grayMedium, fontSize: 15),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => LoginHelper.showLoginBottomSheet(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: BrandColors.primaryOrange,
-                  foregroundColor: BrandColors.primaryWhite,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Iniciar sesión'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => LoginHelper.showRegisterBottomSheet(context),
-              child: const Text(
-                'Crear cuenta',
-                style: TextStyle(
-                  color: BrandColors.primaryOrange,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

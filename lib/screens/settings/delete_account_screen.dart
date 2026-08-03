@@ -363,22 +363,6 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                               ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: TextButton(
-                        onPressed: loading ? null : () => context.pop(),
-                        child: const Text(
-                          'Cancelar y volver',
-                          style: TextStyle(
-                            color: BrandColors.grayMedium,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               );

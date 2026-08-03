@@ -39,6 +39,8 @@ import 'screens/youtube/youtube_screen.dart';
 import 'screens/events/events_screen.dart';
 import 'screens/events/event_detail_screen.dart';
 import 'screens/academy/course_detail_screen.dart';
+import 'models/product.dart';
+import 'screens/products/product_detail_screen.dart';
 import 'screens/products/products_screen.dart';
 import 'widgets/main_navigation.dart';
 import 'widgets/version_check_wrapper.dart';
@@ -270,6 +272,23 @@ final GoRouter _router = GoRouter(
         transitionType: 'horizontal',
         maintainState: true,
       ),
+    ),
+    GoRoute(
+      path: '/products/:id',
+      pageBuilder: (context, state) {
+        final productId = state.pathParameters['id']!;
+        final extra = state.extra as Map<String, dynamic>?;
+        final product = extra?['product'] as Product?;
+        return _buildPageWithTransition(
+          child: ProductDetailScreen(
+            productId: productId,
+            product: product,
+          ),
+          state: state,
+          transitionType: 'horizontal',
+          maintainState: true,
+        );
+      },
     ),
     GoRoute(
       path: '/episode/:id',

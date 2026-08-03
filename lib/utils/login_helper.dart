@@ -4,8 +4,8 @@ import '../widgets/register_bottom_sheet.dart';
 import '../widgets/forgot_password_bottom_sheet.dart';
 
 class LoginHelper {
-  static void showLoginBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+  static Future<void> showLoginBottomSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -13,8 +13,8 @@ class LoginHelper {
     );
   }
 
-  static void showRegisterBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+  static Future<void> showRegisterBottomSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -22,8 +22,8 @@ class LoginHelper {
     );
   }
 
-  static void showForgotPasswordBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+  static Future<void> showForgotPasswordBottomSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,

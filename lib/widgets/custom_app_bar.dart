@@ -126,7 +126,8 @@ class _CustomAppBarState extends State<CustomAppBar> {
             _buildAppBarIcon(
               icon: Icons.person_rounded,
               onTap: () {
-                if (_currentUser != null) {
+                final authState = context.read<AuthBlocSimple>().state;
+                if (authState is AuthAuthenticated && _currentUser != null) {
                   context.push('/profile');
                 } else {
                   LoginHelper.showLoginBottomSheet(context);
