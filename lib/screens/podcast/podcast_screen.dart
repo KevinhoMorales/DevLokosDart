@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -46,9 +47,15 @@ class _PodcastScreenState extends State<PodcastScreen>
   String _loadingMessage = 'Cargando videos...'; // Mensaje de loading
   bool _hasLoaded = false; // Flag para asegurar que solo se carga una vez
   final ScrollController _mainScrollController = ScrollController();
+  final ScrollController _discoverScrollController = ScrollController();
+  Timer? _discoverAutoScrollTimer;
+  Timer? _discoverResumeTimer;
+  bool _discoverUserInteracting = false;
+  double _discoverCardStride = 248;
   bool _isLoadingMoreEpisodes = false;
   static const int _discoverCount = 10;
   static const double _paginationThreshold = 480;
+  static const Duration _discoverAutoScrollInterval = Duration(milliseconds: 4500);
 
   @override
   bool get wantKeepAlive => true; // Mantener el estado vivo cuando se navega
@@ -269,11 +276,59 @@ class _PodcastScreenState extends State<PodcastScreen>
     }
   }
 
+  void _startDiscoverAutoScroll() {
+    _discoverAutoScrollTimer?.cancel();
+    final count = _discoverVideos?.length ?? 0;
+    if (count <= 1) return;
+    _discoverAutoScrollTimer = Timer.periodic(_discoverAutoScrollInterval, (_) {
+      _advanceDiscoverRail();
+    });
+  }
+
+  void _stopDiscoverAutoScroll() {
+    _discoverAutoScrollTimer?.cancel();
+    _discoverAutoScrollTimer = null;
+    _discoverResumeTimer?.cancel();
+    _discoverResumeTimer = null;
+  }
+
+  void _pauseDiscoverAutoScrollTemporarily() {
+    _discoverUserInteracting = true;
+    _discoverResumeTimer?.cancel();
+    _discoverResumeTimer = Timer(const Duration(seconds: 2), () {
+      _discoverUserInteracting = false;
+    });
+  }
+
+  void _advanceDiscoverRail() {
+    if (!mounted || _discoverUserInteracting) return;
+    if (!_discoverScrollController.hasClients) return;
+    final position = _discoverScrollController.position;
+    if (!position.hasContentDimensions || position.maxScrollExtent <= 0) return;
+
+    final next = position.pixels + _discoverCardStride;
+    if (next >= position.maxScrollExtent - 4) {
+      _discoverScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _discoverScrollController.animateTo(
+        next.clamp(0.0, position.maxScrollExtent),
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   void dispose() {
+    _stopDiscoverAutoScroll();
     _animationController.dispose();
     _searchController.dispose();
     _mainScrollController.dispose();
+    _discoverScrollController.dispose();
     super.dispose();
   }
 
@@ -353,9 +408,8 @@ class _PodcastScreenState extends State<PodcastScreen>
   }
 
   Widget _buildSearchBar() {
-    final hPad = Responsive.horizontalPadding(context);
-    return Container(
-      padding: EdgeInsets.fromLTRB(hPad, 20.0, hPad, 16.0),
+    return Padding(
+      padding: Responsive.searchBarPadding(context),
       child: SearchBarWidget(
         controller: _searchController,
         hintText: 'Buscar episodios, invitado o tema...',
@@ -575,8 +629,19 @@ class _PodcastScreenState extends State<PodcastScreen>
     final tablet = Responsive.isTablet(context);
     final wide = Responsive.isWide(context);
     final cardWidth = wide ? 300.0 : (tablet ? 280.0 : 236.0);
+    const gap = 12.0;
+    _discoverCardStride = cardWidth + gap;
     final thumbHeight = tablet ? 140.0 : 118.0;
     final railHeight = tablet ? 220.0 : 188.0;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          discoverVideos.length > 1 &&
+          (_discoverAutoScrollTimer == null ||
+              !_discoverAutoScrollTimer!.isActive)) {
+        _startDiscoverAutoScroll();
+      }
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,27 +653,38 @@ class _PodcastScreenState extends State<PodcastScreen>
         const SizedBox(height: 12),
         SizedBox(
           height: railHeight,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            itemCount: discoverVideos.length,
-            itemBuilder: (context, index) {
-              final video = discoverVideos[index];
-              return SizedBox(
-                width: cardWidth,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: index < discoverVideos.length - 1 ? 12 : 0,
-                  ),
-                  child: YouTubeVideoCard(
-                    video: video,
-                    onTap: () => _onVideoTap(video),
-                    showChannelTitle: false,
-                    thumbnailHeight: thumbHeight,
-                  ),
-                ),
-              );
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              // Pausar autoplay solo si el usuario arrastra el rail.
+              if (notification is ScrollStartNotification &&
+                  notification.dragDetails != null) {
+                _pauseDiscoverAutoScrollTemporarily();
+              }
+              return false;
             },
+            child: ListView.builder(
+              controller: _discoverScrollController,
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              itemCount: discoverVideos.length,
+              itemBuilder: (context, index) {
+                final video = discoverVideos[index];
+                return SizedBox(
+                  width: cardWidth,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: index < discoverVideos.length - 1 ? gap : 0,
+                    ),
+                    child: YouTubeVideoCard(
+                      video: video,
+                      onTap: () => _onVideoTap(video),
+                      showChannelTitle: false,
+                      thumbnailHeight: thumbHeight,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],

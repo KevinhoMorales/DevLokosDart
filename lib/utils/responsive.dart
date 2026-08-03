@@ -27,6 +27,13 @@ class Responsive {
   static double horizontalPadding(BuildContext context) =>
       isTablet(context) ? 32 : 20;
 
+  /// Padding exterior del buscador — mismo en Podcast / Tutoriales / Academia
+  /// para que no “salte” al cambiar de tab.
+  static EdgeInsets searchBarPadding(BuildContext context) {
+    final h = horizontalPadding(context);
+    return EdgeInsets.fromLTRB(h, 12, h, 12);
+  }
+
   /// Columnas para listas densas de episodios.
   static int episodeCrossAxisCount(BuildContext context) =>
       isTablet(context) ? 2 : 1;

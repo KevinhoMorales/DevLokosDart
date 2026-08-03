@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../bloc/auth/auth_bloc_exports.dart';
 import '../constants/app_constants.dart';
 import '../utils/app_haptics.dart';
@@ -500,44 +499,12 @@ class _RegisterBottomSheetState extends State<RegisterBottomSheet>
     );
   }
 
-  void _openTermsAndConditions() async {
-    try {
-      await launchUrl(Uri.parse(AppConstants.termsAndConditionsUrl),
-          mode: LaunchMode.externalApplication);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No se pudo abrir el enlace: $e'),
-            backgroundColor: BrandColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
-    }
+  void _openTermsAndConditions() {
+    context.push(AppConstants.termsRoute);
   }
 
-  void _openPrivacyPolicy() async {
-    try {
-      await launchUrl(Uri.parse(AppConstants.privacyPolicyUrl),
-          mode: LaunchMode.externalApplication);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No se pudo abrir el enlace: $e'),
-            backgroundColor: BrandColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
-    }
+  void _openPrivacyPolicy() {
+    context.push(AppConstants.privacyRoute);
   }
 
 }

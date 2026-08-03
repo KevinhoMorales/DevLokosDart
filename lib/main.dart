@@ -30,8 +30,11 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/profile/edit_profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/settings/about_screen.dart';
+import 'screens/settings/legal_document_screen.dart';
+import 'screens/settings/delete_account_screen.dart';
 import 'screens/youtube/youtube_screen.dart';
 import 'screens/events/events_screen.dart';
 import 'screens/events/event_detail_screen.dart';
@@ -303,6 +306,15 @@ final GoRouter _router = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/profile/edit',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const EditProfileScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
       path: '/settings',
       pageBuilder: (context, state) => _buildPageWithTransition(
         child: const SettingsScreen(),
@@ -315,6 +327,33 @@ final GoRouter _router = GoRouter(
       path: '/settings/about',
       pageBuilder: (context, state) => _buildPageWithTransition(
         child: const AboutScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/settings/delete-account',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const DeleteAccountScreen(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/terminos',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: LegalDocumentScreen.terms(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/privacidad',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: LegalDocumentScreen.privacy(),
         state: state,
         transitionType: 'horizontal',
         maintainState: true,

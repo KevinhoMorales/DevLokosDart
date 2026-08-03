@@ -11,6 +11,7 @@ const Map<String, String> _routeToModule = {
   '/forgot-password': 'auth',
   '/home': 'home',
   '/profile': 'profile',
+  '/profile/edit': 'profile',
   '/settings': 'settings',
   '/settings/about': 'settings',
   '/episode': 'podcast',

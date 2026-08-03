@@ -6,6 +6,7 @@ import '../../models/tutorial.dart';
 import '../../models/youtube_playlist_info.dart';
 import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_error_state.dart';
 import '../../widgets/content_skeleton.dart';
@@ -57,7 +58,7 @@ class _TutorialsScreenState extends State<TutorialsScreen>
           children: [
             if (RemoteConfigService().isTutorialsPlaylistConfigured) ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                padding: Responsive.searchBarPadding(context),
                 child: SearchBarWidget(
                   controller: _searchController,
                   hintText: 'Buscar por título...',

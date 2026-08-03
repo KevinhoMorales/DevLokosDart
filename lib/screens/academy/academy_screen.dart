@@ -8,6 +8,7 @@ import '../../constants/learning_paths.dart';
 import '../../models/course.dart';
 import '../../repository/academy_repository.dart';
 import '../../utils/brand_colors.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_error_state.dart';
 import '../../widgets/content_skeleton.dart';
@@ -82,22 +83,20 @@ class _AcademyScreenState extends State<AcademyScreen>
 
             return Column(
               children: [
-                if (showFilters) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                    child: SearchBarWidget(
-                      controller: _searchController,
-                      hintText: 'Buscar cursos...',
-                      onChanged: (value) {
-                        context
-                            .read<AcademyBloc>()
-                            .add(SearchCourses(value.trim()));
-                        setState(() {});
-                      },
-                    ),
+                Padding(
+                  padding: Responsive.searchBarPadding(context),
+                  child: SearchBarWidget(
+                    controller: _searchController,
+                    hintText: 'Buscar cursos...',
+                    onChanged: (value) {
+                      context
+                          .read<AcademyBloc>()
+                          .add(SearchCourses(value.trim()));
+                      setState(() {});
+                    },
                   ),
-                  _buildFilters(),
-                ],
+                ),
+                if (showFilters) _buildFilters(),
                 Expanded(child: _buildContent(state)),
               ],
             );

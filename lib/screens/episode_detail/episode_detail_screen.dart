@@ -8,6 +8,7 @@ import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
 import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../providers/youtube_provider.dart';
@@ -167,8 +168,25 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
     return null;
   }
 
+  Widget _buildMetaColumn({bool denser = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildEpisodeHeader(),
+        SizedBox(height: denser ? 16 : 20),
+        _buildEpisodeDescription(),
+        SizedBox(height: denser ? 16 : 20),
+        _buildShareButton(),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final wide = Responsive.isWide(context);
+    final hPad = Responsive.horizontalPadding(context);
+    final bottomPad = MediaQuery.of(context).padding.bottom + 24;
+
     return Scaffold(
       backgroundColor: BrandColors.primaryBlack,
       appBar: CustomAppBar(
@@ -177,24 +195,42 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
       ),
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            8,
-            16,
-            MediaQuery.of(context).padding.bottom + 24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildVideoPlayer(),
-              const SizedBox(height: 16),
-              _buildEpisodeHeader(),
-              const SizedBox(height: 20),
-              _buildEpisodeDescription(),
-              const SizedBox(height: 20),
-              _buildShareButton(),
-            ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: Responsive.contentMaxWidth(context),
+            ),
+            child: wide
+                ? Padding(
+                    padding: EdgeInsets.fromLTRB(hPad, 12, hPad, bottomPad),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: _buildVideoPlayer(),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          flex: 4,
+                          child: SingleChildScrollView(
+                            child: _buildMetaColumn(denser: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(hPad, 8, hPad, bottomPad),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildVideoPlayer(),
+                        const SizedBox(height: 16),
+                        _buildMetaColumn(),
+                      ],
+                    ),
+                  ),
           ),
         ),
       ),

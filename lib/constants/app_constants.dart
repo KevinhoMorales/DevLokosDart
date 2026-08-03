@@ -15,11 +15,11 @@ class AppConstants {
   static const String academyWhatsAppMessage =
       'Hola, me gustaría inscribirme en la Academia DevLokos. ¿Cuáles son los pasos?';
 
-  // Legal URLs (mismos enlaces que login/registro)
-  static const String termsAndConditionsUrl =
-      'https://kevinhomorales.super.site/play-store/devlokos';
-  static const String privacyPolicyUrl =
-      'https://kevinhomorales.super.site/play-store/devlokos';
+  // Legal (rutas web + deep links in-app)
+  static const String termsAndConditionsUrl = 'https://devlokos.com/terminos';
+  static const String privacyPolicyUrl = 'https://devlokos.com/privacidad';
+  static const String termsRoute = '/terminos';
+  static const String privacyRoute = '/privacidad';
   
   // Firebase Collections
   static const String episodesCollection = 'episodes';

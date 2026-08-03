@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
 import '../../constants/app_constants.dart';
 import '../../utils/app_haptics.dart';
@@ -371,7 +370,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: 'Términos y condiciones',
       subtitle: 'Consulta los términos de uso',
       icon: Icons.description_outlined,
-      url: AppConstants.termsAndConditionsUrl,
+      route: AppConstants.termsRoute,
     );
   }
 
@@ -380,7 +379,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: 'Política de privacidad',
       subtitle: 'Cómo protegemos tus datos',
       icon: Icons.privacy_tip_outlined,
-      url: AppConstants.privacyPolicyUrl,
+      route: AppConstants.privacyRoute,
     );
   }
 
@@ -388,10 +387,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     required String subtitle,
     required IconData icon,
-    required String url,
+    required String route,
   }) {
     return GestureDetector(
-      onTap: AppHaptics.wrap(() => _openUrl(url)),
+      onTap: AppHaptics.wrap(() => context.push(route)),
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: double.infinity,
@@ -452,31 +451,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _openUrl(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se puede abrir el enlace'),
-            backgroundColor: BrandColors.error,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al abrir: $e'),
-            backgroundColor: BrandColors.error,
-          ),
-        );
-      }
-    }
-  }
-
   Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
@@ -506,7 +480,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       width: double.infinity,
       height: 50,
       child: OutlinedButton(
-        onPressed: _showDeleteAccountDialog,
+        onPressed: AppHaptics.wrap(
+          () => context.push('/settings/delete-account'),
+        ),
         style: OutlinedButton.styleFrom(
           foregroundColor: BrandColors.error,
           side: const BorderSide(color: BrandColors.error),
@@ -561,105 +537,5 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showDeleteAccountDialog() async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: BrandColors.blackLight,
-        title: const Text(
-          'Eliminar cuenta',
-          style: TextStyle(color: BrandColors.primaryWhite),
-        ),
-        content: const Text(
-          'Esta acción es irreversible. Se eliminarán todos tus datos, incluyendo tu perfil, imágenes y datos asociados. Para confirmar, necesitas ingresar tu contraseña.',
-          style: TextStyle(color: BrandColors.grayMedium),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text(
-              'Cancelar',
-              style: TextStyle(color: BrandColors.grayMedium),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Continuar',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (shouldDelete == true && mounted) {
-      _showPasswordDialog();
-    }
-  }
-
-  void _showPasswordDialog() {
-    final passwordController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: BrandColors.blackLight,
-        title: const Text(
-          'Confirmar contraseña',
-          style: TextStyle(color: BrandColors.primaryWhite),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Ingresa tu contraseña actual para confirmar la eliminación:',
-              style: TextStyle(color: BrandColors.grayMedium),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              style: const TextStyle(color: BrandColors.primaryWhite),
-              decoration: InputDecoration(
-                labelText: 'Contraseña',
-                labelStyle: const TextStyle(color: BrandColors.grayMedium),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: BrandColors.grayMedium),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: BrandColors.primaryOrange),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(
-              'Cancelar',
-              style: TextStyle(color: BrandColors.grayMedium),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              if (passwordController.text.isNotEmpty && mounted) {
-                context.read<AuthBlocSimple>().add(
-                      AuthDeleteAccountWithReauthRequested(
-                        password: passwordController.text,
-                      ),
-                    );
-              }
-            },
-            child: const Text(
-              'Eliminar cuenta',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+

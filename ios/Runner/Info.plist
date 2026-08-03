@@ -49,6 +49,8 @@
 	<string>Esta aplicación necesita acceso a la cámara para tomar fotos de perfil.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Esta aplicación necesita acceso a la galería de fotos para seleccionar imágenes de perfil.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Usamos Face ID para confirmar acciones sensibles como eliminar tu cuenta.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
