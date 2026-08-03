@@ -1,4 +1,4 @@
-# Configuración de Administradores
+# Configuración de Administradores y roles de cuenta
 
 La administración de contenido (cursos, eventos, servicios, portfolio) se hace en la **web**:
 
@@ -6,7 +6,39 @@ La administración de contenido (cursos, eventos, servicios, portfolio) se hace 
 
 La app móvil ya no incluye pantallas de admin. Si tu email está en la colección `admin` de Firestore, verás en Perfil el botón **Administrar en la web**.
 
-## Agregar un administrador
+## Roles de cuenta (`accountRole`)
+
+Cada usuario de la app tiene un campo **`accountRole`** en Firestore:
+
+```
+{env}/{env}/users/{uid}
+  └── accountRole: "user" | "member" | "admin"
+```
+
+| Rol | Quién lo asigna | Uso |
+|-----|-----------------|-----|
+| `user` | Automático al registrarse | Acceso base (p. ej. podcast) |
+| `member` | Admin (Console / futuro CMS) | Beneficios (cursos, descuentos, etc.) — en evolución |
+| `admin` | Admin (Console) | Acciones admin en app (TBD) |
+
+Notas importantes:
+
+- El campo de perfil **`role`** es el **cargo laboral** (texto libre). No es un permiso.
+- Al registrarse siempre se escribe `accountRole: "user"`.
+- El cliente **no puede** elevarse a `member`/`admin` (reglas Firestore).
+- Para subir un rol: Firebase Console → documento del usuario → editar `accountRole`.
+- Usuarios antiguos sin el campo se tratan como `user` al leerlos en la app.
+
+### Ejemplo: hacer member
+
+```
+prod/prod/users/{uid}
+  └── accountRole: "member"
+```
+
+## Agregar un administrador del CMS (colección `admin`)
+
+El panel web `/admin` **sigue** autorizando con la colección `admin` por email (no con `accountRole` todavía).
 
 1. Abre [Firebase Console](https://console.firebase.google.com/) → proyecto `devlokos`.
 2. Ve a **Authentication** y asegúrate de que el usuario exista (email/password).
@@ -24,12 +56,13 @@ prod/prod/admin/{docId}
   └── email: "usuario@ejemplo.com"
 ```
 
-6. En la web: entra a `/admin/login` con ese email y contraseña.
+6. (Recomendado) En el doc del usuario, pon también `accountRole: "admin"` para alinear app y CMS.
+7. En la web: entra a `/admin/login` con ese email y contraseña.
 
 ## Notas
 
 - El email se compara en minúsculas y sin espacios.
-- Las altas de admin solo se hacen desde Firebase Console (las rules no permiten write a `admin` desde clients).
+- Las altas de admin CMS solo se hacen desde Firebase Console (las rules no permiten write a `admin` desde clients).
 - El CMS escribe con Firebase Admin SDK; despliega rules actualizadas:
 
 ```bash

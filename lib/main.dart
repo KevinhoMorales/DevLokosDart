@@ -39,6 +39,7 @@ import 'screens/youtube/youtube_screen.dart';
 import 'screens/events/events_screen.dart';
 import 'screens/events/event_detail_screen.dart';
 import 'screens/academy/course_detail_screen.dart';
+import 'screens/products/products_screen.dart';
 import 'widgets/main_navigation.dart';
 import 'widgets/version_check_wrapper.dart';
 import 'utils/brand_colors.dart';
@@ -256,6 +257,15 @@ final GoRouter _router = GoRouter(
       path: '/home',
       pageBuilder: (context, state) => _buildPageWithTransition(
         child: const MainNavigation(),
+        state: state,
+        transitionType: 'horizontal',
+        maintainState: true,
+      ),
+    ),
+    GoRoute(
+      path: '/products',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const ProductsScreen(),
         state: state,
         transitionType: 'horizontal',
         maintainState: true,

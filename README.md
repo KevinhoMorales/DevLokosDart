@@ -79,6 +79,18 @@ flutter run --dart-define=DEVLOKOS_ENV=dev
 
 Opcional: edita `onelinkUrl` en [`lib/config/environment_config.dart`](lib/config/environment_config.dart).
 
+### Roles de cuenta
+
+Al registrarse, el documento `{env}/{env}/users/{uid}` recibe `accountRole: "user"`.
+
+| `accountRole` | Significado |
+|---------------|-------------|
+| `user` | Default al crear cuenta |
+| `member` | Beneficios (asignado por admin) |
+| `admin` | Acceso admin en app (TBD) |
+
+El campo de perfil `role` es el **cargo laboral**, no un permiso. Elevaciones solo desde Firebase Console (las rules bloquean auto-escalada). Ver [ADMIN_SETUP.md](ADMIN_SETUP.md).
+
 ### 3. Firebase nativo
 
 Los archivos `android/app/google-services.json` e `ios/Runner/GoogleService-Info.plist` ya están en el repo. Si creas un proyecto nuevo, regenera con FlutterFire CLI:

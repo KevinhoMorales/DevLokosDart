@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:devlokos_podcast/utils/user_manager.dart';
+import '../../constants/account_roles.dart';
 import '../../services/cache_service.dart';
 import '../../services/analytics_service.dart';
 import '../../services/admin_service.dart';
@@ -547,7 +548,8 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         'photoURL': '',
         'bio': '',
         'company': '',
-        'role': '',
+        'role': '', // cargo laboral del perfil (texto libre)
+        'accountRole': AccountRole.user, // acceso: user | member | admin
         'instagram': '',
         'linkedin': '',
         'twitter': '',
@@ -620,12 +622,13 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         print('   - Photo URL: ${userData['photoURL']}');
         print('   - Is Active: ${userData['isActive']}');
         
-        // Guardar datos en UserManager
+        // Guardar datos en UserManager (incl. accountRole; default user si falta)
         await UserManager.saveUser(UserModel(
           uid: user.uid,
           email: userData['email'] ?? user.email ?? '',
           displayName: userData['displayName'] ?? '',
           photoURL: userData['photoURL'] ?? '',
+          accountRole: AccountRole.parse(userData['accountRole']),
         ));
         
         print('✅ Datos del usuario cargados y guardados localmente exitosamente');
@@ -638,6 +641,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
           email: user.email ?? '',
           displayName: user.displayName ?? '',
           photoURL: user.photoURL ?? '',
+          accountRole: AccountRole.defaultRole,
         ));
         
         print('✅ Datos básicos guardados localmente');
@@ -652,6 +656,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
           email: user.email ?? '',
           displayName: user.displayName ?? '',
           photoURL: user.photoURL ?? '',
+          accountRole: AccountRole.defaultRole,
         ));
         print('✅ Datos básicos guardados como fallback');
       } catch (fallbackError) {

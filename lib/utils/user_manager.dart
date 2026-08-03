@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../constants/account_roles.dart';
 import '../services/user_firestore_service.dart';
 
 /// Modelo de usuario (local + Firestore).
@@ -11,7 +12,10 @@ class UserModel {
   final String? photoURL;
   final String? bio;
   final String? company;
+  /// Cargo laboral del perfil (texto libre). No es permiso de acceso.
   final String? role;
+  /// Rol de acceso: [AccountRole.user] | [AccountRole.member] | [AccountRole.admin].
+  final String accountRole;
   final String? instagram;
   final String? linkedin;
   final String? twitter;
@@ -28,6 +32,7 @@ class UserModel {
     this.bio,
     this.company,
     this.role,
+    this.accountRole = AccountRole.defaultRole,
     this.instagram,
     this.linkedin,
     this.twitter,
@@ -45,6 +50,7 @@ class UserModel {
     String? bio,
     String? company,
     String? role,
+    String? accountRole,
     String? instagram,
     String? linkedin,
     String? twitter,
@@ -62,6 +68,7 @@ class UserModel {
       bio: bio ?? this.bio,
       company: company ?? this.company,
       role: role ?? this.role,
+      accountRole: accountRole ?? this.accountRole,
       instagram: instagram ?? this.instagram,
       linkedin: linkedin ?? this.linkedin,
       twitter: twitter ?? this.twitter,
@@ -82,6 +89,7 @@ class UserModel {
       'bio': bio,
       'company': company,
       'role': role,
+      'accountRole': accountRole,
       'instagram': instagram,
       'linkedin': linkedin,
       'twitter': twitter,
@@ -118,6 +126,7 @@ class UserModel {
       bio: map['bio'] as String?,
       company: map['company'] as String?,
       role: map['role'] as String?,
+      accountRole: AccountRole.parse(map['accountRole']),
       instagram: map['instagram'] as String?,
       linkedin: map['linkedin'] as String?,
       twitter: map['twitter'] as String?,
@@ -139,11 +148,16 @@ class UserModel {
       email: user.email ?? '',
       displayName: user.displayName,
       photoURL: user.photoURL,
+      accountRole: AccountRole.defaultRole,
       createdAt: user.metadata.creationTime ?? DateTime.now(),
     );
   }
 
   bool get hasBio => bio != null && bio!.trim().isNotEmpty;
+
+  bool get isMember => AccountRole.isMemberOrAbove(accountRole);
+
+  bool get isAccountAdmin => AccountRole.isAdmin(accountRole);
 }
 
 /// Gestor de usuarios para almacenamiento local + sync Firestore.

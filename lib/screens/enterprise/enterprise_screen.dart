@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../bloc/enterprise/enterprise_bloc_exports.dart';
 import '../../models/enterprise.dart';
 import '../../utils/app_haptics.dart';
@@ -441,8 +442,15 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
+  Future<void> _openPortfolioUrl(String? url) async {
+    if (url == null || url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   Widget _buildPortfolioCard(PortfolioProject project) {
-    return Container(
+    final card = Container(
       width: 260,
       decoration: BoxDecoration(
         color: BrandColors.cardBackground,
@@ -512,6 +520,18 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
             ),
           ),
         ],
+      ),
+    );
+
+    final url = project.projectUrl;
+    if (url == null || url.isEmpty) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openPortfolioUrl(url),
+        child: card,
       ),
     );
   }

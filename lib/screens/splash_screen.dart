@@ -277,42 +277,27 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                             // Logo DevLokos oficial
-                             Container(
-                               width: 200,
-                               height: 200,
-                               decoration: BoxDecoration(
-                                 color: BrandColors.primaryBlack,
-                                 borderRadius: BorderRadius.circular(25),
-                               ),
-                               child: ClipRRect(
-                                 borderRadius: BorderRadius.circular(25),
-                                 child: Image.asset(
-                                   'assets/icons/devlokos_icon.webp',
-                                   width: 180,
-                                   height: 180,
-                                   fit: BoxFit.contain,
-                                 ),
-                               ),
-                             ),
-                      const SizedBox(height: 32),
-                      Text(
-                        AppConstants.appName,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: BrandColors.primaryWhite,
-                        ),
+                      // Logo circular oficial (mismo que LaunchScreen)
+                      Image.asset(
+                        AppConstants.logoPath,
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 28),
                       Text(
                         'APRENDE - CREA - CRECE',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: BrandColors.grayMedium,
+                          letterSpacing: 1.2,
                         ),
                       ),
                       const SizedBox(height: 48),
                       const CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          BrandColors.primaryOrange,
+                        ),
                       ),
                     ],
                   ),

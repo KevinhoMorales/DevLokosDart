@@ -4,6 +4,7 @@ import '../services/analytics_service.dart';
 import '../screens/podcast/podcast_screen.dart';
 import '../screens/academy/academy_screen.dart';
 import '../screens/tutorials/tutorials_screen.dart';
+import '../screens/products/products_screen.dart';
 import '../screens/enterprise/enterprise_screen.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -26,6 +27,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const PodcastScreen(),
     const TutorialsScreen(),
     const AcademyScreen(),
+    const ProductsScreen(),
     const EnterpriseScreen(),
   ];
 
@@ -33,6 +35,7 @@ class _MainNavigationState extends State<MainNavigation> {
     'podcast',
     'tutorials',
     'academy',
+    'products',
     'enterprise',
   ];
 
@@ -53,6 +56,11 @@ class _MainNavigationState extends State<MainNavigation> {
       label: 'Academia',
     ),
     const BottomNavigationBarItem(
+      icon: Icon(Icons.shopping_bag_outlined),
+      activeIcon: Icon(Icons.shopping_bag),
+      label: 'Productos',
+    ),
+    const BottomNavigationBarItem(
       icon: Icon(Icons.business_outlined),
       activeIcon: Icon(Icons.business),
       label: 'Empresarial',
@@ -60,7 +68,6 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   void _onItemTapped(int index) {
-    // Haptic vía Theme.splashFactory (InkResponse del BottomNavigationBar)
     setState(() {
       _selectedIndex = index;
     });
@@ -84,6 +91,9 @@ class _MainNavigationState extends State<MainNavigation> {
         AnalyticsService.logAcademyHomeViewed();
         break;
       case 3:
+        AnalyticsService.logProductsViewed();
+        break;
+      case 4:
         AnalyticsService.logEnterpriseViewed();
         break;
     }
@@ -118,10 +128,10 @@ class _MainNavigationState extends State<MainNavigation> {
           unselectedItemColor: BrandColors.grayMedium,
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 12,
+            fontSize: 11,
           ),
           unselectedLabelStyle: const TextStyle(
-            fontSize: 12,
+            fontSize: 11,
           ),
           items: _navItems,
         ),

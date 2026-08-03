@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../constants/account_roles.dart';
 import '../utils/user_manager.dart';
 import '../config/environment_config.dart';
 
@@ -16,6 +17,7 @@ class UserFirestoreService {
   }
 
   /// Crea o actualiza campos del perfil (merge). Evita not-found si el doc no existía.
+  /// No permite cambiar [accountRole] desde el cliente (solo create → user).
   static Future<void> upsertProfileFields(Map<String, dynamic> fields) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -25,17 +27,21 @@ class UserFirestoreService {
     final ref = _userDoc(user.uid);
     final existing = await ref.get();
 
+    // El cliente nunca auto-escala roles de acceso.
+    final safeFields = Map<String, dynamic>.from(fields)..remove('accountRole');
+
     final data = <String, dynamic>{
-      ...fields,
+      ...safeFields,
       'uid': user.uid,
       'id': user.uid,
-      'email': user.email ?? fields['email'] ?? '',
+      'email': user.email ?? safeFields['email'] ?? '',
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
     if (!existing.exists) {
       data['isActive'] = true;
       data['createdAt'] = FieldValue.serverTimestamp();
+      data['accountRole'] = AccountRole.user;
       data.putIfAbsent('displayName', () => user.displayName ?? '');
       data.putIfAbsent('photoURL', () => user.photoURL ?? '');
     }

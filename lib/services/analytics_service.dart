@@ -335,6 +335,25 @@ class AnalyticsService {
     );
   }
 
+  // --- Productos ---
+
+  static Future<void> logProductsViewed() async {
+    await _analytics.logEvent(name: 'products_viewed');
+  }
+
+  static Future<void> logProductStoreClicked({
+    required String productId,
+    required String storeLabel,
+  }) async {
+    await _analytics.logEvent(
+      name: 'product_store_clicked',
+      parameters: {
+        'product_id': _truncate(productId, 100),
+        'store_label': _truncate(storeLabel, 100),
+      },
+    );
+  }
+
   // --- Empresarial ---
 
   static Future<void> logEnterpriseViewed() async {

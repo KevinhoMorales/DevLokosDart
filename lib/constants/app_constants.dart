@@ -26,7 +26,8 @@ class AppConstants {
   static const String usersCollection = 'users';
   
   // Image Assets
-  static const String logoPath = 'assets/images/devlokos_logo.png';
+  static const String logoPath = 'assets/icons/devlokos_logo.png';
+  static const String iconPath = 'assets/icons/devlokos_icon.webp';
   static const String backgroundPath = 'assets/images/background.png';
   
   // Animation Durations
