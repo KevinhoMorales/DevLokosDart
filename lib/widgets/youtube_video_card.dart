@@ -19,7 +19,7 @@ class YouTubeVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCompact = thumbnailHeight != null && thumbnailHeight! < 140;
+    final isCompact = thumbnailHeight != null && thumbnailHeight! <= 140;
     return Material(
       color: Colors.transparent,
       child: InkWell(

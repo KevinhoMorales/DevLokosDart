@@ -10,6 +10,7 @@ import '../../models/youtube_video.dart';
 import '../../providers/youtube_provider.dart';
 import '../../constants/podcast_seasons.dart';
 import '../../utils/brand_colors.dart';
+import '../../utils/responsive.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../widgets/app_error_state.dart';
 import '../../widgets/app_loading.dart';
@@ -307,16 +308,23 @@ class _PodcastScreenState extends State<PodcastScreen>
             ),
           ),
           child: SafeArea(
-            child: Column(
-              children: [
-                _buildSearchBar(),
-                Expanded(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: _buildContent(),
-                  ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: Responsive.contentMaxWidth(context),
                 ),
-              ],
+                child: Column(
+                  children: [
+                    _buildSearchBar(),
+                    Expanded(
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: _buildContent(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -345,8 +353,9 @@ class _PodcastScreenState extends State<PodcastScreen>
   }
 
   Widget _buildSearchBar() {
+    final hPad = Responsive.horizontalPadding(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 16.0),
+      padding: EdgeInsets.fromLTRB(hPad, 20.0, hPad, 16.0),
       child: SearchBarWidget(
         controller: _searchController,
         hintText: 'Buscar episodios, invitado o tema...',
@@ -511,11 +520,12 @@ class _PodcastScreenState extends State<PodcastScreen>
           _generateSortedVideos(youtubeProvider.videos);
         }
 
+        final hPad = Responsive.horizontalPadding(context);
         return SingleChildScrollView(
           controller: _mainScrollController,
           padding: EdgeInsets.only(
-            left: 20.0,
-            right: 20.0,
+            left: hPad,
+            right: hPad,
             bottom: MediaQuery.of(context).padding.bottom + 100.0,
           ),
           child: Column(
@@ -562,6 +572,12 @@ class _PodcastScreenState extends State<PodcastScreen>
       return const SizedBox.shrink();
     }
 
+    final tablet = Responsive.isTablet(context);
+    final wide = Responsive.isWide(context);
+    final cardWidth = wide ? 300.0 : (tablet ? 280.0 : 236.0);
+    final thumbHeight = tablet ? 140.0 : 118.0;
+    final railHeight = tablet ? 220.0 : 188.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -571,7 +587,7 @@ class _PodcastScreenState extends State<PodcastScreen>
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 188,
+          height: railHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -579,7 +595,7 @@ class _PodcastScreenState extends State<PodcastScreen>
             itemBuilder: (context, index) {
               final video = discoverVideos[index];
               return SizedBox(
-                width: 236,
+                width: cardWidth,
                 child: Padding(
                   padding: EdgeInsets.only(
                     right: index < discoverVideos.length - 1 ? 12 : 0,
@@ -588,7 +604,7 @@ class _PodcastScreenState extends State<PodcastScreen>
                     video: video,
                     onTap: () => _onVideoTap(video),
                     showChannelTitle: false,
-                    thumbnailHeight: 118,
+                    thumbnailHeight: thumbHeight,
                   ),
                 ),
               );
@@ -628,35 +644,60 @@ class _PodcastScreenState extends State<PodcastScreen>
       );
     }
 
+    final hPad = Responsive.horizontalPadding(context);
+    final cols = Responsive.episodeCrossAxisCount(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 8),
           child: SectionHeader(
             title: 'Resultados (${searchResults.length})',
             padding: EdgeInsets.zero,
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              bottom: MediaQuery.of(context).padding.bottom + 100,
-            ),
-            itemCount: searchResults.length,
-            itemBuilder: (context, index) {
-              final video = searchResults[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: YouTubeVideoListTile(
-                  video: video,
-                  onTap: () => _onVideoTap(video),
+          child: cols == 1
+              ? ListView.builder(
+                  padding: EdgeInsets.only(
+                    left: hPad,
+                    right: hPad,
+                    bottom: MediaQuery.of(context).padding.bottom + 100,
+                  ),
+                  itemCount: searchResults.length,
+                  itemBuilder: (context, index) {
+                    final video = searchResults[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: YouTubeVideoListTile(
+                        video: video,
+                        onTap: () => _onVideoTap(video),
+                      ),
+                    );
+                  },
+                )
+              : GridView.builder(
+                  padding: EdgeInsets.only(
+                    left: hPad,
+                    right: hPad,
+                    bottom: MediaQuery.of(context).padding.bottom + 100,
+                  ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    mainAxisExtent: 96,
+                  ),
+                  itemCount: searchResults.length,
+                  itemBuilder: (context, index) {
+                    final video = searchResults[index];
+                    return YouTubeVideoListTile(
+                      video: video,
+                      onTap: () => _onVideoTap(video),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
@@ -701,18 +742,43 @@ class _PodcastScreenState extends State<PodcastScreen>
   }
 
   /// Lista densa de episodios (scroll del SingleChildScrollView padre).
+  /// En tablet/iPad usa 2 columnas para aprovechar el ancho.
   Widget _buildEpisodesListView(List<YouTubeVideo> filteredVideos) {
-    return Column(
-      children: [
-        for (final video in filteredVideos)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: YouTubeVideoListTile(
-              video: video,
-              onTap: () => _onVideoTap(video),
+    final cols = Responsive.episodeCrossAxisCount(context);
+    if (cols == 1) {
+      return Column(
+        children: [
+          for (final video in filteredVideos)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: YouTubeVideoListTile(
+                video: video,
+                onTap: () => _onVideoTap(video),
+              ),
             ),
-          ),
-      ],
+        ],
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 10.0;
+        final tileWidth = (constraints.maxWidth - gap) / 2;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final video in filteredVideos)
+              SizedBox(
+                width: tileWidth,
+                child: YouTubeVideoListTile(
+                  video: video,
+                  onTap: () => _onVideoTap(video),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

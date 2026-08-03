@@ -130,30 +130,40 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
         'Sin título';
   }
 
+  List<String> _titleParts() {
+    return _getFullTitle()
+        .split('||')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+  }
+
   String _getAppBarTitle() {
     // Prioridad: nombre de playlist (más corto) cuando viene de Tutoriales
     if (widget.playlistTitle != null && widget.playlistTitle!.isNotEmpty) {
       return widget.playlistTitle!;
     }
-    final parts = _getFullTitle().split('||');
-    if (parts.length > 1) return parts[0].trim();
+    final parts = _titleParts();
+    // "DevLokos S2 Ep065 || Tema || Invitado" → show label
+    if (parts.isNotEmpty) return parts[0];
     return _getFullTitle();
   }
 
-  /// Título del episodio (parte izquierda de "tema || invitado").
+  /// Título del episodio.
+  /// Formato 3 partes: show || tema || invitado → tema.
+  /// Formato 2 partes: tema || invitado → tema.
   String _getVideoTitle() {
-    final parts = _getFullTitle().split('||');
-    if (parts.length > 1) return parts[0].trim();
+    final parts = _titleParts();
+    if (parts.length >= 3) return parts[1];
+    if (parts.length == 2) return parts[0];
     return _getFullTitle();
   }
 
-  /// Invitado / guest (parte derecha de "tema || invitado").
+  /// Invitado / guest.
   String? _getGuestName() {
-    final parts = _getFullTitle().split('||');
-    if (parts.length > 1) {
-      final guest = parts.sublist(1).join('||').trim();
-      if (guest.isNotEmpty) return guest;
-    }
+    final parts = _titleParts();
+    if (parts.length >= 3) return parts[2];
+    if (parts.length == 2) return parts[1];
     return null;
   }
 
