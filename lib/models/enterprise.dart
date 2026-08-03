@@ -4,7 +4,8 @@ class Service {
   final String id;
   final String title;
   final String description;
-  final String icon; // Icon name or emoji
+  /// Clave de icono Material (ej. `code`, `phone_iphone`). Sin emojis en UI.
+  final String icon;
   final List<String> features;
   final int order;
   final bool isPublished;
@@ -24,7 +25,7 @@ class Service {
       id: id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      icon: data['icon'] ?? '💼',
+      icon: data['icon'] ?? 'business_center',
       features: List<String>.from(data['features'] ?? []),
       order: data['order'] ?? 0,
       isPublished: data['isPublished'] ?? true,

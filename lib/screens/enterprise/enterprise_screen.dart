@@ -3,9 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../bloc/enterprise/enterprise_bloc_exports.dart';
 import '../../models/enterprise.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
+import '../../utils/service_icons.dart';
+import '../../widgets/app_error_state.dart';
+import '../../widgets/content_skeleton.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/gradient_button.dart';
+import '../../widgets/section_header.dart';
 
 class EnterpriseScreen extends StatefulWidget {
   const EnterpriseScreen({super.key});
@@ -31,6 +36,49 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     'Desarrollo web',
     'DevOps e infraestructura',
     'Otro',
+  ];
+
+  /// Contenido de respaldo si Firestore aún no tiene servicios publicados.
+  static final List<Service> _fallbackServices = [
+    Service(
+      id: 'fallback-software',
+      title: 'Software a medida',
+      description:
+          'Productos y plataformas pensadas para tu operación, no plantillas genéricas.',
+      icon: 'code',
+      features: const [
+        'Discovery y arquitectura',
+        'Desarrollo end-to-end',
+        'Entrega continua',
+      ],
+      order: 0,
+    ),
+    Service(
+      id: 'fallback-mobile',
+      title: 'Apps móviles',
+      description:
+          'iOS y Android con foco en rendimiento, UX y mantenimiento a largo plazo.',
+      icon: 'phone_iphone',
+      features: const [
+        'Flutter nativo-feel',
+        'Integraciones backend',
+        'Publicación en stores',
+      ],
+      order: 1,
+    ),
+    Service(
+      id: 'fallback-consulting',
+      title: 'Consultoría técnica',
+      description:
+          'Acompañamos a tu equipo en decisiones de stack, cloud y procesos.',
+      icon: 'explore',
+      features: const [
+        'Auditoría técnica',
+        'Roadmap de producto',
+        'Mentoría a equipos',
+      ],
+      order: 2,
+    ),
   ];
 
   @override
@@ -62,9 +110,20 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
           color: BrandColors.primaryBlack,
         ),
         child: SafeArea(
-          child: BlocListener<EnterpriseBloc, EnterpriseState>(
+          bottom: false,
+          child: BlocConsumer<EnterpriseBloc, EnterpriseState>(
+            listenWhen: (prev, curr) {
+              if (curr is! EnterpriseLoaded) return false;
+              final prevLoaded = prev is EnterpriseLoaded ? prev : null;
+              final becameSuccess =
+                  curr.submitSuccess && !(prevLoaded?.submitSuccess ?? false);
+              final becameError = curr.submitError != null &&
+                  curr.submitError != prevLoaded?.submitError;
+              return becameSuccess || becameError;
+            },
             listener: (context, state) {
-              if (state is ContactFormSubmitted) {
+              if (state is! EnterpriseLoaded) return;
+              if (state.submitSuccess) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('¡Formulario enviado exitosamente!'),
@@ -72,45 +131,73 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   ),
                 );
                 _clearForm();
-              } else if (state is ContactFormError) {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              } else if (state.submitError != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(state.message),
+                    content: Text(state.submitError!),
                     backgroundColor: BrandColors.error,
                   ),
                 );
               }
             },
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).padding.bottom + 100,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCompactHeader(),
-                  _buildProcessChips(),
-                  _buildContactForm(),
-                  _buildServices(),
-                  _buildPortfolio(),
-                ],
-              ),
-            ),
+            builder: (context, state) {
+              if (state is EnterpriseLoading || state is EnterpriseInitial) {
+                return const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: ContentSkeleton.card(count: 3),
+                );
+              }
+
+              if (state is EnterpriseError) {
+                return AppErrorState(
+                  message: state.message,
+                  onRetry: () =>
+                      context.read<EnterpriseBloc>().add(const LoadServices()),
+                );
+              }
+
+              final loaded = state is EnterpriseLoaded
+                  ? state
+                  : const EnterpriseLoaded(
+                      services: [],
+                      portfolioProjects: [],
+                    );
+
+              final services = loaded.services.isNotEmpty
+                  ? loaded.services
+                  : _fallbackServices;
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCompactHeader(),
+                    _buildProcessSteps(),
+                    _buildServices(services),
+                    _buildPortfolio(loaded.portfolioProjects),
+                    _buildContactCta(),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  /// Header compacto: propuesta de valor en mínimo espacio
   Widget _buildCompactHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Servicios empresariales',
+          Text(
+            'Empresarial',
             style: TextStyle(
               color: BrandColors.primaryOrange,
               fontSize: 22,
@@ -118,7 +205,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
               letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
             'Software a medida y consultoría para empresas.',
             style: TextStyle(
@@ -132,194 +219,196 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
-  Widget _buildServices() {
-    return BlocBuilder<EnterpriseBloc, EnterpriseState>(
-      builder: (context, state) {
-        if (state is EnterpriseLoaded) {
-          final services = state.services;
-          if (services.isEmpty) return const SizedBox.shrink();
+  Widget _buildProcessSteps() {
+    const steps = [
+      (Icons.search_rounded, '01', 'Descubrimiento'),
+      (Icons.palette_outlined, '02', 'Diseño'),
+      (Icons.code_rounded, '03', 'Desarrollo'),
+      (Icons.rocket_launch_outlined, '04', 'Entrega'),
+    ];
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      height: 1,
-                      width: 24,
-                      color: BrandColors.primaryOrange.withOpacity(0.4),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Nuestros servicios',
-                      style: TextStyle(
-                        color: BrandColors.grayMedium,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Nuestro proceso',
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const gap = 10.0;
+              final tileW = (constraints.maxWidth - gap) / 2;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: steps.map((step) {
+                  return SizedBox(
+                    width: tileW,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                      decoration: BoxDecoration(
+                        color: BrandColors.cardBackground,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: BrandColors.primaryOrange
+                              .withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                step.$1,
+                                color: BrandColors.primaryOrange,
+                                size: 18,
+                              ),
+                              const Spacer(),
+                              Text(
+                                step.$2,
+                                style: TextStyle(
+                                  color: BrandColors.primaryOrange
+                                      .withValues(alpha: 0.9),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.4,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            step.$3,
+                            style: const TextStyle(
+                              color: BrandColors.primaryWhite,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                            softWrap: true,
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: services.length,
-                itemBuilder: (context, index) {
-                  final service = services[index];
-                  return _buildServiceCard(service);
-                },
-              ),
-            ],
-          );
-        }
-        return const SizedBox.shrink();
-      },
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServices(List<Service> services) {
+    if (services.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Servicios',
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+        ),
+        ...services.map(
+          (service) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: _buildServiceCard(service),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildServiceCard(Service service) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: BrandColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                service.icon,
-                style: const TextStyle(fontSize: 32),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  service.title,
-                  style: const TextStyle(
-                    color: BrandColors.primaryWhite,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            service.description,
-            style: const TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 14,
-            ),
-          ),
-          if (service.features.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ...service.features.map((feature) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle,
-                        color: BrandColors.success,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          feature,
-                          style: const TextStyle(
-                            color: BrandColors.primaryWhite,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Proceso en grid 2x2: chips compactos (icono + título). Secundario visualmente.
-  Widget _buildProcessChips() {
-    const steps = [
-      (Icons.search_rounded, 'Descubrimiento'),
-      (Icons.palette_rounded, 'Diseño'),
-      (Icons.code_rounded, 'Desarrollo'),
-      (Icons.rocket_launch_rounded, 'Entrega'),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Nuestro proceso',
-            style: TextStyle(
-              color: BrandColors.grayMedium,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 10),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.8,
-            children: steps.map((s) => _buildProcessChip(s.$1, s.$2)).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProcessChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: BrandColors.cardBackground.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.15),
-          width: 1,
+          color: BrandColors.primaryOrange.withValues(alpha: 0.15),
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: BrandColors.primaryOrange,
-            size: 20,
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              serviceIconData(service.icon),
+              color: BrandColors.primaryOrange,
+              size: 22,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: BrandColors.primaryWhite,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  service.title,
+                  style: const TextStyle(
+                    color: BrandColors.primaryWhite,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  service.description,
+                  style: const TextStyle(
+                    color: BrandColors.grayMedium,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (service.features.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: service.features.take(3).map((feature) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: BrandColors.primaryBlack.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: BrandColors.primaryOrange
+                                .withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Text(
+                          feature,
+                          style: const TextStyle(
+                            color: BrandColors.grayLight,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
@@ -327,101 +416,74 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
-  Widget _buildPortfolio() {
-    return BlocBuilder<EnterpriseBloc, EnterpriseState>(
-      builder: (context, state) {
-        if (state is EnterpriseLoaded) {
-          final projects = state.portfolioProjects;
-          if (projects.isEmpty) return const SizedBox.shrink();
+  Widget _buildPortfolio(List<PortfolioProject> projects) {
+    if (projects.isEmpty) return const SizedBox.shrink();
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      height: 1,
-                      width: 24,
-                      color: BrandColors.primaryOrange.withOpacity(0.4),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Proyectos destacados',
-                      style: TextStyle(
-                        color: BrandColors.grayMedium,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: projects.length,
-                  itemBuilder: (context, index) {
-                    final project = projects[index];
-                    return _buildPortfolioCard(project);
-                  },
-                ),
-              ),
-            ],
-          );
-        }
-        return const SizedBox.shrink();
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Portafolio',
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+        ),
+        SizedBox(
+          height: 196,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: projects.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) =>
+                _buildPortfolioCard(projects[index]),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildPortfolioCard(PortfolioProject project) {
     return Container(
-      width: 280,
-      margin: const EdgeInsets.only(right: 16),
+      width: 260,
       decoration: BoxDecoration(
         color: BrandColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.3),
-          width: 1,
+          color: BrandColors.primaryOrange.withValues(alpha: 0.15),
         ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (project.thumbnailUrl != null)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: CachedNetworkImage(
-                imageUrl: project.thumbnailUrl!,
-                width: double.infinity,
-                height: 120,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  height: 120,
-                  color: BrandColors.grayDark,
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      color: BrandColors.primaryOrange,
-                    ),
-                  ),
+            CachedNetworkImage(
+              imageUrl: project.thumbnailUrl!,
+              width: double.infinity,
+              height: 110,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                height: 110,
+                color: BrandColors.grayDark,
+              ),
+              errorWidget: (context, url, error) => Container(
+                height: 110,
+                color: BrandColors.grayDark,
+                child: const Icon(
+                  Icons.business,
+                  color: BrandColors.grayMedium,
                 ),
-                errorWidget: (context, url, error) => Container(
-                  height: 120,
-                  color: BrandColors.grayDark,
-                  child: const Icon(
-                    Icons.business,
-                    color: BrandColors.grayMedium,
-                  ),
-                ),
+              ),
+            )
+          else
+            Container(
+              height: 110,
+              color: BrandColors.grayDark,
+              child: const Center(
+                child: Icon(Icons.business, color: BrandColors.grayMedium),
               ),
             ),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -429,18 +491,19 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   project.title,
                   style: const TextStyle(
                     color: BrandColors.primaryWhite,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
                   project.description,
                   style: const TextStyle(
                     color: BrandColors.grayMedium,
                     fontSize: 12,
+                    height: 1.3,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -453,69 +516,114 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
     );
   }
 
-  InputDecoration _inputDecoration({
-    required String label,
-    required String hint,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      labelStyle: const TextStyle(color: BrandColors.grayMedium),
-      hintStyle: const TextStyle(color: BrandColors.grayMedium),
-      filled: true,
-      fillColor: BrandColors.cardBackground,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: BrandColors.primaryOrange.withOpacity(0.3),
+  Widget _buildContactCta() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+        decoration: BoxDecoration(
+          color: BrandColors.cardBackground,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: BrandColors.primaryOrange.withValues(alpha: 0.22),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '¿Listo para construir?',
+              style: TextStyle(
+                color: BrandColors.primaryWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Cuéntanos tu proyecto y te respondemos en menos de 24 h.',
+              style: TextStyle(
+                color: BrandColors.grayMedium,
+                fontSize: 14,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: GradientButton(
+                onPressed: () {
+                  AppHaptics.light();
+                  _openContactSheet();
+                },
+                text: 'Inicia un proyecto',
+              ),
+            ),
+          ],
         ),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: BrandColors.primaryOrange,
-          width: 2,
-        ),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: BrandColors.error),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 
-  /// Formulario de contacto: foco principal de la pantalla
-  Widget _buildContactForm() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  void _openContactSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: BrandColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          ),
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.88,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            builder: (context, scrollController) {
+              return StatefulBuilder(
+                builder: (context, setSheetState) {
+                  return _buildContactFormSheet(
+                    scrollController,
+                    setSheetState,
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContactFormSheet(
+    ScrollController scrollController,
+    StateSetter setSheetState,
+  ) {
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: BrandColors.grayMedium.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+          child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: BrandColors.primaryOrange.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.mail_outline_rounded,
-                  color: BrandColors.primaryOrange,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Inicia un proyecto',
                       style: TextStyle(
                         color: BrandColors.primaryWhite,
@@ -523,7 +631,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 4),
                     Text(
                       'Te respondemos en menos de 24 h',
                       style: TextStyle(
@@ -534,12 +642,19 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   ],
                 ),
               ),
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, color: BrandColors.grayMedium),
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          Form(
+        ),
+        Expanded(
+          child: Form(
             key: _formKey,
-            child: Column(
+            child: ListView(
+              controller: scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               children: [
                 TextFormField(
                   controller: _nameController,
@@ -613,7 +728,7 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                     );
                   }).toList(),
                   onChanged: (value) {
-                    setState(() {
+                    setSheetState(() {
                       _selectedProjectType = value;
                     });
                   },
@@ -623,7 +738,8 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                   controller: _messageController,
                   decoration: _inputDecoration(
                     label: 'Mensaje',
-                    hint: 'Cuéntanos sobre tu proyecto, necesidades o preguntas...',
+                    hint:
+                        'Cuéntanos sobre tu proyecto, necesidades o preguntas...',
                   ),
                   style: const TextStyle(color: BrandColors.primaryWhite),
                   maxLines: 4,
@@ -637,11 +753,13 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
                 const SizedBox(height: 20),
                 BlocBuilder<EnterpriseBloc, EnterpriseState>(
                   builder: (context, state) {
-                    final isSubmitting = state is ContactFormSubmitting;
+                    final isSubmitting =
+                        state is EnterpriseLoaded && state.isSubmitting;
                     return SizedBox(
                       width: double.infinity,
                       child: GradientButton(
                         onPressed: isSubmitting ? null : _submitForm,
+                        isLoading: isSubmitting,
                         text: isSubmitting ? 'Enviando...' : 'Enviar mensaje',
                       ),
                     );
@@ -650,13 +768,50 @@ class _EnterpriseScreenState extends State<EnterpriseScreen>
               ],
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    required String hint,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: BrandColors.grayMedium),
+      hintStyle: const TextStyle(color: BrandColors.grayMedium),
+      filled: true,
+      fillColor: BrandColors.primaryBlack.withValues(alpha: 0.45),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
       ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: BrandColors.primaryOrange.withValues(alpha: 0.2),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: BrandColors.primaryOrange,
+          width: 1.5,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: BrandColors.error),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
+      AppHaptics.light();
       final submission = ContactSubmission(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _nameController.text.trim(),

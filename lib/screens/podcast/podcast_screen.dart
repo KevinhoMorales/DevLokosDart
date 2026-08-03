@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -6,9 +8,15 @@ import '../../bloc/episode/episode_bloc_exports.dart';
 import '../../models/episode.dart';
 import '../../models/youtube_video.dart';
 import '../../providers/youtube_provider.dart';
+import '../../constants/podcast_seasons.dart';
 import '../../utils/brand_colors.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_error_state.dart';
+import '../../widgets/app_loading.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/custom_app_bar.dart';
+import '../../widgets/section_header.dart';
+import '../../widgets/season_filter_dropdown.dart';
 import '../../widgets/youtube_video_card.dart';
 
 class PodcastScreen extends StatefulWidget {
@@ -27,16 +35,19 @@ class _PodcastScreenState extends State<PodcastScreen>
   bool _isSearching = false;
   List<YouTubeVideo>? _apiSearchResults;
   String? _searchError;
-  String _selectedSeason = 'Temporada 2';
-  List<YouTubeVideo>? _discoverVideos; // Cache para videos de descubrimiento
+  String _selectedSeason = PodcastSeasons.defaultLabel;
+  List<YouTubeVideo>? _discoverVideos; // Cache estable para Descubre
   List<YouTubeVideo>? _allVideosSorted; // Cache para todos los videos ordenados por fecha
-  List<YouTubeVideo>? _s1VideosSorted; // Cache para videos de temporada 1 ordenados
-  List<YouTubeVideo>? _s2VideosSorted; // Cache para videos de temporada 2 ordenados
+  List<YouTubeVideo>? _s1VideosSorted;
+  List<YouTubeVideo>? _s2VideosSorted;
+  List<YouTubeVideo>? _s3VideosSorted;
   bool _isInitialLoading = true; // Estado de carga inicial
   String _loadingMessage = 'Cargando videos...'; // Mensaje de loading
   bool _hasLoaded = false; // Flag para asegurar que solo se carga una vez
-  final ScrollController _episodesScrollController = ScrollController();
+  final ScrollController _mainScrollController = ScrollController();
   bool _isLoadingMoreEpisodes = false;
+  static const int _discoverCount = 10;
+  static const double _paginationThreshold = 480;
 
   @override
   bool get wantKeepAlive => true; // Mantener el estado vivo cuando se navega
@@ -80,86 +91,93 @@ class _PodcastScreenState extends State<PodcastScreen>
 
   void _loadYouTubeVideos() async {
     final youtubeProvider = context.read<YouTubeProvider>();
-    
-    // Actualizar mensaje de loading
+
     if (mounted) {
-      setState(() {
-        _loadingMessage = 'CARGANDO EPISODIOS';
-      });
+      setState(() => _loadingMessage = 'CARGANDO EPISODIOS');
     }
-    
-    // Carga inicial rápida: solo 30 videos para mostrar la UI rápidamente
-    await youtubeProvider.loadVideos(initialLoad: true, maxResults: 30);
-    
-    // Generar videos de descubrimiento con los videos iniciales
+
+    // 1) Caché / API: pintar lo antes posible
+    if (youtubeProvider.videos.isEmpty) {
+      await youtubeProvider.loadVideos(initialLoad: true, maxResults: 30);
+    }
+
+    // Si la caché vino vacía o falló, forzar red
+    if (youtubeProvider.videos.isEmpty) {
+      await youtubeProvider.loadVideos(
+        refresh: true,
+        initialLoad: true,
+        maxResults: 30,
+      );
+    }
+
     _generateDiscoverVideos(youtubeProvider.videos);
-    
-    // Generar videos ordenados con los videos iniciales
     _generateSortedVideos(youtubeProvider.videos);
-    
-    // Finalizar loading inicial para mostrar la UI inmediatamente
+
     if (mounted) {
-      setState(() {
-        _isInitialLoading = false;
-      });
+      setState(() => _isInitialLoading = false);
     }
-    
-    // Cargar más videos en segundo plano sin bloquear la UI
+
+    // 2) Prefetch transparente en background (sin reshuffle de Descubre)
     _loadMoreVideosInBackground(youtubeProvider);
   }
-  
-  /// Carga más videos en segundo plano sin bloquear la UI
+
+  /// Prefetch en segundo plano; actualiza Episodios sin tocar Descubre.
   Future<void> _loadMoreVideosInBackground(YouTubeProvider provider) async {
-    // Cargar más videos gradualmente en segundo plano
-    // Esto permite que el usuario vea contenido mientras se cargan más episodios
     int loadedBatches = 0;
-    const maxInitialBatches = 3; // Cargar 3 batches adicionales en segundo plano (30 + 60 = 90 videos)
-    
-    while (loadedBatches < maxInitialBatches && provider.hasMoreVideos && mounted) {
-      await Future.delayed(const Duration(milliseconds: 500)); // Pequeña pausa entre batches
-      
+    const maxInitialBatches = 4;
+
+    while (loadedBatches < maxInitialBatches &&
+        provider.hasMoreVideos &&
+        mounted) {
+      await Future.delayed(const Duration(milliseconds: 350));
       if (!mounted) break;
-      
+
       await provider.loadMoreVideos(batchSize: 30);
       loadedBatches++;
-      
-      // Regenerar caches con los nuevos videos
-      if (mounted) {
+
+      if (!mounted) break;
+      setState(() {
         _generateSortedVideos(provider.videos);
+        // Completar Descubre hasta el cupo sin reordenar lo ya visible
         _generateDiscoverVideos(provider.videos);
-      }
+      });
     }
-    
-    print('✅ Carga en segundo plano completada: ${provider.videos.length} videos totales');
+
+    // Si la temporada activa sigue corta, seguir paginando un poco más
+    await _ensureSeasonHasContent();
   }
 
-        void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
-          // Regenerar siempre para incluir nuevos videos cargados
-          if (allVideos.isNotEmpty) {
-            // Filtrar videos con títulos válidos (no vacíos, no "Sin título")
-            final validVideos = allVideos.where((video) => 
-              video.title.isNotEmpty && 
-              video.title.trim().isNotEmpty &&
-              video.title != 'Sin título'
-            ).toList();
-            
-            print('🎲 Videos válidos para descubrimiento: ${validVideos.length} de ${allVideos.length} videos totales');
-            
-            if (validVideos.isNotEmpty) {
-              // Mezclar videos válidos y tomar 4 aleatorios
-              final shuffledVideos = List<YouTubeVideo>.from(validVideos);
-              shuffledVideos.shuffle();
-              _discoverVideos = shuffledVideos.take(4).toList();
-              print('🎲 Videos de descubrimiento regenerados: ${_discoverVideos!.length} videos válidos');
-            } else {
-              // Si no hay videos válidos, usar todos los videos como fallback
-              final shuffledVideos = List<YouTubeVideo>.from(allVideos);
-              shuffledVideos.shuffle();
-              _discoverVideos = shuffledVideos.take(4).toList();
-              print('⚠️ Fallback: Usando todos los videos para descubrimiento: ${_discoverVideos!.length}');
-            }
-          }
-        }
+  /// Descubre estable: se elige una vez al día y no salta al paginar.
+  void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
+    if (allVideos.isEmpty) return;
+
+    final validVideos = allVideos
+        .where((video) =>
+            video.title.isNotEmpty &&
+            video.title.trim().isNotEmpty &&
+            video.title != 'Sin título')
+        .toList();
+    if (validVideos.isEmpty) return;
+
+    // Ya hay lista: solo rellenar huecos hasta _discoverCount
+    if (_discoverVideos != null && _discoverVideos!.isNotEmpty) {
+      if (_discoverVideos!.length >= _discoverCount) return;
+      final existingIds = _discoverVideos!.map((v) => v.videoId).toSet();
+      final extras = validVideos
+          .where((v) => !existingIds.contains(v.videoId))
+          .take(_discoverCount - _discoverVideos!.length);
+      _discoverVideos = [..._discoverVideos!, ...extras];
+      return;
+    }
+
+    // Primera vez: mezcla estable por día (no cambia en cada rebuild)
+    final daySeed = DateTime.now()
+        .difference(DateTime(DateTime.now().year, 1, 1))
+        .inDays;
+    final shuffled = List<YouTubeVideo>.from(validVideos)
+      ..shuffle(Random(daySeed));
+    _discoverVideos = shuffled.take(_discoverCount).toList();
+  }
 
   void _generateSortedVideos(List<YouTubeVideo> allVideos) {
     if (allVideos.isNotEmpty) {
@@ -170,66 +188,91 @@ class _PodcastScreenState extends State<PodcastScreen>
       }
       final deduplicatedVideos = uniqueVideos.values.toList();
       
-      // Separar videos por temporada
-      final s1Videos = deduplicatedVideos.where((v) => v.title.contains('S1')).toList();
-      final s2Videos = deduplicatedVideos.where((v) => v.title.contains('S2')).toList();
-      
-      // Ordenar cada temporada por fecha descendente (más reciente primero)
+      // Separar por temporada (S3 / S2 / S1); extensible vía PodcastSeasons
+      final s1Videos = deduplicatedVideos
+          .where((v) => PodcastSeasons.detectFromTitle(v.title) == 1)
+          .toList();
+      final s2Videos = deduplicatedVideos
+          .where((v) => PodcastSeasons.detectFromTitle(v.title) == 2)
+          .toList();
+      final s3Videos = deduplicatedVideos
+          .where((v) => PodcastSeasons.detectFromTitle(v.title) == 3)
+          .toList();
+
       s1Videos.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
       s2Videos.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
-      
-      // Para "TODAS": S2 primero (más reciente), luego S1
-      _allVideosSorted = [...s2Videos, ...s1Videos];
-      
-      // Cache para cada temporada
+      s3Videos.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+
+      // Orden global: S3 → S2 → S1 (más reciente primero dentro de cada una)
+      _allVideosSorted = [...s3Videos, ...s2Videos, ...s1Videos];
       _s1VideosSorted = s1Videos;
       _s2VideosSorted = s2Videos;
-      
-      print('📅 Videos ordenados por fecha regenerados:');
-      print('  - Todos (S2 + S1): ${_allVideosSorted!.length} videos');
-      print('  - Temporada 1: ${_s1VideosSorted!.length} videos');
-      print('  - Temporada 2: ${_s2VideosSorted!.length} videos');
-      
-      // Mostrar los primeros 3 videos ordenados
-      if (_allVideosSorted!.isNotEmpty) {
-        print('📅 Primeros 3 videos ordenados (S2 primero, luego S1):');
-        for (int i = 0; i < _allVideosSorted!.length && i < 3; i++) {
-          final video = _allVideosSorted![i];
-          print('  ${i + 1}. ${video.title} - ${video.publishedAt}');
-        }
-      }
+      _s3VideosSorted = s3Videos;
+
+      print('📅 Videos ordenados: T3=${s3Videos.length} T2=${s2Videos.length} T1=${s1Videos.length}');
     }
   }
 
   void _setupScrollListener() {
-    _episodesScrollController.addListener(() {
-      if (_episodesScrollController.position.pixels >= 
-          _episodesScrollController.position.maxScrollExtent * 0.8) {
-        // Cuando el usuario llega al 80% del scroll, cargar más videos
-        if (!_isLoadingMoreEpisodes && mounted) {
-          final youtubeProvider = context.read<YouTubeProvider>();
-          if (youtubeProvider.hasMoreVideos && !youtubeProvider.isLoading) {
-            _isLoadingMoreEpisodes = true;
-            youtubeProvider.loadMoreVideos(batchSize: 30).then((_) {
-              _isLoadingMoreEpisodes = false;
-              // Regenerar caches con los nuevos videos
-              if (mounted) {
-                setState(() {
-                  _generateSortedVideos(youtubeProvider.videos);
-                });
-              }
-            });
-          }
-        }
+    _mainScrollController.addListener(() {
+      if (!_mainScrollController.hasClients) return;
+      final position = _mainScrollController.position;
+      if (position.maxScrollExtent <= 0) return;
+      if (position.pixels >= position.maxScrollExtent - _paginationThreshold) {
+        _maybeLoadMoreEpisodes();
       }
     });
+  }
+
+  /// Paginado automático transparente al acercarse al final del scroll.
+  Future<void> _maybeLoadMoreEpisodes() async {
+    if (_isLoadingMoreEpisodes || !mounted) return;
+    final provider = context.read<YouTubeProvider>();
+    if (!provider.hasMoreVideos || provider.isLoading) return;
+
+    setState(() => _isLoadingMoreEpisodes = true);
+    try {
+      await provider.loadMoreVideos(batchSize: 30);
+      if (!mounted) return;
+      setState(() {
+        _generateSortedVideos(provider.videos);
+        _generateDiscoverVideos(provider.videos);
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingMoreEpisodes = false);
+      } else {
+        _isLoadingMoreEpisodes = false;
+      }
+    }
+  }
+
+  Future<void> _ensureSeasonHasContent() async {
+    if (!mounted) return;
+    final provider = context.read<YouTubeProvider>();
+    var safety = 0;
+    while (
+      mounted &&
+      provider.hasMoreVideos &&
+      !provider.isLoading &&
+      _filterVideosBySeason(provider.videos).length < 12 &&
+      safety < 6
+    ) {
+      safety++;
+      await provider.loadMoreVideos(batchSize: 30);
+      if (!mounted) return;
+      setState(() {
+        _generateSortedVideos(provider.videos);
+        _generateDiscoverVideos(provider.videos);
+      });
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _searchController.dispose();
-    _episodesScrollController.dispose();
+    _mainScrollController.dispose();
     super.dispose();
   }
 
@@ -425,350 +468,128 @@ class _PodcastScreenState extends State<PodcastScreen>
   }
 
   Widget _buildContent() {
-    // Mostrar loading inicial si aún no se han cargado los videos
     if (_isInitialLoading) {
       return _buildInitialLoading();
     }
-    
-    return BlocBuilder<EpisodeBloc, EpisodeState>(
-      builder: (context, state) {
-        if (state is EpisodeLoading) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
-            ),
+
+    // Búsqueda API tiene prioridad; no bloquear home por EpisodeBloc
+    if (_apiSearchResults != null || _isSearching || _searchError != null) {
+      return _buildSearchResultsContent();
+    }
+
+    return Consumer<YouTubeProvider>(
+      builder: (context, youtubeProvider, _) {
+        if (youtubeProvider.videos.isEmpty &&
+            youtubeProvider.errorMessage != null) {
+          return AppErrorState(
+            title: 'Error al cargar videos',
+            message: youtubeProvider.errorMessage!,
+            onRetry: () {
+              setState(() => _isInitialLoading = true);
+              _loadYouTubeVideos();
+            },
           );
         }
 
-        if (state is EpisodeError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: BrandColors.error,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error al cargar episodios',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: BrandColors.primaryWhite,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  state.message,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: BrandColors.grayMedium,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _loadEpisodes,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('REINTENTAR'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: BrandColors.primaryOrange,
-                    foregroundColor: BrandColors.primaryWhite,
-                  ),
-                ),
-              ],
-            ),
+        if (youtubeProvider.videos.isEmpty) {
+          return AppEmptyState(
+            icon: Icons.podcasts_outlined,
+            title: 'No hay episodios disponibles',
+            subtitle: 'Vuelve a intentarlo en un momento.',
+            showRetry: true,
+            onRetry: () {
+              setState(() => _isInitialLoading = true);
+              _loadYouTubeVideos();
+            },
           );
         }
 
-        if (state is EpisodeLoaded || state is EpisodeSearching) {
-          final episodes = state is EpisodeLoaded ? state.filteredEpisodes : (state as EpisodeSearching).episodes;
-          final featuredEpisodes = state is EpisodeLoaded ? state.featuredEpisodes : [];
-
-          // Solo mostrar resultados de búsqueda cuando el usuario presionó Enter
-          if (_apiSearchResults != null || _isSearching) {
-            return _buildSearchResultsContent();
-          }
-
-          // Si no hay búsqueda, mostrar contenido normal
-          if (episodes.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: BrandColors.grayMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay episodios disponibles',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: BrandColors.primaryWhite,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: EdgeInsets.only(
-              left: 20.0,
-              right: 20.0,
-              bottom: MediaQuery.of(context).padding.bottom + 100.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildFeaturedSection(featuredEpisodes.cast<Episode>()),
-                const SizedBox(height: 32),
-                _buildEpisodesSection(episodes),
-                SizedBox(height: MediaQuery.of(context).padding.bottom + 50.0),
-              ],
-            ),
-          );
+        if (_discoverVideos == null) {
+          _generateDiscoverVideos(youtubeProvider.videos);
+        }
+        if (_allVideosSorted == null) {
+          _generateSortedVideos(youtubeProvider.videos);
         }
 
-        // Estado inicial - mostrar loading
-        return const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
+        return SingleChildScrollView(
+          controller: _mainScrollController,
+          padding: EdgeInsets.only(
+            left: 20.0,
+            right: 20.0,
+            bottom: MediaQuery.of(context).padding.bottom + 100.0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildFeaturedSection(),
+              const SizedBox(height: 32),
+              _buildEpisodesSection(),
+              _buildPaginationFooter(youtubeProvider),
+              SizedBox(height: MediaQuery.of(context).padding.bottom + 24.0),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildFeaturedSection(List<Episode> featuredEpisodes) {
-    return Consumer<YouTubeProvider>(
-      builder: (context, youtubeProvider, child) {
-        // Usar videos cacheados si están disponibles, sino generar nuevos
-        if (_discoverVideos == null && youtubeProvider.videos.isNotEmpty) {
-          _generateDiscoverVideos(youtubeProvider.videos);
-        }
-        
-        final discoverVideos = _discoverVideos;
-        if (discoverVideos == null || discoverVideos.isEmpty) {
-          print('❌ No hay videos de descubrimiento disponibles');
-          return const SizedBox.shrink();
-        }
-        
-        print('🎲 Mostrando ${discoverVideos.length} videos de descubrimiento cacheados');
-          
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: BrandColors.primaryOrange,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Descubre',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: BrandColors.primaryWhite,
-                        fontSize: 20,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 220,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  clipBehavior: Clip.none,
-                  itemCount: discoverVideos.length,
-                  itemBuilder: (context, index) {
-                    final video = discoverVideos[index];
-                    return SizedBox(
-                      width: 300,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          right: index < discoverVideos.length - 1 ? 16 : 0,
-                        ),
-                        child: YouTubeVideoCard(
-                          video: video,
-                          onTap: () => _onVideoTap(video),
-                          showChannelTitle: false,
-                          thumbnailHeight: 140,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-      },
+  Widget _buildPaginationFooter(YouTubeProvider youtubeProvider) {
+    final showSpinner =
+        _isLoadingMoreEpisodes || (youtubeProvider.isLoading && youtubeProvider.hasMoreVideos);
+    if (!showSpinner && !youtubeProvider.hasMoreVideos) {
+      return const SizedBox(height: 8);
+    }
+    if (!showSpinner) return const SizedBox(height: 8);
+
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: SizedBox(
+          width: 28,
+          height: 28,
+          child: CircularProgressIndicator(
+            color: BrandColors.primaryOrange,
+            strokeWidth: 2.5,
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildSearchResultsContent() {
-    if (_isSearching) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Buscando en el canal...',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: BrandColors.grayMedium,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_searchError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, color: BrandColors.grayMedium, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                _searchError!,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: BrandColors.grayMedium,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: () => _performApiSearch(_searchQuery),
-                icon: const Icon(Icons.refresh, color: BrandColors.primaryOrange),
-                label: const Text('Reintentar', style: TextStyle(color: BrandColors.primaryOrange)),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_apiSearchResults == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.search, color: BrandColors.primaryOrange.withOpacity(0.8), size: 56),
-              const SizedBox(height: 16),
-              Text(
-                'Presiona Enter para buscar',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: BrandColors.primaryWhite,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Busca por invitado, tema o número de episodio',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: BrandColors.grayMedium,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final searchResults = _apiSearchResults!;
-    if (searchResults.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.search_off, color: BrandColors.grayMedium, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                'No se encontraron episodios',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: BrandColors.primaryWhite,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Intenta con otros términos de búsqueda',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: BrandColors.grayMedium,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
+  Widget _buildFeaturedSection() {
+    final discoverVideos = _discoverVideos;
+    if (discoverVideos == null || discoverVideos.isEmpty) {
+      return const SizedBox.shrink();
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: BrandColors.primaryOrange,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Resultados (${searchResults.length})',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: BrandColors.primaryWhite,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
+        const SectionHeader(
+          title: 'Descubre',
+          padding: EdgeInsets.only(left: 4, bottom: 4),
         ),
-        Expanded(
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 188,
           child: ListView.builder(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).padding.bottom + 100.0,
-            ),
-            itemCount: searchResults.length,
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: discoverVideos.length,
             itemBuilder: (context, index) {
-              final video = searchResults[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-                child: YouTubeVideoCard(
-                  video: video,
-                  onTap: () => _onVideoTap(video),
-                  thumbnailHeight: 200,
+              final video = discoverVideos[index];
+              return SizedBox(
+                width: 236,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: index < discoverVideos.length - 1 ? 12 : 0,
+                  ),
+                  child: YouTubeVideoCard(
+                    video: video,
+                    onTap: () => _onVideoTap(video),
+                    showChannelTitle: false,
+                    thumbnailHeight: 118,
+                  ),
                 ),
               );
             },
@@ -778,194 +599,120 @@ class _PodcastScreenState extends State<PodcastScreen>
     );
   }
 
-  Widget _buildEpisodesSection(List<Episode> episodes) {
+  Widget _buildSearchResultsContent() {
+    if (_isSearching) {
+      return const AppLoading(message: 'Buscando episodios...');
+    }
+
+    if (_searchError != null) {
+      return AppErrorState(
+        message: _searchError!,
+        onRetry: () => _performApiSearch(_searchQuery),
+      );
+    }
+
+    if (_apiSearchResults == null) {
+      return const AppEmptyState(
+        icon: Icons.search_rounded,
+        title: 'Presiona Enter para buscar',
+        subtitle: 'Busca por invitado, tema o número de episodio',
+      );
+    }
+
+    final searchResults = _apiSearchResults!;
+    if (searchResults.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'Sin resultados',
+        subtitle: 'Intenta con otros términos de búsqueda',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: SectionHeader(
+            title: 'Resultados (${searchResults.length})',
+            padding: EdgeInsets.zero,
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              bottom: MediaQuery.of(context).padding.bottom + 100,
+            ),
+            itemCount: searchResults.length,
+            itemBuilder: (context, index) {
+              final video = searchResults[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: YouTubeVideoListTile(
+                  video: video,
+                  onTap: () => _onVideoTap(video),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEpisodesSection() {
     return Consumer<YouTubeProvider>(
       builder: (context, youtubeProvider, child) {
-        // Mostrar videos filtrados por temporada
         final filteredVideos = _filterVideosBySeason(youtubeProvider.videos);
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: BrandColors.primaryOrange,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Episodios',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: BrandColors.primaryWhite,
-                          fontSize: 20,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _buildSeasonFilter(),
-              ],
+            SectionHeader(
+              title: 'Episodios',
+              padding: const EdgeInsets.only(left: 4),
+              trailing: SeasonFilterDropdown(
+                value: _selectedSeason,
+                onChanged: _loadMoreVideosForSeason,
+              ),
             ),
             const SizedBox(height: 16),
-            
-            // Mostrar videos de YouTube en lugar de episodios tradicionales
             if (youtubeProvider.isLoading && youtubeProvider.videos.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(
-                    color: BrandColors.primaryOrange,
-                  ),
-                ),
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: AppLoading(message: 'Cargando episodios...'),
               )
-            else if (youtubeProvider.errorMessage != null)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: BrandColors.error,
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error al cargar videos',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: BrandColors.primaryWhite,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        youtubeProvider.errorMessage!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: BrandColors.grayMedium,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => youtubeProvider.loadVideos(refresh: true),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reintentar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: BrandColors.primaryOrange,
-                          foregroundColor: BrandColors.primaryWhite,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            else if (filteredVideos.isEmpty)
+              AppEmptyState(
+                icon: Icons.podcasts_outlined,
+                title: 'Sin episodios en $_selectedSeason',
+                subtitle: _isLoadingMoreEpisodes || youtubeProvider.isLoading
+                    ? 'Buscando episodios de esta temporada...'
+                    : PodcastSeasons.emptyMessage(_selectedSeason),
               )
             else
-              _buildEpisodesListView(filteredVideos, youtubeProvider),
+              _buildEpisodesListView(filteredVideos),
           ],
         );
       },
     );
   }
 
-  /// Construye la lista de episodios con scroll infinito
-  Widget _buildEpisodesListView(List<YouTubeVideo> filteredVideos, YouTubeProvider youtubeProvider) {
-    return ListView.builder(
-      controller: _episodesScrollController,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).padding.bottom + 100.0,
-      ),
-      itemCount: filteredVideos.length + (youtubeProvider.hasMoreVideos ? 1 : 0),
-      itemBuilder: (context, index) {
-        // Mostrar indicador de carga al final si hay más videos
-        if (index == filteredVideos.length) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: youtubeProvider.isLoading || _isLoadingMoreEpisodes
-                ? const Center(
-                    child: SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: CircularProgressIndicator(
-                        color: BrandColors.primaryOrange,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  )
-                : Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () async {
-                        if (!_isLoadingMoreEpisodes) {
-                          _isLoadingMoreEpisodes = true;
-                          await youtubeProvider.loadMoreVideos(batchSize: 30);
-                          if (mounted) {
-                            setState(() {
-                              _generateSortedVideos(youtubeProvider.videos);
-                              _isLoadingMoreEpisodes = false;
-                            });
-                          }
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-                        decoration: BoxDecoration(
-                          color: BrandColors.blackLight.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: BrandColors.primaryOrange.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.add_circle_outline_rounded,
-                              color: BrandColors.primaryOrange,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Cargar más episodios',
-                              style: TextStyle(
-                                color: BrandColors.primaryWhite,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-          );
-        }
-
-        final video = filteredVideos[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: YouTubeVideoCard(
-            video: video,
-            onTap: () => _onVideoTap(video),
-            thumbnailHeight: 200,
+  /// Lista densa de episodios (scroll del SingleChildScrollView padre).
+  Widget _buildEpisodesListView(List<YouTubeVideo> filteredVideos) {
+    return Column(
+      children: [
+        for (final video in filteredVideos)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: YouTubeVideoListTile(
+              video: video,
+              onTap: () => _onVideoTap(video),
+            ),
           ),
-        );
-      },
+      ],
     );
   }
 
@@ -994,112 +741,26 @@ class _PodcastScreenState extends State<PodcastScreen>
     );
   }
 
-  Widget _buildSeasonFilter() {
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: BrandColors.blackLight.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: BrandColors.primaryOrange.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: DropdownButton<String>(
-        value: _selectedSeason,
-        dropdownColor: BrandColors.blackLight,
-        style: const TextStyle(
-          color: BrandColors.primaryWhite,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-        underline: const SizedBox(),
-        icon: Icon(
-          Icons.keyboard_arrow_down_rounded,
-          color: BrandColors.primaryOrange.withOpacity(0.9),
-          size: 20,
-        ),
-        items: ['Temporada 1', 'Temporada 2'].map((String season) {
-          return DropdownMenuItem<String>(
-            value: season,
-            child: Text(season),
-          );
-        }).toList(),
-        onChanged: (String? newValue) async {
-          if (newValue != null) {
-            setState(() {
-              _selectedSeason = newValue;
-            });
-            
-            // Cargar más videos para la temporada seleccionada si es necesario
-            await _loadMoreVideosForSeason(newValue);
-          }
-        },
-      ),
-    );
-  }
-
   List<YouTubeVideo> _filterVideosBySeason(List<YouTubeVideo> videos) {
-    List<YouTubeVideo> allFilteredVideos;
-    
-    // Usar videos cacheados si están disponibles
+    final season = PodcastSeasons.byLabel(_selectedSeason);
+    final seasonNum = season?.number ?? 2;
+
     if (_allVideosSorted != null) {
-      if (_selectedSeason == 'Temporada 1' && _s1VideosSorted != null) {
-        allFilteredVideos = _s1VideosSorted!;
-      } else if (_selectedSeason == 'Temporada 2' && _s2VideosSorted != null) {
-        allFilteredVideos = _s2VideosSorted!;
-      } else {
-        allFilteredVideos = [];
-      }
-    } else {
-      // Fallback: ordenar videos en tiempo real si no hay cache
-      final seasonPattern = _selectedSeason == 'Temporada 1' ? 'S1' : 'S2';
-      allFilteredVideos = videos.where((video) => 
-        video.title.contains(seasonPattern)
-      ).toList();
-      
-      // Ordenar por fecha de publicación descendente (más reciente primero)
-      allFilteredVideos.sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
-      
-      print('📅 Videos ordenados en tiempo real (${_selectedSeason}): ${allFilteredVideos.length} videos');
+      if (seasonNum == 1 && _s1VideosSorted != null) return _s1VideosSorted!;
+      if (seasonNum == 2 && _s2VideosSorted != null) return _s2VideosSorted!;
+      if (seasonNum == 3 && _s3VideosSorted != null) return _s3VideosSorted!;
+      return [];
     }
-    
-    // No limitar la cantidad - mostrar todos los videos disponibles
-    // La paginación se manejará con scroll infinito
-    print('📄 Mostrando ${allFilteredVideos.length} videos de ${_selectedSeason}');
-    
-    return allFilteredVideos;
+
+    final pattern = PodcastSeasons.patternForLabel(_selectedSeason);
+    final filtered = videos.where((v) => v.title.contains(pattern)).toList()
+      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+    return filtered;
   }
 
   Future<void> _loadMoreVideosForSeason(String season) async {
-    final youtubeProvider = context.read<YouTubeProvider>();
-    final seasonPattern = season == 'Temporada 1' ? 'S1' : 'S2';
-    final currentSeasonVideos = youtubeProvider.videos.where((v) => v.title.contains(seasonPattern)).length;
-    
-    print('🔍 Temporada seleccionada: $season - Actualmente: $currentSeasonVideos videos');
-    
-    // Cargar solo un batch adicional si hay pocos videos de la temporada seleccionada
-    // El scroll infinito se encargará de cargar más cuando sea necesario
-    if (currentSeasonVideos < 10 && youtubeProvider.hasMoreVideos && !youtubeProvider.isLoading) {
-      try {
-        await youtubeProvider.loadMoreVideos(batchSize: 30);
-        
-        // Regenerar caches con los nuevos videos
-        _generateSortedVideos(youtubeProvider.videos);
-        
-        final updatedSeasonVideos = youtubeProvider.videos.where((v) => v.title.contains(seasonPattern)).length;
-        print('✅ Carga rápida para $season completada - Total videos: $updatedSeasonVideos');
-      } catch (e) {
-        print('❌ Error en _loadMoreVideosForSeason: $e');
-      }
-    }
+    if (!mounted) return;
+    setState(() => _selectedSeason = season);
+    await _ensureSeasonHasContent();
   }
 }

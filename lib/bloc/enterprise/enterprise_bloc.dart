@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../models/enterprise.dart';
 import '../../repository/enterprise_repository.dart';
 import '../../services/analytics_service.dart';
 import 'enterprise_event.dart';
@@ -31,7 +30,9 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
         portfolioProjects: portfolio,
       ));
     } catch (e) {
-      emit(EnterpriseError(message: 'Error al cargar servicios: $e'));
+      emit(const EnterpriseError(
+        message: 'No pudimos cargar los servicios. Revisa tu conexión e intenta de nuevo.',
+      ));
     }
   }
 
@@ -39,14 +40,15 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     LoadPortfolio event,
     Emitter<EnterpriseState> emit,
   ) async {
-    if (state is EnterpriseLoaded) {
-      final currentState = state as EnterpriseLoaded;
-      try {
-        final portfolio = await _repository.getPortfolioProjects();
-        emit(currentState.copyWith(portfolioProjects: portfolio));
-      } catch (e) {
-        emit(EnterpriseError(message: 'Error al cargar portfolio: $e'));
-      }
+    if (state is! EnterpriseLoaded) return;
+    final currentState = state as EnterpriseLoaded;
+    try {
+      final portfolio = await _repository.getPortfolioProjects();
+      emit(currentState.copyWith(portfolioProjects: portfolio));
+    } catch (e) {
+      emit(const EnterpriseError(
+        message: 'No pudimos cargar el portafolio. Revisa tu conexión e intenta de nuevo.',
+      ));
     }
   }
 
@@ -54,36 +56,40 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     SubmitContactForm event,
     Emitter<EnterpriseState> emit,
   ) async {
-    final previousState = state;
+    // Mantener contenido visible mientras se envía
+    final loaded = state is EnterpriseLoaded
+        ? state as EnterpriseLoaded
+        : const EnterpriseLoaded(services: [], portfolioProjects: []);
+
     try {
       AnalyticsService.logEnterpriseContactStarted();
-      emit(const ContactFormSubmitting());
+      emit(loaded.copyWith(
+        isSubmitting: true,
+        clearSubmitError: true,
+        clearSubmitSuccess: true,
+      ));
       await _repository.submitContactForm(event.submission);
       AnalyticsService.logEnterpriseContactSubmitted(
         hasCompany: event.submission.company != null &&
             event.submission.company!.trim().isNotEmpty,
       );
-      emit(const ContactFormSubmitted());
-
-      // Restaurar el estado anterior sin recargar (los datos no cambiaron)
-      if (previousState is EnterpriseLoaded) {
-        emit(EnterpriseLoaded(
-          services: previousState.services,
-          portfolioProjects: previousState.portfolioProjects,
-        ));
-      }
+      emit(loaded.copyWith(
+        isSubmitting: false,
+        submitSuccess: true,
+        clearSubmitError: true,
+      ));
     } catch (e) {
       final message = e.toString().replaceFirst('Exception: ', '');
-      emit(ContactFormError(message: message));
+      emit(loaded.copyWith(
+        isSubmitting: false,
+        submitError: message,
+        clearSubmitSuccess: true,
+      ));
     }
   }
 
   Future<void> _onSelectPortfolioProject(
     SelectPortfolioProject event,
     Emitter<EnterpriseState> emit,
-  ) async {
-    // Portfolio project selection logic can be handled here if needed
-  }
+  ) async {}
 }
-
-

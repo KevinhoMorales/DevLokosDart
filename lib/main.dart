@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -19,9 +20,11 @@ import 'repository/tutorial_repository.dart';
 import 'repository/event_repository.dart';
 import 'providers/youtube_provider.dart';
 import 'models/episode.dart';
+import 'models/course.dart';
 import 'models/youtube_video.dart';
 import 'config/environment_config.dart';
 import 'screens/splash_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/episode_detail/episode_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -30,16 +33,9 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/settings/settings_screen.dart';
 import 'screens/settings/about_screen.dart';
 import 'screens/youtube/youtube_screen.dart';
-import 'screens/admin/admin_modules_screen.dart';
-import 'screens/admin/courses_list_screen.dart';
-import 'screens/admin/course_form_screen.dart';
-import 'screens/admin/events_list_screen.dart';
-import 'screens/admin/event_form_screen.dart';
 import 'screens/events/events_screen.dart';
 import 'screens/events/event_detail_screen.dart';
 import 'screens/academy/course_detail_screen.dart';
-import 'repository/course_admin_repository.dart';
-import 'models/course.dart';
 import 'widgets/main_navigation.dart';
 import 'widgets/version_check_wrapper.dart';
 import 'utils/brand_colors.dart';
@@ -51,6 +47,17 @@ import 'services/push_notification_service.dart'
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: BrandColors.primaryBlack,
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarDividerColor: BrandColors.primaryBlack,
+    ),
+  );
 
   // Registrar handler de mensajes en background (debe ser antes de runApp)
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -66,30 +73,40 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Inicializar Firebase Remote Config
+  // Remote Config / push / analytics: no bloquear el primer frame del splash.
+  // Si Remote Config tarda o falla, usamos defaults y seguimos.
   print('🔄 Inicializando Firebase Remote Config...');
-  final remoteConfig = RemoteConfigService();
-  await remoteConfig.initialize();
-
-  // Verificar configuración
-  print('🔍 Verificando configuración de Remote Config...');
-  final isConfigured = remoteConfig.isRemoteConfigConfigured;
-  print('✅ Remote Config configurado: $isConfigured');
-
-  // Inicializar push notifications
-  await PushNotificationService().initialize();
-
-  // Habilitar colección de analítica (Firebase Analytics)
-  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-
-  // app_first_open solo en la primera ejecución post-instalación
-  final prefs = await SharedPreferences.getInstance();
-  final hasOpenedBefore = prefs.getBool('analytics_app_opened_before') ?? false;
-  if (!hasOpenedBefore) {
-    await AnalyticsService.logAppFirstOpen();
-    await prefs.setBool('analytics_app_opened_before', true);
+  try {
+    await RemoteConfigService()
+        .initialize()
+        .timeout(const Duration(seconds: 10));
+    print(
+      '✅ Remote Config configurado: ${RemoteConfigService().isRemoteConfigConfigured}',
+    );
+  } catch (e) {
+    print('⚠️ Remote Config omitido en arranque: $e');
   }
-  await AnalyticsService.logAppOpen();
+
+  try {
+    await PushNotificationService()
+        .initialize()
+        .timeout(const Duration(seconds: 5));
+  } catch (e) {
+    print('⚠️ Push notifications omitidas en arranque: $e');
+  }
+
+  try {
+    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+    final prefs = await SharedPreferences.getInstance();
+    final hasOpenedBefore = prefs.getBool('analytics_app_opened_before') ?? false;
+    if (!hasOpenedBefore) {
+      await AnalyticsService.logAppFirstOpen();
+      await prefs.setBool('analytics_app_opened_before', true);
+    }
+    await AnalyticsService.logAppOpen();
+  } catch (e) {
+    print('⚠️ Analytics omitida en arranque: $e');
+  }
 
   runApp(const DevLokosApp());
 }
@@ -170,9 +187,9 @@ class DevLokosApp extends StatelessWidget {
             router: _router,
             child: MaterialApp.router(
               title: 'DevLokos',
-              theme: BrandColors.lightTheme,
+              theme: BrandColors.darkTheme,
               darkTheme: BrandColors.darkTheme,
-              themeMode: ThemeMode.system,
+              themeMode: ThemeMode.dark,
               routerConfig: _router,
               debugShowCheckedModeBanner: false,
             ),
@@ -195,6 +212,14 @@ final GoRouter _router = GoRouter(
         child: const SplashScreen(),
         state: state,
         transitionType: 'fade', // Splash usa fade
+      ),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      pageBuilder: (context, state) => _buildPageWithTransition(
+        child: const OnboardingScreen(),
+        state: state,
+        transitionType: 'fade',
       ),
     ),
     GoRoute(
@@ -329,167 +354,6 @@ final GoRouter _router = GoRouter(
         );
       },
     ),
-    // Rutas de administración
-    GoRoute(
-      path: '/admin/modules',
-      pageBuilder: (context, state) => _buildPageWithTransition(
-        child: const AdminModulesScreen(),
-        state: state,
-        transitionType: 'horizontal',
-        maintainState: true,
-      ),
-    ),
-    GoRoute(
-      path: '/admin/courses',
-      pageBuilder: (context, state) => _buildPageWithTransition(
-        child: const CoursesListScreen(),
-        state: state,
-        transitionType: 'horizontal',
-        maintainState: true,
-      ),
-    ),
-    GoRoute(
-      path: '/admin/courses/new',
-      pageBuilder: (context, state) => _buildPageWithTransition(
-        child: const CourseFormScreen(),
-        state: state,
-        transitionType: 'horizontal',
-        maintainState: true,
-      ),
-    ),
-    GoRoute(
-      path: '/admin/courses/:id',
-      pageBuilder: (context, state) {
-        final courseId = state.pathParameters['id']!;
-        return _buildPageWithTransition(
-          child: FutureBuilder<Course?>(
-            future: CourseAdminRepository().getCourseById(courseId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Scaffold(
-                  backgroundColor: BrandColors.primaryBlack,
-                  body: const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(BrandColors.primaryOrange),
-                    ),
-                  ),
-                );
-              }
-              if (snapshot.hasError) {
-                return Scaffold(
-                  appBar: AppBar(
-                    title: const Text('Error'),
-                    backgroundColor: BrandColors.primaryBlack,
-                  ),
-                  backgroundColor: BrandColors.primaryBlack,
-                  body: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, size: 64, color: BrandColors.error),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No se pudo cargar el curso',
-                            style: TextStyle(color: BrandColors.primaryWhite, fontSize: 18),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            snapshot.error.toString(),
-                            style: TextStyle(color: BrandColors.grayMedium, fontSize: 14),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-                          TextButton(
-                            onPressed: () => context.go('/admin/courses'),
-                            child: const Text('Volver a cursos'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }
-              final course = snapshot.data;
-              if (course == null) {
-                return Scaffold(
-                  appBar: AppBar(
-                    title: const Text('Curso no encontrado'),
-                    backgroundColor: BrandColors.primaryBlack,
-                  ),
-                  backgroundColor: BrandColors.primaryBlack,
-                  body: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.school_outlined, size: 64, color: BrandColors.grayMedium),
-                        const SizedBox(height: 16),
-                        Text(
-                          'El curso no existe o fue eliminado',
-                          style: TextStyle(color: BrandColors.primaryWhite, fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        TextButton(
-                          onPressed: () => context.go('/admin/courses'),
-                          child: const Text('Volver a cursos'),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              return CourseFormScreen(course: course);
-            },
-          ),
-          state: state,
-          transitionType: 'horizontal',
-          maintainState: true,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/admin/events',
-      pageBuilder: (context, state) => _buildPageWithTransition(
-        child: const EventsListScreen(),
-        state: state,
-        transitionType: 'horizontal',
-        maintainState: true,
-      ),
-    ),
-    GoRoute(
-      path: '/admin/events/new',
-      pageBuilder: (context, state) => _buildPageWithTransition(
-        child: const EventFormScreen(),
-        state: state,
-        transitionType: 'horizontal',
-        maintainState: true,
-      ),
-    ),
-    GoRoute(
-      path: '/admin/events/:id',
-      pageBuilder: (context, state) {
-        final eventId = state.pathParameters['id']!;
-        return _buildPageWithTransition(
-          child: FutureBuilder(
-            future: EventRepository().getEventById(eventId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              return EventFormScreen(event: snapshot.data);
-            },
-          ),
-          state: state,
-          transitionType: 'horizontal',
-          maintainState: true,
-        );
-      },
-    ),
   ],
 );
 
@@ -590,9 +454,12 @@ class CustomTransitionPage extends Page<void> {
   Route<void> createRoute(BuildContext context) {
     return PageRouteBuilder(
       settings: this,
-      pageBuilder: (context, animation, secondaryAnimation) => child,
-      transitionsBuilder: transitionsBuilder ?? 
-        (context, animation, secondaryAnimation, child) => child,
+      opaque: true,
+      barrierColor: BrandColors.primaryBlack,
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          ColoredBox(color: BrandColors.primaryBlack, child: child),
+      transitionsBuilder: transitionsBuilder ??
+          (context, animation, secondaryAnimation, child) => child,
       transitionDuration: transitionDuration,
       reverseTransitionDuration: reverseTransitionDuration ?? transitionDuration,
       maintainState: maintainState,

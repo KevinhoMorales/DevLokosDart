@@ -15,163 +15,140 @@ class CourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-      color: BrandColors.cardBackground,
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(
-          color: BrandColors.primaryOrange,
-          width: 2,
-        ),
-      ),
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        enableFeedback: false,
         borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail
-            if (course.thumbnailUrl != null) _buildThumbnail(),
-            
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  _buildTitle(),
-                  const SizedBox(height: 12),
-                  
-                  // Meta info
-                  _buildMetaInfo(),
-                  const SizedBox(height: 12),
-                  
-                  // Learning paths
-                  if (course.learningPaths.isNotEmpty) _buildLearningPaths(),
-                ],
-              ),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: BrandColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: BrandColors.primaryOrange.withValues(alpha: 0.15),
             ),
-          ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (course.thumbnailUrl != null &&
+                    course.thumbnailUrl!.isNotEmpty)
+                  _buildThumbnail()
+                else
+                  _buildPlaceholderThumb(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        course.title,
+                        style: const TextStyle(
+                          color: BrandColors.primaryWhite,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          height: 1.25,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMetaInfo(),
+                      if (course.learningPaths.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        _buildLearningPaths(),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-
-  static const double _thumbnailHeight = 120;
 
   Widget _buildThumbnail() {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      child: SizedBox(
-        width: double.infinity,
-        height: _thumbnailHeight,
-        child: CachedNetworkImage(
-          imageUrl: course.thumbnailUrl!,
-          width: double.infinity,
-          height: _thumbnailHeight,
-          fit: BoxFit.cover,
-          placeholder: (context, url) => Container(
-            height: _thumbnailHeight,
-            color: BrandColors.grayDark,
-            child: const Center(
-              child: CircularProgressIndicator(
-                color: BrandColors.primaryOrange,
-              ),
-            ),
-          ),
-          errorWidget: (context, url, error) => Container(
-            height: _thumbnailHeight,
-            color: BrandColors.grayDark,
-            child: const Icon(
-              Icons.school,
-              color: BrandColors.grayMedium,
-              size: 48,
-            ),
-          ),
-        ),
+    return SizedBox(
+      width: double.infinity,
+      height: 128,
+      child: CachedNetworkImage(
+        imageUrl: course.thumbnailUrl!,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => Container(color: BrandColors.grayDark),
+        errorWidget: (_, __, ___) => _buildPlaceholderThumb(),
       ),
     );
   }
 
-  Widget _buildTitle() {
-    return Text(
-      course.title,
-      style: const TextStyle(
-        color: BrandColors.primaryWhite,
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
+  Widget _buildPlaceholderThumb() {
+    return Container(
+      width: double.infinity,
+      height: 96,
+      color: BrandColors.blackLight,
+      child: const Center(
+        child: Icon(
+          Icons.school_rounded,
+          color: BrandColors.primaryOrange,
+          size: 36,
+        ),
       ),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
     );
   }
 
   Widget _buildMetaInfo() {
+    final difficultyLabel = _difficultyLabel(course.difficulty);
+    final difficultyColor = _difficultyColor(course.difficulty);
+
     return Row(
       children: [
-        // Difficulty badge
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: _getDifficultyColor(course.difficulty).withOpacity(0.2),
+            color: difficultyColor.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: _getDifficultyColor(course.difficulty),
-              width: 1,
-            ),
+            border: Border.all(color: difficultyColor.withValues(alpha: 0.5)),
           ),
           child: Text(
-            course.difficulty,
+            difficultyLabel,
             style: TextStyle(
-              color: _getDifficultyColor(course.difficulty),
-              fontSize: 12,
+              color: difficultyColor,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
         if (course.duration > 0) ...[
-          const SizedBox(width: 12),
-          Row(
-            children: [
-              const Icon(
-                Icons.access_time,
-                color: BrandColors.grayMedium,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                course.formattedDuration,
-                style: const TextStyle(
-                  color: BrandColors.grayMedium,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+          const SizedBox(width: 10),
+          const Icon(
+            Icons.access_time_rounded,
+            color: BrandColors.grayMedium,
+            size: 14,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            course.formattedDuration,
+            style: const TextStyle(
+              color: BrandColors.grayMedium,
+              fontSize: 12,
+            ),
           ),
         ],
-        const Spacer(),
-        // Modules count (solo si hay módulos)
-        if (course.modules.isNotEmpty)
-          Row(
-            children: [
-              const Icon(
-                Icons.menu_book,
-                color: BrandColors.grayMedium,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${course.modules.length} módulos',
-                style: const TextStyle(
-                  color: BrandColors.grayMedium,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+        if (course.modules.isNotEmpty) ...[
+          const Spacer(),
+          Text(
+            '${course.modules.length} módulos',
+            style: const TextStyle(
+              color: BrandColors.grayMedium,
+              fontSize: 12,
+            ),
           ),
+        ],
       ],
     );
   }
@@ -180,16 +157,12 @@ class CourseCard extends StatelessWidget {
     return Wrap(
       spacing: 6,
       runSpacing: 6,
-      children: course.learningPaths.map((path) {
+      children: course.learningPaths.take(3).map((path) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: BrandColors.primaryOrange.withOpacity(0.1),
+            color: BrandColors.primaryOrange.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: BrandColors.primaryOrange.withOpacity(0.3),
-              width: 1,
-            ),
           ),
           child: Text(
             path,
@@ -204,18 +177,35 @@ class CourseCard extends StatelessWidget {
     );
   }
 
-  Color _getDifficultyColor(String difficulty) {
+  String _difficultyLabel(String difficulty) {
     switch (difficulty.toLowerCase()) {
       case 'beginner':
+      case 'principiante':
+        return 'Principiante';
+      case 'intermediate':
+      case 'intermedio':
+        return 'Intermedio';
+      case 'advanced':
+      case 'avanzado':
+        return 'Avanzado';
+      default:
+        return difficulty.isEmpty ? 'General' : difficulty;
+    }
+  }
+
+  Color _difficultyColor(String difficulty) {
+    switch (difficulty.toLowerCase()) {
+      case 'beginner':
+      case 'principiante':
         return BrandColors.success;
       case 'intermediate':
+      case 'intermedio':
         return BrandColors.warning;
       case 'advanced':
+      case 'avanzado':
         return BrandColors.error;
       default:
         return BrandColors.grayMedium;
     }
   }
 }
-
-

@@ -52,7 +52,11 @@ class PushNotificationService {
   }
 
   /// Inicializa el servicio de push notifications.
-  Future<void> initialize() async {
+  ///
+  /// Por defecto no pide permiso: el onboarding (o Ajustes) lo solicita
+  /// con contexto. Usa [requestPermission] = true solo si quieres el diálogo
+  /// del sistema en el arranque.
+  Future<void> initialize({bool requestPermission = false}) async {
     if (kIsWeb) return;
 
     // Configurar notificaciones locales para Android (foreground)
@@ -75,10 +79,11 @@ class PushNotificationService {
           ?.createNotificationChannel(_channel);
     }
 
-    // Solicitar permisos (iOS, Android 13+)
-    await _requestPermissions();
+    if (requestPermission) {
+      await _requestPermissions();
+    }
 
-    // Obtener token FCM
+    // Obtener token FCM (puede ser null hasta que haya permiso en iOS)
     await _getToken();
 
     // Suscribir al topic según entorno
@@ -227,22 +232,29 @@ class PushNotificationService {
   Future<bool> requestNotificationPermission() async {
     if (kIsWeb) return false;
     try {
+      var granted = false;
       if (Platform.isIOS) {
         final settings = await _messaging.requestPermission(
           alert: true,
           badge: true,
           sound: true,
         );
-        return settings.authorizationStatus == AuthorizationStatus.authorized ||
+        granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
             settings.authorizationStatus == AuthorizationStatus.provisional;
-      }
-      if (Platform.isAndroid) {
+      } else if (Platform.isAndroid) {
         final androidPlugin = _localNotifications
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
-        final granted = await androidPlugin?.requestNotificationsPermission();
-        return granted == true;
+        granted = await androidPlugin?.requestNotificationsPermission() == true;
       }
+
+      if (granted) {
+        await _getToken();
+        final topic =
+            EnvironmentConfig.isDevelopment() ? _topicDev : _topicProd;
+        await subscribeToTopic(topic);
+      }
+      return granted;
     } catch (_) {}
     return false;
   }

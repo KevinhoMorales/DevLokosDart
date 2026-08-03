@@ -266,8 +266,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
     try {
       final text = '${event.title}\n\n'
-          '${event.formattedDate.isNotEmpty ? '📅 ${event.formattedDate}\n' : ''}'
-          '${event.locationDisplay.isNotEmpty ? '📍 ${event.locationDisplay}\n' : ''}'
+          '${event.formattedDate.isNotEmpty ? '${event.formattedDate}\n' : ''}'
+          '${event.locationDisplay.isNotEmpty ? '${event.locationDisplay}\n' : ''}'
           '${event.registrationUrl ?? ''}';
 
       Rect sharePositionOrigin;

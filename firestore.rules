@@ -1,61 +1,73 @@
 rules_version = '2';
 
-// Reglas de seguridad para Firebase Firestore
+// Reglas de seguridad Firestore — Fase 2
+// Escrituras de contenido solo vía Firebase Admin SDK (CMS Web).
+// Clients (app/web públicos) solo leen.
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas para usuarios en desarrollo
+
     match /dev_users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Reglas para usuarios en producción
+
+    // Usuarios anidados prod/prod/users y dev/dev/users
+    match /dev/dev/users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /prod/prod/users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Legacy path (si aún se usa)
     match /prod/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Colección admin (dev): dev/dev/admin - lectura para usuarios autenticados
+
+    // Lista de admins: solo lectura autenticada; altas desde Firebase Console
     match /dev/dev/admin/{adminId} {
       allow read: if request.auth != null;
-      allow write: if false; // Solo se edita desde Firebase Console
+      allow write: if false;
     }
-    
-    // Colección admin (prod): prod/prod/admin
     match /prod/prod/admin/{adminId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
-    
-    // Colección courses (dev): dev/dev/courses
+
+    // Cursos — lectura pública; escritura solo Admin SDK
     match /dev/dev/courses/{courseId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if true;
+      allow write: if false;
     }
-    
-    // Colección courses (prod): prod/prod/courses
     match /prod/prod/courses/{courseId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
-    // Colección events (dev): dev/dev/events - lectura pública, escritura auth
-    match /dev/dev/events/{eventId} {
       allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    // Colección events (prod): prod/prod/events
-    match /prod/prod/events/{eventId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if false;
     }
 
-    // Reglas para otras colecciones (solo lectura para usuarios autenticados)
-    match /dev_{document=**} {
-      allow read: if request.auth != null;
+    // Eventos — lectura pública; escritura solo Admin SDK
+    match /dev/dev/events/{eventId} {
+      allow read: if true;
+      allow write: if false;
     }
-    
-    match /prod_{document=**} {
-      allow read: if request.auth != null;
+    match /prod/prod/events/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Empresarial (raíz)
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /portfolio/{projectId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Catch-all lectura auth para colecciones legacy con prefijo dev_/prod_
+    match /{collection}/{document=**} {
+      allow read: if request.auth != null
+        && (collection.matches('dev_.*') || collection.matches('prod_.*'));
+      allow write: if false;
     }
   }
 }

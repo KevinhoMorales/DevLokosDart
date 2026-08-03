@@ -132,8 +132,8 @@ class YouTubeProvider extends ChangeNotifier {
         _hasMoreVideos = false;
       }
 
-      // Si no es refresh, intentar cargar desde caché primero
-      if (!refresh && !initialLoad) {
+      // Si no es refresh, hidratar desde caché primero (incluye carga inicial)
+      if (!refresh) {
         final cacheResult = await CacheService.loadVideosFromCache();
         if (cacheResult != null) {
           print('📱 Cache: Cargando videos desde caché...');
@@ -154,20 +154,10 @@ class YouTubeProvider extends ChangeNotifier {
             print('🔄 Cache: Limpiando caché y recargando desde API...');
             await CacheService.clearCache();
             // Continuar con la carga desde API en lugar de usar el caché
-          } else {
+          } else if (_videos.isNotEmpty) {
             _updateChannelIdFromVideos(cacheResult.videos);
             print('✅ Cache: ${_videos.length} videos cargados desde caché');
             print('⭐ Cache: ${_featuredVideos.length} videos destacados desde caché');
-            
-            // Mostrar los primeros 3 videos desde caché
-            if (_videos.isNotEmpty) {
-              print('🎬 Primeros 3 videos desde caché:');
-              for (int i = 0; i < _videos.length && i < 3; i++) {
-                final video = _videos[i];
-                print('  ${i + 1}. ${video.title} (${video.publishedAt})');
-              }
-            }
-            
             notifyListeners();
             return;
           }

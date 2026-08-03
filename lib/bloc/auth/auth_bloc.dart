@@ -541,9 +541,19 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
       
       final userData = {
         'id': user.uid,
+        'uid': user.uid,
         'email': user.email,
         'displayName': displayName,
-        'photoURL': '', // Vacío inicialmente, se llenará en el perfil
+        'photoURL': '',
+        'bio': '',
+        'company': '',
+        'role': '',
+        'instagram': '',
+        'linkedin': '',
+        'twitter': '',
+        'github': '',
+        'tiktok': '',
+        'website': '',
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),

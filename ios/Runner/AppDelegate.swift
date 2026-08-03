@@ -8,6 +8,10 @@ import UIKit
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    let ok = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    // Evita franja blanca bajo el home indicator (fondo nativo por defecto es blanco).
+    window?.backgroundColor = UIColor.black
+    window?.rootViewController?.view.backgroundColor = UIColor.black
+    return ok
   }
 }

@@ -18,7 +18,7 @@ App móvil oficial de **DevLokos** — plataforma de contenido tech en español 
 | **Empresarial** | Tab `EnterpriseScreen` | Firestore `services` / `portfolio` + Web3Forms |
 | **Eventos** | `/events` (app bar) | Firestore `events` |
 
-La autenticación es **opcional**: el splash redirige a `/home` aunque no haya sesión activa. Login/registro desbloquea perfil, foto y funciones admin.
+La autenticación es **opcional**: el splash redirige a `/home` aunque no haya sesión activa. Login/registro desbloquea perfil y foto. Los admins ven en Perfil un enlace al CMS web.
 
 ---
 
@@ -27,7 +27,7 @@ La autenticación es **opcional**: el splash redirige a `/home` aunque no haya s
 - **Autenticación** — Registro, login, recuperación de contraseña (Firebase Auth)
 - **Reproductor YouTube** integrado para podcast y tutoriales
 - **Búsqueda y filtros** — Episodios, temporadas (S1/S2), rutas de aprendizaje
-- **Panel admin** — CRUD de cursos y eventos (emails autorizados en Firestore)
+- **CMS web** — Administración en [devlokos.com/admin](https://devlokos.com/admin) (cursos, eventos, servicios, portfolio)
 - **Push notifications** — FCM vía Cloud Functions al publicar cursos/eventos
 - **Remote Config** — API keys, playlists YouTube, versión mínima forzada
 - **Analytics** — Eventos alineados con el hub web
@@ -105,7 +105,7 @@ Configura estos parámetros en [Firebase Console](https://console.firebase.googl
 
 ### 5. Administradores
 
-Para habilitar el panel admin en perfil, registra el email en Firestore. Ver [ADMIN_SETUP.md](ADMIN_SETUP.md).
+Registra el email en Firestore y usa el CMS en la web. Ver [ADMIN_SETUP.md](ADMIN_SETUP.md).
 
 ### 6. Android release (opcional)
 
@@ -162,10 +162,10 @@ Ver [docs/RELEASE_BUILD.md](docs/RELEASE_BUILD.md) y [docs/VERSIONING.md](docs/V
 | `/episode/:id` | Detalle + reproductor |
 | `/course/:id` | Detalle de curso |
 | `/events`, `/events/:id` | Eventos |
-| `/profile` | Perfil y acceso admin |
+| `/profile` | Perfil (admins → CTA a web CMS) |
 | `/settings`, `/settings/about` | Ajustes |
-| `/admin/modules` | Hub administración |
-| `/admin/courses/*`, `/admin/events/*` | CRUD |
+
+**Administración:** CMS en [devlokos.com/admin](https://devlokos.com/admin). Ver [ADMIN_SETUP.md](ADMIN_SETUP.md).
 
 ---
 
@@ -293,4 +293,6 @@ dart format .
 
 **Contacto:** DevLokos — [@devlokos](https://twitter.com/devlokos)
 
-**Última actualización:** Junio 2026
+Auditoría de producto (ecosistema App + Web): ver [`../AUDITORIA_PRODUCTO.md`](../AUDITORIA_PRODUCTO.md).
+
+**Última actualización:** Agosto 2026

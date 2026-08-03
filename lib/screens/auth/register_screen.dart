@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../bloc/auth/auth_bloc_exports.dart';
+import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/gradient_button.dart';
@@ -388,6 +389,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Checkbox(
           value: _acceptTerms,
           onChanged: (value) {
+            AppHaptics.selection();
             setState(() {
               _acceptTerms = value ?? false;
             });
@@ -398,6 +400,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Expanded(
           child: GestureDetector(
             onTap: () {
+              AppHaptics.selection();
               setState(() {
                 _acceptTerms = !_acceptTerms;
               });
