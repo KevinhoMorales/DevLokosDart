@@ -92,7 +92,7 @@ class AboutScreen extends StatelessWidget {
         boxShadow: BrandColors.blackShadow,
       ),
       child: const Text(
-        'DevLokos nació una noche con la simple idea de crear un podcast para hablar de desarrollo y tecnología. Sin planearlo mucho, grabamos el primer episodio entre amigos… y desde entonces, el resto es historia.\n\nHoy contamos con más de 150 episodios junto a grandes expertos, una comunidad activa y nuevas iniciativas como DevLokos Tutorials, DevLokos Academy y DevLokos Enterprise, donde ayudamos a las personas a aprender, crear y crecer en el mundo del software.',
+        'DevLokos nació una noche con la simple idea de crear un podcast para hablar de desarrollo y tecnología. Sin planearlo mucho, grabamos el primer episodio entre amigos… y desde entonces, el resto es historia.\n\nHoy contamos con más de 150 episodios junto a grandes expertos, una comunidad activa y nuevas iniciativas como Tutoriales DevLokos, Academia DevLokos y Empresarial DevLokos, donde ayudamos a las personas a aprender, crear y crecer en el mundo del software.',
         style: TextStyle(
           color: BrandColors.grayMedium,
           fontSize: 16,

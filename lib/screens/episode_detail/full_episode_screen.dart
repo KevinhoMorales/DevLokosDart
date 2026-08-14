@@ -35,8 +35,10 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
   }
 
   void _initializePlayer() {
-    final videoId = widget.youtubeVideo?.videoId ?? '';
-    
+    final videoId = widget.youtubeVideo?.videoId ??
+        widget.episode?.youtubeVideoId ??
+        '';
+
     if (videoId.isNotEmpty) {
       _controller = YoutubePlayerController(
         initialVideoId: videoId,
@@ -55,7 +57,7 @@ class _FullEpisodeScreenState extends State<FullEpisodeScreen> with WidgetsBindi
           hideThumbnail: true,
         ),
       );
-      
+
       // Si hay una posición inicial, configurarla después de que el reproductor esté listo
       if (widget.initialPosition != null) {
         print('🎯 Posición inicial configurada: ${widget.initialPosition!.inSeconds} segundos');

@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -50,6 +50,7 @@ class _PodcastScreenState extends State<PodcastScreen>
   final ScrollController _discoverScrollController = ScrollController();
   Timer? _discoverAutoScrollTimer;
   Timer? _discoverResumeTimer;
+  Timer? _searchDebounce;
   bool _discoverUserInteracting = false;
   bool _isLoadingMoreEpisodes = false;
   static const int _discoverCount = 10;
@@ -156,7 +157,7 @@ class _PodcastScreenState extends State<PodcastScreen>
     await _ensureSeasonHasContent();
   }
 
-  /// Descubre estable: se elige una vez al día y no salta al paginar.
+  /// Descubre: episodios recientes (no aleatorios) para encontrar lo nuevo rápido.
   void _generateDiscoverVideos(List<YouTubeVideo> allVideos) {
     if (allVideos.isEmpty) return;
 
@@ -168,14 +169,17 @@ class _PodcastScreenState extends State<PodcastScreen>
         .toList();
     if (validVideos.isEmpty) return;
 
-    // Ya hay lista: solo rellenar huecos hasta _discoverCount
+    // Ordenar por fecha descendente; rellenar Descubre sin reordenar lo ya visible
+    final byDate = List<YouTubeVideo>.from(validVideos)
+      ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+
     if (_discoverVideos != null && _discoverVideos!.isNotEmpty) {
       if (_discoverVideos!.length >= _discoverCount) {
         _scheduleDiscoverAutoScroll();
         return;
       }
       final existingIds = _discoverVideos!.map((v) => v.videoId).toSet();
-      final extras = validVideos
+      final extras = byDate
           .where((v) => !existingIds.contains(v.videoId))
           .take(_discoverCount - _discoverVideos!.length);
       _discoverVideos = [..._discoverVideos!, ...extras];
@@ -183,13 +187,7 @@ class _PodcastScreenState extends State<PodcastScreen>
       return;
     }
 
-    // Primera vez: mezcla estable por día (no cambia en cada rebuild)
-    final daySeed = DateTime.now()
-        .difference(DateTime(DateTime.now().year, 1, 1))
-        .inDays;
-    final shuffled = List<YouTubeVideo>.from(validVideos)
-      ..shuffle(Random(daySeed));
-    _discoverVideos = shuffled.take(_discoverCount).toList();
+    _discoverVideos = byDate.take(_discoverCount).toList();
     _scheduleDiscoverAutoScroll();
   }
 
@@ -335,6 +333,7 @@ class _PodcastScreenState extends State<PodcastScreen>
   @override
   void dispose() {
     _stopDiscoverAutoScroll();
+    _searchDebounce?.cancel();
     _animationController.dispose();
     _searchController.dispose();
     _mainScrollController.dispose();
@@ -348,12 +347,10 @@ class _PodcastScreenState extends State<PodcastScreen>
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
-        // Si el usuario presiona el botón back, mostrar diálogo de confirmación
         if (!didPop) {
           final shouldPop = await _showExitDialog();
           if (shouldPop && context.mounted) {
-            // Si el usuario confirma, salir de la app
-            Navigator.of(context).pop();
+            SystemNavigator.pop();
           }
         }
       },
@@ -424,15 +421,26 @@ class _PodcastScreenState extends State<PodcastScreen>
         controller: _searchController,
         hintText: 'Buscar episodios, invitado o tema...',
         onChanged: (value) {
+          final query = value.trim();
           setState(() {
-            _searchQuery = value.trim();
-            if (value.trim().isEmpty) {
+            _searchQuery = query;
+            if (query.isEmpty) {
               _apiSearchResults = null;
               _searchError = null;
+              _isSearching = false;
+            }
+          });
+          _searchDebounce?.cancel();
+          if (query.isEmpty) return;
+          _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+            if (!mounted) return;
+            if (_searchController.text.trim() == query) {
+              _performApiSearch(query);
             }
           });
         },
         onSubmitted: (value) {
+          _searchDebounce?.cancel();
           final query = value.trim();
           if (query.isNotEmpty) _performApiSearch(query);
         },
@@ -595,6 +603,8 @@ class _PodcastScreenState extends State<PodcastScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildLatestEpisodeSection(),
+              const SizedBox(height: 28),
               _buildFeaturedSection(),
               const SizedBox(height: 32),
               _buildEpisodesSection(),
@@ -630,11 +640,55 @@ class _PodcastScreenState extends State<PodcastScreen>
     );
   }
 
+  Widget _buildLatestEpisodeSection() {
+    final latest = _latestEpisode;
+    if (latest == null) return const SizedBox.shrink();
+
+    final tablet = Responsive.isTablet(context);
+    final thumbHeight = tablet ? 180.0 : 160.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          title: 'Último episodio',
+          padding: EdgeInsets.only(left: 4, bottom: 4),
+        ),
+        const SizedBox(height: 12),
+        YouTubeVideoCard(
+          video: latest,
+          onTap: () => _onVideoTap(latest),
+          showChannelTitle: false,
+          thumbnailHeight: thumbHeight,
+        ),
+      ],
+    );
+  }
+
+  YouTubeVideo? get _latestEpisode {
+    final sorted = _allVideosSorted;
+    if (sorted != null && sorted.isNotEmpty) {
+      final byDate = List<YouTubeVideo>.from(sorted)
+        ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+      return byDate.first;
+    }
+    final discover = _discoverVideos;
+    if (discover == null || discover.isEmpty) return null;
+    return discover.first;
+  }
+
   Widget _buildFeaturedSection() {
     final discoverVideos = _discoverVideos;
     if (discoverVideos == null || discoverVideos.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    // Evitar duplicar el último episodio justo debajo del hero
+    final latestId = _latestEpisode?.videoId;
+    final railVideos = latestId == null
+        ? discoverVideos
+        : discoverVideos.where((v) => v.videoId != latestId).toList();
+    if (railVideos.isEmpty) return const SizedBox.shrink();
 
     final tablet = Responsive.isTablet(context);
     final wide = Responsive.isWide(context);
@@ -647,7 +701,7 @@ class _PodcastScreenState extends State<PodcastScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(
-          title: 'Descubre',
+          title: 'Recientes',
           padding: EdgeInsets.only(left: 4, bottom: 4),
         ),
         const SizedBox(height: 12),
@@ -655,7 +709,6 @@ class _PodcastScreenState extends State<PodcastScreen>
           height: railHeight,
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
-              // Pausar autoplay solo si el usuario arrastra el rail.
               if (notification is ScrollStartNotification &&
                   notification.dragDetails != null) {
                 _pauseDiscoverAutoScrollTemporarily();
@@ -671,14 +724,14 @@ class _PodcastScreenState extends State<PodcastScreen>
                 scrollDirection: Axis.horizontal,
                 clipBehavior: Clip.none,
                 physics: const BouncingScrollPhysics(),
-                itemCount: discoverVideos.length,
+                itemCount: railVideos.length,
                 itemBuilder: (context, index) {
-                  final video = discoverVideos[index];
+                  final video = railVideos[index];
                   return SizedBox(
                     width: cardWidth,
                     child: Padding(
                       padding: EdgeInsets.only(
-                        right: index < discoverVideos.length - 1 ? gap : 0,
+                        right: index < railVideos.length - 1 ? gap : 0,
                       ),
                       child: YouTubeVideoCard(
                         video: video,
@@ -712,7 +765,7 @@ class _PodcastScreenState extends State<PodcastScreen>
     if (_apiSearchResults == null) {
       return const AppEmptyState(
         icon: Icons.search_rounded,
-        title: 'Presiona Enter para buscar',
+        title: 'Escribe para buscar',
         subtitle: 'Busca por invitado, tema o número de episodio',
       );
     }
@@ -890,6 +943,18 @@ class _PodcastScreenState extends State<PodcastScreen>
   }
 
   List<YouTubeVideo> _filterVideosBySeason(List<YouTubeVideo> videos) {
+    if (PodcastSeasons.isAll(_selectedSeason)) {
+      if (_allVideosSorted != null) {
+        // Orden absoluto por fecha para "Todas"
+        final byDate = List<YouTubeVideo>.from(_allVideosSorted!)
+          ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+        return byDate;
+      }
+      final sorted = List<YouTubeVideo>.from(videos)
+        ..sort((a, b) => b.publishedAt.compareTo(a.publishedAt));
+      return sorted;
+    }
+
     final season = PodcastSeasons.byLabel(_selectedSeason);
     final seasonNum = season?.number ?? 2;
 

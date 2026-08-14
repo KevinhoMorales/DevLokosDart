@@ -159,7 +159,7 @@ class AuthBlocSimple extends Bloc<AuthEvent, AuthState> {
         if (refreshedUser == null || !refreshedUser.emailVerified) {
           // No cerrar sesión: el usuario puede reenviar el email de verificación
           emit(AuthError(
-            message: 'Tu cuenta está creada pero tu correo aún está pendiente de aceptación. Revisa tu bandeja y haz clic en el enlace que te enviamos para activar tu cuenta.',
+            message: 'Tu cuenta está creada pero tu correo aún está pendiente de verificación. Revisa tu bandeja y haz clic en el enlace que te enviamos para activar tu cuenta.',
             code: 'email-not-verified',
           ));
           return;

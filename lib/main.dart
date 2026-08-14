@@ -162,7 +162,9 @@ class DevLokosApp extends StatelessWidget {
           ),
           BlocProvider<EpisodeBloc>(
             create: (context) => EpisodeBloc(
-              repository: EpisodeRepositoryImpl(),
+              repository: EpisodeRepositoryImpl(
+                youtubeProvider: context.read<YouTubeProvider>(),
+              ),
             )..add(const LoadEpisodes()),
           ),
           BlocProvider<TutorialBloc>(

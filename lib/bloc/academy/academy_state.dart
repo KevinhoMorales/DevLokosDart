@@ -43,13 +43,19 @@ class AcademyLoaded extends AcademyState {
     String? selectedDifficulty,
     String? searchQuery,
     bool? showUpcoming,
+    bool clearLearningPath = false,
+    bool clearDifficulty = false,
   }) {
     return AcademyLoaded(
       courses: courses ?? this.courses,
       filteredCourses: filteredCourses ?? this.filteredCourses,
       upcomingCourses: upcomingCourses ?? this.upcomingCourses,
-      selectedLearningPath: selectedLearningPath ?? this.selectedLearningPath,
-      selectedDifficulty: selectedDifficulty ?? this.selectedDifficulty,
+      selectedLearningPath: clearLearningPath
+          ? null
+          : (selectedLearningPath ?? this.selectedLearningPath),
+      selectedDifficulty: clearDifficulty
+          ? null
+          : (selectedDifficulty ?? this.selectedDifficulty),
       searchQuery: searchQuery ?? this.searchQuery,
       showUpcoming: showUpcoming ?? this.showUpcoming,
     );
@@ -79,5 +85,3 @@ class AcademyError extends AcademyState {
   @override
   List<Object?> get props => [message, cachedCourses];
 }
-
-

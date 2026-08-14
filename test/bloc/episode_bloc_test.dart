@@ -66,7 +66,7 @@ void main() {
           const EpisodeLoading(),
           EpisodeLoaded(
             episodes: testEpisodes,
-            featuredEpisodes: [testEpisodes[0]], // Solo el primero es featured
+            featuredEpisodes: [testEpisodes[0]],
             filteredEpisodes: testEpisodes,
             searchQuery: '',
           ),
@@ -86,7 +86,9 @@ void main() {
         act: (bloc) => bloc.add(const LoadEpisodes()),
         expect: () => [
           const EpisodeLoading(),
-          const EpisodeError(message: 'Error al cargar episodios: Exception: Test error'),
+          const EpisodeError(
+            message: 'Error al cargar episodios: Exception: Test error',
+          ),
         ],
         verify: (_) {
           verify(() => mockRepository.getAllEpisodes()).called(1);
@@ -125,15 +127,20 @@ void main() {
       blocTest<EpisodeBloc, EpisodeState>(
         'emits EpisodeSearching then EpisodeLoaded with filtered results',
         build: () {
-          when(() => mockRepository.getAllEpisodes())
-              .thenAnswer((_) async => testEpisodes);
-          when(() => mockRepository.searchEpisodes('flutter'))
-              .thenAnswer((_) async => [testEpisodes[0]]);
+          when(
+            () => mockRepository.searchEpisodes(
+              any(),
+              episodesToSearchIn: any(named: 'episodesToSearchIn'),
+              pageToken: any(named: 'pageToken'),
+            ),
+          ).thenAnswer(
+            (_) async => EpisodeSearchResult(episodes: [testEpisodes[0]]),
+          );
           return episodeBloc;
         },
         seed: () => EpisodeLoaded(
           episodes: testEpisodes,
-          featuredEpisodes: [testEpisodes[0]], // El primer episodio es featured
+          featuredEpisodes: [testEpisodes[0]],
           filteredEpisodes: testEpisodes,
           searchQuery: '',
         ),
@@ -145,13 +152,19 @@ void main() {
           ),
           EpisodeLoaded(
             episodes: testEpisodes,
-            featuredEpisodes: [testEpisodes[0]], // Mantener featured episodes
+            featuredEpisodes: [testEpisodes[0]],
             filteredEpisodes: [testEpisodes[0]],
             searchQuery: 'flutter',
           ),
         ],
         verify: (_) {
-          verify(() => mockRepository.searchEpisodes('flutter')).called(1);
+          verify(
+            () => mockRepository.searchEpisodes(
+              'flutter',
+              episodesToSearchIn: any(named: 'episodesToSearchIn'),
+              pageToken: any(named: 'pageToken'),
+            ),
+          ).called(1);
         },
       );
     });

@@ -5,6 +5,7 @@ import '../../bloc/event/event_bloc_exports.dart';
 import '../../models/event.dart';
 import '../../utils/brand_colors.dart';
 import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_error_state.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/event_card.dart';
@@ -43,11 +44,8 @@ class _EventsScreenState extends State<EventsScreen> {
           }
 
           if (state is EventError) {
-            return AppEmptyState(
-              icon: Icons.error_outline,
-              title: 'Algo salió mal',
-              subtitle: state.message,
-              showRetry: true,
+            return AppErrorState(
+              message: state.message,
               onRetry: () => context.read<EventBloc>().add(const LoadEvents()),
             );
           }

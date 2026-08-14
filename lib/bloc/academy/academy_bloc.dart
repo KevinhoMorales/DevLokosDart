@@ -82,16 +82,11 @@ class AcademyBloc extends Bloc<AcademyEvent, AcademyState> {
     if (state is! AcademyLoaded) return;
 
     final currentState = state as AcademyLoaded;
-
-    try {
-      final filtered = await _repository.getCoursesByLearningPath(event.learningPath);
-      emit(currentState.copyWith(
-        filteredCourses: filtered,
-        selectedLearningPath: event.learningPath,
-      ));
-    } catch (e) {
-      emit(AcademyError(message: 'Error al filtrar por learning path: $e'));
-    }
+    final next = currentState.copyWith(
+      selectedLearningPath: event.learningPath,
+      clearLearningPath: event.learningPath.isEmpty,
+    );
+    emit(next.copyWith(filteredCourses: _applyFilters(next)));
   }
 
   Future<void> _onFilterByDifficulty(
@@ -101,16 +96,11 @@ class AcademyBloc extends Bloc<AcademyEvent, AcademyState> {
     if (state is! AcademyLoaded) return;
 
     final currentState = state as AcademyLoaded;
-
-    try {
-      final filtered = await _repository.getCoursesByDifficulty(event.difficulty);
-      emit(currentState.copyWith(
-        filteredCourses: filtered,
-        selectedDifficulty: event.difficulty,
-      ));
-    } catch (e) {
-      emit(AcademyError(message: 'Error al filtrar por dificultad: $e'));
-    }
+    final next = currentState.copyWith(
+      selectedDifficulty: event.difficulty,
+      clearDifficulty: event.difficulty.isEmpty,
+    );
+    emit(next.copyWith(filteredCourses: _applyFilters(next)));
   }
 
   Future<void> _onSearchCourses(
@@ -120,24 +110,34 @@ class AcademyBloc extends Bloc<AcademyEvent, AcademyState> {
     if (state is! AcademyLoaded) return;
 
     final currentState = state as AcademyLoaded;
+    final next = currentState.copyWith(searchQuery: event.query);
+    emit(next.copyWith(filteredCourses: _applyFilters(next)));
+  }
 
-    if (event.query.isEmpty) {
-      emit(currentState.copyWith(
-        filteredCourses: currentState.courses,
-        searchQuery: '',
-      ));
-      return;
+  /// Aplica path + dificultad + búsqueda como AND sobre el catálogo en memoria.
+  List<Course> _applyFilters(AcademyLoaded state) {
+    Iterable<Course> result = state.courses;
+
+    final path = state.selectedLearningPath;
+    if (path != null && path.isNotEmpty) {
+      result = result.where((c) => c.learningPaths.contains(path));
     }
 
-    try {
-      final results = await _repository.searchCourses(event.query);
-      emit(currentState.copyWith(
-        filteredCourses: results,
-        searchQuery: event.query,
-      ));
-    } catch (e) {
-      emit(AcademyError(message: 'Error al buscar cursos: $e'));
+    final difficulty = state.selectedDifficulty;
+    if (difficulty != null && difficulty.isNotEmpty) {
+      result = result.where((c) => c.difficulty == difficulty);
     }
+
+    final query = state.searchQuery.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      result = result.where((c) {
+        return c.title.toLowerCase().contains(query) ||
+            c.description.toLowerCase().contains(query) ||
+            c.learningPaths.any((p) => p.toLowerCase().contains(query));
+      });
+    }
+
+    return result.toList();
   }
 
   Future<void> _onSelectCourse(
@@ -156,12 +156,10 @@ class AcademyBloc extends Bloc<AcademyEvent, AcademyState> {
     final currentState = state as AcademyLoaded;
     emit(currentState.copyWith(
       filteredCourses: currentState.courses,
-      selectedLearningPath: null,
-      selectedDifficulty: null,
+      clearLearningPath: true,
+      clearDifficulty: true,
       searchQuery: '',
       showUpcoming: false,
     ));
   }
 }
-
-
