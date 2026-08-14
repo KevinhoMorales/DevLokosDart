@@ -206,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen>
                   style: TextStyle(color: BrandColors.primaryWhite),
                 ),
                 content: Text(
-                  'Tu cuenta está creada pero tu correo aún está pendiente de aceptación. Revisa tu bandeja y haz clic en el enlace que te enviamos para activar tu cuenta.',
+                  'Tu cuenta está creada pero tu correo aún está pendiente de verificación. Revisa tu bandeja y haz clic en el enlace que te enviamos para activar tu cuenta.',
                   style: const TextStyle(color: BrandColors.grayLight),
                 ),
                 actions: [

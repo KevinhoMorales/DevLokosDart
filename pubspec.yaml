@@ -44,7 +44,7 @@ dependencies:
   share_plus: ^10.0.0
   image_picker: ^1.0.7
   path_provider: ^2.1.2
-  local_auth: ^3.0.2
+  local_auth: ^3.0.1
 
 dependency_overrides:
   # Fix wakelock_plus iOS build (messages.g.h not found en 1.2.x)

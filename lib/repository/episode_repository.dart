@@ -67,7 +67,10 @@ abstract class EpisodeRepository {
 
 /// Implementación concreta del repositorio usando YouTube Provider
 class EpisodeRepositoryImpl implements EpisodeRepository {
-  final YouTubeProvider _youtubeProvider = YouTubeProvider();
+  final YouTubeProvider _youtubeProvider;
+
+  EpisodeRepositoryImpl({YouTubeProvider? youtubeProvider})
+      : _youtubeProvider = youtubeProvider ?? YouTubeProvider();
 
   @override
   Future<List<Episode>> getInitialEpisodes({int limit = 20}) async {

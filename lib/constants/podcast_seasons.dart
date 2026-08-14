@@ -9,9 +9,13 @@ class PodcastSeasons {
     PodcastSeason(number: 3, label: 'Temporada 3', pattern: 'S3'),
   ];
 
-  static const String defaultLabel = 'Temporada 2';
+  /// Filtro sin temporada: muestra todos los episodios (más recientes primero).
+  static const String allLabel = 'Todas';
 
-  static List<String> get labels => all.map((s) => s.label).toList();
+  /// Por defecto: todas las temporadas para que el último episodio sea visible.
+  static const String defaultLabel = allLabel;
+
+  static List<String> get labels => [allLabel, ...all.map((s) => s.label)];
 
   static PodcastSeason? byLabel(String label) {
     for (final s in all) {
@@ -27,19 +31,38 @@ class PodcastSeasons {
     return null;
   }
 
-  /// Detecta temporada por substring en el título de YouTube (S3 > S2 > S1).
+  static bool isAll(String label) => label == allLabel;
+
+  /// Detecta temporada por marcador en el título (S3 > S2 > S1).
+  /// Usa límites de palabra para evitar que "S10" coincida con "S1".
   /// Sin marcador → Temporada 2 (comportamiento histórico).
   static int detectFromTitle(String title) {
-    if (title.contains('S3')) return 3;
-    if (title.contains('S2')) return 2;
-    if (title.contains('S1')) return 1;
+    final upper = title.toUpperCase();
+    if (RegExp(r'\bS3\b').hasMatch(upper)) return 3;
+    if (RegExp(r'\bS2\b').hasMatch(upper)) return 2;
+    if (RegExp(r'\bS1\b').hasMatch(upper)) return 1;
     return 2;
   }
 
   static String patternForLabel(String label) =>
       byLabel(label)?.pattern ?? 'S2';
 
+  /// Elige la temporada más reciente que tenga episodios; si ninguna, [allLabel].
+  static String newestSeasonWithContent({
+    required int s1Count,
+    required int s2Count,
+    required int s3Count,
+  }) {
+    if (s3Count > 0) return byNumber(3)!.label;
+    if (s2Count > 0) return byNumber(2)!.label;
+    if (s1Count > 0) return byNumber(1)!.label;
+    return allLabel;
+  }
+
   static String emptyMessage(String label) {
+    if (isAll(label)) {
+      return 'No hay episodios por ahora. Desliza para actualizar.';
+    }
     if (label == 'Temporada 3') {
       return 'Pronto episodios de Temporada 3. Mientras tanto, explora Temporada 1 o 2.';
     }

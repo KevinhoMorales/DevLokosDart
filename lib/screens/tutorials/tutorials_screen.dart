@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../bloc/tutorial/tutorial_bloc_exports.dart';
 import '../../models/tutorial.dart';
 import '../../models/youtube_playlist_info.dart';
+import '../../models/youtube_video.dart';
 import '../../utils/app_haptics.dart';
 import '../../utils/brand_colors.dart';
 import '../../utils/responsive.dart';
@@ -15,7 +16,6 @@ import '../../widgets/search_bar_widget.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/tutorial_card.dart';
 import '../../providers/youtube_provider.dart';
-import '../../services/remote_config_service.dart';
 
 class TutorialsScreen extends StatefulWidget {
   const TutorialsScreen({super.key});
@@ -36,9 +36,9 @@ class _TutorialsScreenState extends State<TutorialsScreen>
   @override
   void initState() {
     super.initState();
-    if (RemoteConfigService().isTutorialsPlaylistConfigured) {
-      context.read<TutorialBloc>().add(const LoadPlaylists());
-    }
+    // Siempre intentar cargar: el bloc usa playlists del canal (y fallback
+    // a la playlist principal). No bloquear por ausencia de un RC key dedicado.
+    context.read<TutorialBloc>().add(const LoadPlaylists());
   }
 
   @override
@@ -56,26 +56,24 @@ class _TutorialsScreenState extends State<TutorialsScreen>
       body: SafeArea(
         child: Column(
           children: [
-            if (RemoteConfigService().isTutorialsPlaylistConfigured) ...[
-              Padding(
-                padding: Responsive.searchBarPadding(context),
-                child: SearchBarWidget(
-                  controller: _searchController,
-                  hintText: 'Buscar por título...',
-                  onChanged: (value) {
-                    context
-                        .read<TutorialBloc>()
-                        .add(SearchTutorials(value.trim()));
-                  },
-                  onSubmitted: (value) {
-                    context
-                        .read<TutorialBloc>()
-                        .add(SearchTutorials(value.trim()));
-                  },
-                ),
+            Padding(
+              padding: Responsive.searchBarPadding(context),
+              child: SearchBarWidget(
+                controller: _searchController,
+                hintText: 'Buscar por título...',
+                onChanged: (value) {
+                  context
+                      .read<TutorialBloc>()
+                      .add(SearchTutorials(value.trim()));
+                },
+                onSubmitted: (value) {
+                  context
+                      .read<TutorialBloc>()
+                      .add(SearchTutorials(value.trim()));
+                },
               ),
-              _buildPlaylistChips(),
-            ],
+            ),
+            _buildPlaylistChips(),
             Expanded(child: _buildContent()),
           ],
         ),
@@ -157,18 +155,9 @@ class _TutorialsScreenState extends State<TutorialsScreen>
   }
 
   Widget _buildContent() {
-    if (!RemoteConfigService().isTutorialsPlaylistConfigured) {
-      return const AppEmptyState(
-        icon: Icons.playlist_add_outlined,
-        title: 'Tutoriales próximamente',
-        subtitle:
-            'Estamos preparando contenido de tutoriales. Vuelve pronto.',
-      );
-    }
-
     return BlocBuilder<TutorialBloc, TutorialState>(
       builder: (context, state) {
-        if (state is TutorialLoading) {
+        if (state is TutorialInitial || state is TutorialLoading) {
           return const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: ContentSkeleton.card(count: 3),
@@ -272,12 +261,23 @@ class _TutorialsScreenState extends State<TutorialsScreen>
 
   void _onTutorialTap(Tutorial tutorial, String? playlistTitle) {
     final youtubeProvider = context.read<YouTubeProvider>();
-    final video = youtubeProvider.getVideoById(tutorial.videoId);
+    // Siempre pasar un YouTubeVideo usable: el provider puede no tener el
+    // video en caché (otra playlist / cold open), pero el player solo necesita videoId.
+    final video = youtubeProvider.getVideoById(tutorial.videoId) ??
+        YouTubeVideo(
+          videoId: tutorial.videoId,
+          title: tutorial.title,
+          description: tutorial.description,
+          thumbnailUrl: tutorial.thumbnailUrl,
+          channelTitle: 'DevLokos',
+          publishedAt: tutorial.publishedAt,
+          position: 0,
+        );
 
     context.push(
       '/episode/${tutorial.id}',
       extra: {
-        if (video != null) 'youtubeVideo': video,
+        'youtubeVideo': video,
         'playlistTitle': playlistTitle,
       },
     );

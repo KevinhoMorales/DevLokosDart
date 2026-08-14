@@ -60,42 +60,27 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
         filteredTutorials: tutorials,
       ));
 
-      // Stale-while-revalidate: refrescar en background sin bloquear
-      _refreshInBackground(first.id, first.title, null, emit);
-    } catch (e) {
-      emit(TutorialError(message: _toUserFriendlyMessage(e)));
-    }
-  }
-
-  void _refreshInBackground(
-    String playlistId,
-    String playlistTitle,
-    String? searchQuery,
-    Emitter<TutorialState> emit,
-  ) {
-    Future.microtask(() async {
+      // Stale-while-revalidate: refrescar dentro del handler (emit válido).
       try {
         final freshPlaylists = await _repository.getPlaylists(refresh: true);
         if (freshPlaylists.isEmpty) return;
         final freshTutorials = await _repository.getTutorialsByPlaylist(
-          playlistId,
+          first.id,
           refresh: true,
         );
-        final filtered = searchQuery != null && searchQuery.isNotEmpty
-            ? await _repository.searchByTitle(searchQuery, freshTutorials)
-            : freshTutorials;
         emit(TutorialLoaded(
           playlists: freshPlaylists,
-          selectedPlaylistId: playlistId,
-          selectedPlaylistTitle: playlistTitle,
+          selectedPlaylistId: first.id,
+          selectedPlaylistTitle: first.title,
           tutorials: freshTutorials,
-          filteredTutorials: filtered,
-          searchQuery: searchQuery ?? '',
+          filteredTutorials: freshTutorials,
         ));
       } catch (_) {
         // Silently fail; cached data already shown
       }
-    });
+    } catch (e) {
+      emit(TutorialError(message: _toUserFriendlyMessage(e)));
+    }
   }
 
   Future<void> _onSelectPlaylist(

@@ -39,6 +39,8 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   YoutubePlayerController? _controller;
   Duration? _savedPosition;
   bool _descriptionExpanded = false;
+  bool _isResolvingVideo = false;
+  String? _resolveError;
 
   @override
   void initState() {
@@ -48,7 +50,6 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   }
 
   void _loadEpisodeData() {
-    // Si ya tenemos los datos, usarlos directamente
     if (widget.episode != null) {
       _currentEpisode = widget.episode;
     }
@@ -56,52 +57,96 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
       _currentYouTubeVideo = widget.youtubeVideo;
     }
 
-    // Si tenemos un episodeId, cargar los datos
     if (widget.episodeId != null && widget.episode == null) {
       _loadEpisodeFromId();
     }
 
-    // Inicializar el controlador de YouTube
+    _ensurePlayableVideo();
+  }
+
+  /// Resuelve un videoId usable desde youtubeVideo, episode o route id.
+  String? get _resolvedVideoId {
+    return _currentYouTubeVideo?.videoId ??
+        widget.youtubeVideo?.videoId ??
+        _currentEpisode?.youtubeVideoId ??
+        widget.episode?.youtubeVideoId ??
+        widget.episodeId;
+  }
+
+  void _ensurePlayableVideo() {
+    final videoId = _resolvedVideoId;
+    if (videoId == null || videoId.isEmpty) {
+      _resolveError = 'No encontramos el video de este episodio.';
+      return;
+    }
+
+    if (_currentYouTubeVideo == null ||
+        _currentYouTubeVideo!.videoId != videoId) {
+      _currentYouTubeVideo = YouTubeVideo(
+        videoId: videoId,
+        title: _currentEpisode?.title ??
+            widget.episode?.title ??
+            _currentYouTubeVideo?.title ??
+            'Episodio',
+        description: _currentEpisode?.description ??
+            widget.episode?.description ??
+            _currentYouTubeVideo?.description ??
+            '',
+        thumbnailUrl: _currentEpisode?.thumbnailUrl ??
+            widget.episode?.thumbnailUrl ??
+            _currentYouTubeVideo?.thumbnailUrl ??
+            '',
+        channelTitle: _currentYouTubeVideo?.channelTitle ?? 'DevLokos',
+        publishedAt: _currentEpisode?.publishedDate ??
+            widget.episode?.publishedDate ??
+            _currentYouTubeVideo?.publishedAt ??
+            DateTime.now(),
+        position: _currentYouTubeVideo?.position ?? 0,
+      );
+    }
+
     _initializeYouTubeController();
   }
 
   void _initializeYouTubeController() {
-    final videoId = _currentYouTubeVideo?.videoId ?? widget.youtubeVideo?.videoId ?? '';
-    
-    if (videoId.isNotEmpty) {
-      _controller = YoutubePlayerController(
-        initialVideoId: videoId,
-        flags: const YoutubePlayerFlags(
-          autoPlay: false,
-          mute: false,
-          isLive: false,
-          forceHD: false,
-          enableCaption: true,
-        ),
-      );
-    }
+    final videoId = _resolvedVideoId ?? '';
+
+    if (videoId.isEmpty) return;
+
+    _controller?.dispose();
+    _controller = YoutubePlayerController(
+      initialVideoId: videoId,
+      flags: const YoutubePlayerFlags(
+        autoPlay: false,
+        mute: false,
+        isLive: false,
+        forceHD: false,
+        enableCaption: true,
+      ),
+    );
+    _resolveError = null;
   }
 
   void _loadEpisodeFromId() {
     final youtubeProvider = context.read<YouTubeProvider>();
 
-    // Buscar el episodio en el bloc
     final episodeBloc = context.read<EpisodeBloc>();
     if (episodeBloc.state is EpisodeLoaded) {
       final episodes = (episodeBloc.state as EpisodeLoaded).episodes;
       try {
         _currentEpisode = episodes.firstWhere(
-          (episode) => episode.id == widget.episodeId,
+          (episode) =>
+              episode.id == widget.episodeId ||
+              episode.youtubeVideoId == widget.episodeId,
         );
       } catch (e) {
         _currentEpisode = null;
       }
     }
 
-    // Buscar el video de YouTube (episodios o tutoriales)
     final videoId = _currentEpisode?.youtubeVideoId ?? widget.episodeId;
     if (videoId != null) {
-      _currentYouTubeVideo = youtubeProvider.getVideoById(videoId);
+      _currentYouTubeVideo ??= youtubeProvider.getVideoById(videoId);
     }
   }
 
@@ -238,7 +283,25 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
   }
 
   Widget _buildVideoPlayer() {
-    final videoId = _currentYouTubeVideo?.videoId ?? widget.youtubeVideo?.videoId;
+    final videoId = _resolvedVideoId;
+    if (_isResolvingVideo) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: BrandColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              color: BrandColors.primaryOrange,
+            ),
+          ),
+        ),
+      );
+    }
+
     if (videoId == null || videoId.isEmpty || _controller == null) {
       return AspectRatio(
         aspectRatio: 16 / 9,
@@ -251,23 +314,35 @@ class _EpisodeDetailScreenState extends State<EpisodeDetailScreen> with WidgetsB
               color: BrandColors.primaryOrange.withValues(alpha: 0.12),
             ),
           ),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.play_circle_outline_rounded,
                   color: BrandColors.grayDark,
                   size: 48,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'Video no disponible',
-                  style: TextStyle(
+                  _resolveError ?? 'Video no disponible',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
                     color: BrandColors.grayMedium,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _isResolvingVideo = false;
+                      _resolveError = null;
+                      _ensurePlayableVideo();
+                    });
+                  },
+                  child: const Text('Reintentar'),
                 ),
               ],
             ),
